@@ -778,6 +778,22 @@ jobs:
             [pscustomobject]@{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Source = 'src/InstallerClean/LibrarySearch.cs'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll'); Marker = 'app folder' },
             [pscustomobject]@{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Source = 'src/InstallerClean/LibrarySearch.cs'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll'); Marker = 'module initializer' }
           )
+          # Each of the command line, the portable and the slim started in replace mode
+          # (Invoke-Replace in native-libraries.ps1), once putting itself in place and once
+          # with nothing left at the path, given Wait seconds to end. A window build that
+          # puts itself in place starts the copy at the path, which the first pass judges as
+          # the build it now is. A replace returns before the window or the scan starts, so it names
+          # nothing it must load; its first act seen is judged instead.
+          $builds += foreach ($base in @($builds | Where-Object Label -in 'command line', 'portable', 'slim')) {
+            foreach ($mode in 'replaced', 'nothing') {
+              [pscustomobject]@{
+                Label = "$($base.Label), $(if ($mode -eq 'replaced') { 'putting itself in place' } else { 'with nothing left at the path' })"
+                Exe = $base.Exe; Source = $base.Source; Wait = 120
+                Marker = $(if ($base.Label -eq 'slim') { 'module initializer' } else { 'replaced copy' })
+                Replace = $mode; StartsAtPath = ($base.Label -ne 'command line'); AtPath = $base
+              }
+            }
+          }
 
           . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
           '@
@@ -970,13 +986,31 @@ jobs:
       # fails unless each look for a file to load beside a build is planted for, each for
       # data is not, a load of a planted file fails, and a look recorded under a short name
       # is read in full or fails (Test-ImageNameControls and Test-ShortNameControls in
-      # native-libraries.ps1).
+      # native-libraries.ps1). The checks on how a build in replace mode ended are run the
+      # same way over ends made up with a fault planted in each, and must fail at each
+      # (Test-ReplaceControls), and so is the check on the slim's loads before its Main
+      # (Test-WhereInstalledControls).
+      #
+      # Each build is also started in replace mode, as a newer version an update downloaded
+      # is started to put itself at the old copy's path (Invoke-Replace): from a staging
+      # folder under %ProgramData% made as the app makes one, against a stand-in old copy
+      # it has to wait for, once putting itself in place and once with nothing left at the
+      # path. What it looks for and loads there is judged like every other start, in both
+      # passes. The job fails where it does not set the started event, ends with the wrong
+      # exit code, leaves anything but the build at the path or anything beside it, leaves
+      # the exe without the access list a file made in that folder carries, writes the
+      # Application-log entry saying the update was not installed where it put itself in
+      # place, or does not write it where nothing was left. A window build that puts itself
+      # in place starts the copy at the path, which the first pass judges as that build
+      # started from its own folder; the second pass ends it once the replace has ended.
       - name: First pass, with nothing planted
         shell: pwsh
         run: |
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
           Test-ImageNameControls
           Test-ShortNameControls
+          Test-ReplaceControls
+          Test-WhereInstalledControls
           "  interactive: $([Environment]::UserInteractive); session $((Get-Process -Id $PID).SessionId)"
           $runtimes = dotnet --list-runtimes
           $runtimes
@@ -990,6 +1024,7 @@ jobs:
 
           Start-Record 'first'
           $runs = foreach ($build in $builds) {
+            if ($build.Replace) { Invoke-Replace $build $build.Label 'first' @() -JudgeCopy; continue }
             $folder = Get-RunFolder 'first' $build.Label
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item $build.Exe $folder
@@ -1004,42 +1039,44 @@ jobs:
           foreach ($run in $runs) {
             $read = Read-Run $run $byProcess
             if (-not $read) { continue }
-            Test-MustLoad $run $read.Loads
+            # The build a run starts, which for a start in replace mode is the build it is a
+            # newer version of, and which the copy a replace started at the path already is.
+            $base = if ($run.Build.AtPath) { $run.Build.AtPath.Label } else { $run.Build.Label }
+            if (-not $run.Build.Replace) { Test-MustLoad $run $read.Loads }
             if ($run.Build.UpdateCheck) { Test-UpdateCheck $run $byProcess }
             # A build whose first act seen is not the kind it names is judged against a later
             # row than its own code's start, so it fails rather than passing on that row.
             if (-not $read.Marker) { Fail "$($run.Label) showed no act of its own code." }
             elseif ($read.Marker.Kind -ne $run.Build.Marker) { Fail "$($run.Label)'s first act of its own code seen is the $($read.Marker.Kind) at row $($read.Marker.Index), where it should be the $($run.Build.Marker)." }
+            # A build in replace mode whose first act seen is its module initializer's shows
+            # the replaced copy as the first act of its code in Main or later.
+            if ($run.Build.Replace -and $read.MainMarker.Kind -ne 'replaced copy') {
+              Fail "$($run.Label)'s first act of its code in Main or later is $(if ($read.MainMarker) { "the $($read.MainMarker.Kind) at row $($read.MainMarker.Index)" } else { 'not seen' }), where it should be the replaced copy."
+            }
             # The slim runs on the installed desktop runtime, which lists these as trusted
             # platform assemblies, so its module initializer loads each before its Main: before
             # the first act seen of its code in Main or later.
-            if ($run.Label -eq 'slim') {
-              if (-not $read.MainMarker) { Fail "The slim showed no act of its code in Main or later, so whether it loads these before its Main was not judged." }
-              foreach ($name in @(Get-WhereInstalled)) {
-                $load = @($read.Loads | Where-Object Name -eq "$name.dll".ToLowerInvariant()) | Select-Object -First 1
-                if (-not $load) { Fail "The slim never loaded $name.dll, which it loads before its Main where the installed runtime carries it." }
-                elseif (-not $read.MainMarker) { "  loaded $name.dll at row $($load.Index): $($load.Path)" }
-                elseif ($load.Index -gt $read.MainMarker.Index) { Fail "The slim loaded $name.dll at row $($load.Index), not before the first act seen of its code in Main or later, where it loads it before its Main." }
-                else { "  loaded $name.dll at row $($load.Index), before row $($read.MainMarker.Index), the $($read.MainMarker.Kind): $($load.Path)" }
-              }
-            }
+            # So do the slim's starts in replace mode, and the copy one starts at the path.
+            if ($base -eq 'slim') { Test-WhereInstalledLoads $run $read }
             # Each exe writes to the crash log whatever fails as it starts, such as an
             # assembly on its list that will not load, so a build started with nothing
             # planted writes nothing there. The app also writes to it to add an earlier
             # folder's log to its own, which on a runner that never held an earlier version
-            # is as wrong as an entry.
+            # is as wrong as an entry. A replace that finds nothing left at the path writes
+            # why, which is printed.
             $crashLogPattern = '\\AppData\\Local\\(' + (($crashLogFolders | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')\\crash\.log$'
             $rows = $byProcess[[string]$run.Id]
             $writes = @(for ($i = 0; $i -lt $rows.Count; $i++) {
               if ($rows[$i].Operation -eq 'WriteFile' -and $rows[$i].Path -match $crashLogPattern) { $i + 1 }
             })
-            if ($writes) { Fail "$($run.Label) made $($writes.Count) WriteFile rows to its crash log with nothing planted, the first at row $($writes[0]): $($rows[$writes[0] - 1].Path)." }
+            if ($writes -and $run.Build.Replace -eq 'nothing') { "  made $($writes.Count) WriteFile rows to its crash log, the first at row $($writes[0]), as a replace with nothing left at the path does" }
+            elseif ($writes) { Fail "$($run.Label) made $($writes.Count) WriteFile rows to its crash log with nothing planted, the first at row $($writes[0]): $($rows[$writes[0] - 1].Path)." }
             foreach ($name in $plantedAlone) {
               $beside = @($read.Libraries | Where-Object { $_.Place -eq 'own' -and $_.Operation -ne 'Load Image' -and $_.Relative -eq $name })
               "  looked for $name beside itself: $(if ($beside) { "yes, from row $($beside[0].Index)" } else { 'no' })"
-              if ($beside -and $run.Label -eq 'slim') {
+              if ($beside -and $base -eq 'slim') {
                 $who = if ($name -eq 'hostfxr.dll') { "so its exe searches that folder for .NET" } else { "where hostfxr.dll looked for it" }
-                Fail "The slim looked for $name in the folder it was run from, row $($beside[0].Index), $who."
+                Fail "$($run.Label) looked for $name in the folder it was run from, row $($beside[0].Index), $who."
               }
             }
             foreach ($load in ($read.Loads | Where-Object Place -eq 'own')) {
@@ -1048,10 +1085,13 @@ jobs:
 
             # What the bundle extracted is every file in the folders its libraries were
             # loaded from under %TEMP%\.net. Those folders stay after the run, and the
-            # second pass starts from them again.
+            # second pass starts from them again. A start of the same bundle extracts to the
+            # same folder, so the portable's own run and the copy a replace starts at the
+            # path each check it, and a replace of the portable, which ends before the
+            # window starts, is not required to load from it.
             $extractionFolders = @($read.Loads | Where-Object Place -eq 'extraction' | ForEach-Object { Split-Path $_.Path } | Sort-Object -Unique)
-            if ($run.Label -eq 'portable' -and -not $extractionFolders) {
-              Fail "The portable loaded nothing from its extraction folder, so that folder went unchecked."
+            if ($base -eq 'portable' -and -not $run.Build.Replace -and -not $extractionFolders) {
+              Fail "$($run.Label) loaded nothing from its extraction folder, so that folder went unchecked."
             }
             $bundleFiles = @(foreach ($folder in $extractionFolders) { Get-ChildItem -LiteralPath $folder -File | ForEach-Object FullName })
             # A library the bundle extracts is one a framework assembly may import, and the
@@ -1063,6 +1103,9 @@ jobs:
               }
             }
 
+            # The copy a replace started at the path is the build started from its own
+            # folder, which the build's own runs plant for.
+            if ($run.StartedCopy) { continue }
             $plants = @(Get-RunPlants $run $read $notPlanted $listedSeen $extractionFolders)
 
             $alone = @($plants | Where-Object { $_.Place -eq 'beside' -and (Split-Path $_.Path -Leaf) -in $plantedAlone })
@@ -1116,6 +1159,13 @@ jobs:
           Start-Record 'second'
           $runs = foreach ($p in $planned) {
             $build = $builds | Where-Object Label -eq $p.BuildLabel
+            if ($build.Replace) {
+              # The copy a replace started at the path is ended at once and not judged here.
+              foreach ($run in @(Invoke-Replace $build $p.Label 'second' $p.Plants -LoadAlone:$p.JudgeOnLoadAlone)) {
+                $run | Add-Member -NotePropertyMembers @{ BundleFiles = @($p.BundleFiles | Where-Object { $_ }); JudgeOnLoadAlone = $p.JudgeOnLoadAlone } -PassThru
+              }
+              continue
+            }
             $folder = Get-RunFolder 'second' $p.Label
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item $build.Exe $folder
@@ -1136,10 +1186,11 @@ jobs:
             Test-PlantedRun $run $read
 
             if ($run.JudgeOnLoadAlone) {
-              "  judged without its must-loads: a build that takes a planted apphost library cannot start, so $($run.Label) is not expected to load $($run.Build.MustLoad -join ' or '). DOTNET_ROOT is $env:DOTNET_ROOT."
+              $mustLoad = if ($run.Build.MustLoad) { ", so $($run.Label) is not expected to load $($run.Build.MustLoad -join ' or ')" } else { '' }
+              "  judged on what it loads alone: a build that takes a planted apphost library cannot start$mustLoad. DOTNET_ROOT is $env:DOTNET_ROOT."
             }
             else {
-              Test-MustLoad $run $read.Loads
+              if (-not $run.Build.Replace) { Test-MustLoad $run $read.Loads }
               if ($run.Build.UpdateCheck) { Test-UpdateCheck $run $byProcess }
             }
           }
@@ -1219,7 +1270,7 @@ jobs:
           foreach ($build in $builds) {
             # The trace shows how a build's host starts, which a second run of the same exe
             # repeats.
-            if ($build.UpdateCheck) { continue }
+            if ($build.UpdateCheck -or $build.Replace) { continue }
             $folder = Get-RunFolder 'trace' $build.Label
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item $build.Exe $folder
@@ -1346,6 +1397,7 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         run: |
+          . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
           $failed = @()
           $builds = @(
             @{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('--version') },
@@ -1357,12 +1409,10 @@ jobs:
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item $build.Exe $folder
             $exe = Join-Path $folder (Split-Path $build.Exe -Leaf)
-            $id = [guid]::NewGuid().ToString('N')
-            $created = $false
-            $started = [System.Threading.EventWaitHandle]::new($false, 'ManualReset', "Local\InstallerClean_Started_$id", [ref]$created)
-            if (-not $created) { throw "An event named for $id exists already." }
+            $signal = New-StartedEvent
+            $started = $signal.Handle
             $clock = [System.Diagnostics.Stopwatch]::StartNew()
-            $p = Start-Process -FilePath $exe -ArgumentList (@($build.Arguments) + "/startedevent:$id") -WorkingDirectory $folder -PassThru
+            $p = Start-Process -FilePath $exe -ArgumentList (@($build.Arguments) + $signal.Argument) -WorkingDirectory $folder -PassThru
             # Read now, so the exit code is kept once the process ends.
             $null = $p.Handle
             $set = $started.WaitOne([TimeSpan]::FromSeconds(60))
@@ -1380,7 +1430,7 @@ jobs:
             $exe = Join-Path $folder (Split-Path $build.Exe -Leaf)
             $id = [guid]::NewGuid().ToString('N')
             $isCli = $build.Label -eq 'command line'
-            $arguments = @(if ($isCli) { '/s' }) + "/startedevent:$id"
+            $arguments = @(if ($isCli) { '/s' }) + "$(Read-SourceString 'src/InstallerClean.Core/Helpers/HandOverContract.cs' 'StartedEventSwitch')$id"
             $output = Join-Path $folder 'no-event-output.txt'
             $errors = Join-Path $folder 'no-event-errors.txt'
             $p = if ($isCli) {
@@ -1420,6 +1470,7 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         run: |
+          . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
           $failed = @()
 
           $hookDir = Join-Path $env:RUNNER_TEMP 'startup-hook'
@@ -1480,15 +1531,13 @@ jobs:
             $exe = Join-Path $folder (Split-Path $build.Exe -Leaf)
             $marker = Join-Path $folder 'hook-ran.txt'
             Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue
-            $id = [guid]::NewGuid().ToString('N')
-            $created = $false
-            $started = [System.Threading.EventWaitHandle]::new($false, 'ManualReset', "Local\InstallerClean_Started_$id", [ref]$created)
-            if (-not $created) { throw "An event named for $id exists already." }
+            $signal = New-StartedEvent
+            $started = $signal.Handle
             $info = [System.Diagnostics.ProcessStartInfo]::new($exe)
             $info.UseShellExecute = $false
             $info.WorkingDirectory = $folder
             if ($exe.EndsWith('installerclean-cli.exe', 'OrdinalIgnoreCase')) { $info.ArgumentList.Add('--version') }
-            $info.ArgumentList.Add("/startedevent:$id")
+            $info.ArgumentList.Add($signal.Argument)
             $info.Environment['DOTNET_STARTUP_HOOKS'] = $hook
             $info.Environment['STARTUP_HOOK_MARKER'] = $marker
             Write-Host "== $($build.Label)"

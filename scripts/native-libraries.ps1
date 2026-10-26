@@ -8,6 +8,9 @@
 # is given, what it must load and the kind of its first act seen. The functions are
 # given the builds and runs they judge, and a run carries its build. $procmon is read
 # from $env:PROCMON, which the step that runs Get-Procmon sets for the steps after it.
+# Two steps that only start a build with a started event dot-source this file itself, for
+# New-StartedEvent. What they call from it throws where it fails rather than calling Fail,
+# since neither reads the failures Fail collects.
 # Source files are read from the repository this file is in, whatever the working
 # directory.
 
@@ -214,15 +217,19 @@ function Get-Libraries($rows, [string]$folder, [string]$exe) {
 # names its module initializer's loads, and its first act seen is in Main. Main and
 # later make the others: the look for the exe's old or new copy beside it, the app's
 # folder under %LOCALAPPDATA% or the NoFaff one earlier versions use, a file under
-# C:\Windows\Installer, and the load of msi.dll. Each build names the kind it shows
-# first, and the first pass fails where it shows another.
+# C:\Windows\Installer, and the load of msi.dll. A build started in replace mode makes
+# one more, the replaced copy: its first row on the exe it puts itself at, or a name a
+# replace leaves beside that exe. Each build names the kind it shows first, and the
+# first pass fails where it shows another.
 function Get-Marker($rows, $run) {
   $first = @(Read-SourceList $run.Build.Source 'ImportingAssemblies')[0]
   $exe = $run.Folder.TrimEnd('\') + '\' + $run.Exe
+  $replaced = if ($run.PSObject.Properties['Target'] -and $run.Target) { @($run.Target) + @(Get-ReplaceSuffixes | ForEach-Object { "$($run.Target)$_" }) } else { @() }
   $initializer = $null
   for ($i = 0; $i -lt $rows.Count; $i++) {
     $row = $rows[$i]
-    $kind = if ($row.Path -eq "$exe.old" -or $row.Path -eq "$exe.new") { 'old copy' }
+    $kind = if ($replaced -contains $row.Path) { 'replaced copy' }
+      elseif ($row.Path -eq "$exe.old" -or $row.Path -eq "$exe.new") { 'old copy' }
       elseif ($row.Path -match '\\AppData\\Local\\((NoFaff\\)?InstallerClean(\\|$)|NoFaff$)') { 'app folder' }
       elseif ($row.Path -match '^C:\\Windows\\Installer(\\|$)') { 'Installer folder' }
       elseif ($row.Operation -eq 'Load Image' -and (Split-Path $row.Path -Leaf) -eq 'msi.dll') { 'msi.dll' }
@@ -315,10 +322,8 @@ function Test-MustLoad($run, $loads) {
 # the Application log, or a 3005 or 3006 where an update ended the run, so a run
 # with no entry there, or a log that cannot be read, fails rather than reading as
 # one that found nothing newer. Only the entries written while the run was going are
-# judged, so a run of the same exe before or after it cannot answer for it.
-# Get-WinEvent takes its StartTime and EndTime to the whole second, so it is asked
-# from the run's start, which only widens the read, and the entries are then kept by
-# the time each was written.
+# judged, so a run of the same exe before or after it cannot answer for it
+# (Read-ApplicationLog).
 function Test-UpdateCheck($run, $byProcess) {
   $github = @(@($script:GitHubAddressesByRun[[string]$run.Id]) + @(Get-GitHubAddresses) | Where-Object { $_ } | Sort-Object -Unique)
   $answers = @($byProcess[[string]$run.Id] | Where-Object {
@@ -332,19 +337,10 @@ function Test-UpdateCheck($run, $byProcess) {
       "github.com resolved to $(if ($github) { $github -join ', ' } else { 'nothing' }) around the run; " +
       "the run received from $(if ($seen) { $seen -join ', ' } else { 'nowhere' }).")
   }
-  try {
-    $logged = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; StartTime = $run.Started } -ErrorAction SilentlyContinue -ErrorVariable readErrors)
-  }
-  catch {
-    Fail "$($run.Label): the Application log could not be read, so whether it updated itself was not judged: $($_.Exception.Message)"
-    return
-  }
-  $entries = @($logged | Where-Object { $_.TimeCreated -ge $run.Started -and $_.TimeCreated -le $run.Ended })
-  # No entry matching, and a source that was never registered or writes to another
-  # log, each come back as an error that means the run wrote nothing here.
-  $noEntry = 'NoMatchingEventsFound', 'NoMatchingProvidersFound', 'LogsAndProvidersDontOverlap'
-  $unread = @($readErrors | Where-Object { ($_.FullyQualifiedErrorId -split ',')[0] -notin $noEntry })
-  foreach ($readError in $unread) { Fail "$($run.Label): the Application log could not be read in full, so whether it updated itself may not have been judged: $($readError.Exception.Message)" }
+  $read = Read-ApplicationLog $run.Started $run.Ended
+  $entries = @($read.Entries)
+  $unread = @($read.Unread)
+  foreach ($message in $unread) { Fail "$($run.Label): the Application log could not be read, or not in full, so whether it updated itself may not have been judged: $message" }
   if (-not $entries -and -not $unread) { Fail "$($run.Label) wrote no entry to the Application log, so whether it updated itself was not judged." }
   foreach ($entry in $entries) { "  $($run.Label): Event ID $($entry.Id) at $($entry.TimeCreated)" }
   foreach ($entry in @($entries | Where-Object Id -in 3005, 3006)) {
@@ -362,8 +358,7 @@ function Get-OwnLibraries {
 # The strings in the array a source file initialises under $name. The step stops
 # where the file has no such array, unless $optional, or where it reads as empty.
 function Read-SourceList([string]$path, [string]$name, [switch]$optional) {
-  $source = Get-Content -Raw (Join-Path $repository $path)
-  if ($source -notmatch "(?s)\b$name\s*=\s*\[(.*?)\];") {
+  if ((Get-SourceText $path) -notmatch "(?s)\b$name\s*=\s*\[(.*?)\];") {
     if ($optional) { return @() }
     throw "$path has no $name list to read."
   }
@@ -537,31 +532,32 @@ function Get-Procmon([string]$folder) {
 function Get-NotPlanted {
   $cli = 'publish/cli/installerclean-cli.exe'
   $portable = 'publish/self-contained/InstallerClean.exe'
-  $bothCli = @('command line', 'command line, checking for updates')
+  $everyCli = @('command line', 'command line, checking for updates', 'command line, putting itself in place', 'command line, with nothing left at the path')
+  $allPortable = @('portable', 'portable, putting itself in place', 'portable, with nothing left at the path')
   @(
     # CoreLib imports called during the runtime's start-up in coreclr_initialize:
     # advapi32's EventRegister for EventSource's provider, and a kernel32 import.
-    [pscustomobject]@{ Exe = $cli; Runs = $bothCli; Places = @('beside'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'before'; Names = @('advapi32.dll', 'kernel32.dll') }
+    [pscustomobject]@{ Exe = $cli; Runs = $everyCli; Places = @('beside'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'before'; Names = @('advapi32.dll', 'kernel32.dll') }
     # CoreLib's ntdll and bcrypt imports: NtQuerySystemInformation for the leap-second
     # setting on the first DateTime read, and BCryptGenRandom, which seeds the random
     # numbers the thread pool uses.
-    [pscustomobject]@{ Exe = $cli; Runs = $bothCli; Places = @('beside'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'after'; Names = @('ntdll.dll', 'BCrypt.dll') }
+    [pscustomobject]@{ Exe = $cli; Runs = $everyCli; Places = @('beside'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'after'; Names = @('ntdll.dll', 'BCrypt.dll') }
     # CoreLib's user32 LoadString, which TimeZoneInfo calls for the local time zone's names
     # when the first local DateTime is converted: the update check's TLS handshake does so
     # while X509ChainPal builds the certificate chain (FILETIME.FromDateTime), and its
     # calloc under NativeMemory, which System.Net's DNS query allocates with.
-    [pscustomobject]@{ Exe = $cli; Runs = @('command line, checking for updates'); Places = @('beside'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'after'; Names = @('user32.dll', 'ucrtbase.dll') }
+    [pscustomobject]@{ Exe = $cli; Runs = @('command line, checking for updates', 'command line, with nothing left at the path'); Places = @('beside'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'after'; Names = @('user32.dll', 'ucrtbase.dll') }
     # The runtime's start-up, as the command line's.
-    [pscustomobject]@{ Exe = $portable; Runs = @('portable'); Places = @('beside', 'extraction'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'before'; Names = @('advapi32.dll', 'kernel32.dll') }
+    [pscustomobject]@{ Exe = $portable; Runs = $allPortable; Places = @('beside', 'extraction'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'before'; Names = @('advapi32.dll', 'kernel32.dll') }
     # CoreLib imports called during WPF's start-up: a bcrypt, an ole32 and a user32
     # import, and RtlGetVersion for Environment.OSVersion from WPF's event tracing;
     # calloc for System.Net's DNS query in the window's update check; and an oleaut32
     # import once the window's text services have started.
-    [pscustomobject]@{ Exe = $portable; Runs = @('portable'); Places = @('beside', 'extraction'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'after'; Names = @('BCrypt.dll', 'ole32.dll', 'ntdll.dll', 'user32.dll', 'ucrtbase.dll', 'oleaut32.dll') }
+    [pscustomobject]@{ Exe = $portable; Runs = $allPortable; Places = @('beside', 'extraction'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'after'; Names = @('BCrypt.dll', 'ole32.dll', 'ntdll.dll', 'user32.dll', 'ucrtbase.dll', 'oleaut32.dll') }
     # PresentationCore's module initializer, which loads DirectWrite with
     # NativeLibrary.Load and DllImportSearchPath.System32. That call asks no resolver
     # and searches the folder the bundle extracts to before System32.
-    [pscustomobject]@{ Exe = $portable; Runs = @('portable'); Places = @('extraction'); Assembly = 'PresentationCore'; Call = 'NativeLibrary.Load'; When = 'before'; Names = @('dwrite.dll') }
+    [pscustomobject]@{ Exe = $portable; Runs = $allPortable; Places = @('extraction'); Assembly = 'PresentationCore'; Call = 'NativeLibrary.Load'; When = 'before'; Names = @('dwrite.dll') }
   )
 }
 
@@ -1074,4 +1070,426 @@ function Test-ShortNameControls {
   if ($names -ne 'winspool.drv') { Fail "The control on short names planted '$names', where it should plant winspool.drv, looked for under $short." }
   else { Write-Host "  planted for the look under ${short}: $names" }
   Assert-Caught $result.Caught @("Process Monitor recorded $missing, which could not be written in full") 'short names'
+}
+
+# ---- Replace mode ----
+#
+# A newer version an update downloads is started from a staging folder to put itself at
+# the old copy's path once that copy has ended (ExeReplacement). Each build is started
+# that way too: from a folder made as UpdateStagingFolder makes one, straight under
+# %ProgramData%, under the name AppCopy.DownloadFileName gives its download, with the three
+# switches HandOverContract reads, against a stand-in old copy, a copy of Windows
+# PowerShell named as the build's exe and started from the path, so the replace finds
+# the process runs from there. The stand-in sleeps until the build sets the started
+# event and is then ended, as an old copy closes once it is told. A run with nothing
+# left at the path renames the stand-in's exe aside before ending it.
+#
+# A window's start clears the staging folders it finds of their InstallerClean-*.exe files
+# and removes those left empty (UpdateStagingFolder.RemoveLeftovers), so a window started
+# later in a pass can take an earlier run's staged exe. The files planted beside it stay,
+# and they are what is judged.
+
+# The source file $path, read once a step: each step runs this file in a process of its own.
+$script:SourceTexts = @{}
+function Get-SourceText([string]$path) {
+  if (-not $script:SourceTexts.ContainsKey($path)) { $script:SourceTexts[$path] = Get-Content -Raw (Join-Path $repository $path) }
+  $script:SourceTexts[$path]
+}
+
+# A string constant $name in the source file $path, read as written, once a step.
+$script:SourceStrings = @{}
+function Read-SourceString([string]$path, [string]$name) {
+  Read-SourceMatch $path "\b$name\s*=\s*@?""([^""]*)"";" "$path has no string $name to read."
+}
+
+# A new started event, named as HandOverContract names one, and the argument that hands it
+# to a build: Handle and Argument.
+function New-StartedEvent {
+  $id = [guid]::NewGuid().ToString('N')
+  $created = $false
+  $handle = [System.Threading.EventWaitHandle]::new($false, 'ManualReset', "$(Get-StartedEventPrefix)$id", [ref]$created)
+  if (-not $created) { $handle.Dispose(); throw "An event named for $id exists already." }
+  [pscustomobject]@{ Handle = $handle; Argument = "$(Read-SourceString 'src/InstallerClean.Core/Helpers/HandOverContract.cs' 'StartedEventSwitch')$id" }
+}
+
+# The first group $pattern matches in the source file $path, read once a step; where it
+# matches nothing, the step stops with $missing.
+function Read-SourceMatch([string]$path, [string]$pattern, [string]$missing) {
+  $key = "$path|$pattern"
+  if (-not $script:SourceStrings.ContainsKey($key)) {
+    if ((Get-SourceText $path) -notmatch $pattern) { throw $missing }
+    $script:SourceStrings[$key] = $Matches[1]
+  }
+  $script:SourceStrings[$key]
+}
+
+# What HandOverContract names a started event with, before its id.
+function Get-StartedEventPrefix {
+  Read-SourceMatch 'src/InstallerClean.Core/Helpers/HandOverContract.cs' 'StartedEventName\(Guid id\)\s*=>\s*@?"([^"]+)"\s*\+' "HandOverContract.cs names no started event to read."
+}
+
+# The Application-log event ID CliContract gives the notice that an update was not
+# installed because nothing was left at the path.
+function Get-NothingAtPathEventId {
+  [int](Read-SourceMatch 'src/InstallerClean.Core/Helpers/CliContract.cs' 'CliEventClass\.UpdateNotInstalledNotice\s*=>\s*(\d+)' "CliContract.cs gives UpdateNotInstalledNotice no event ID to read.")
+}
+
+# Creates the folder $path with the descriptor $sddl in the one call, as
+# UpdateStagingFolder does.
+function New-FolderWithDescriptor([string]$path, [string]$sddl) {
+  $security = [System.Security.AccessControl.DirectorySecurity]::new()
+  $security.SetSecurityDescriptorSddlForm($sddl)
+  [System.IO.FileSystemAclExtensions]::Create([System.IO.DirectoryInfo]::new($path), $security)
+}
+
+# A new staging folder, named and made as UpdateStagingFolder makes one, straight under
+# %ProgramData%.
+function New-StagingFolder {
+  $sddl = Read-SourceString 'src/InstallerClean.Core/Services/UpdateStagingFolder.cs' 'AdministratorsOnly'
+  $prefix = Read-SourceString 'src/InstallerClean.Core/Services/UpdateStagingFolder.cs' 'NamePrefix'
+  $path = Join-Path $env:ProgramData ($prefix + [guid]::NewGuid().ToString('N'))
+  $null = New-FolderWithDescriptor $path $sddl
+  $path
+}
+
+# The name AppCopy.DownloadFileName gives the download of the build $label names, which is
+# the name a newer version runs under from its staging folder.
+function Get-StagedName([string]$label) {
+  $source = Get-SourceText 'src/InstallerClean.Core/Services/AppCopy.cs'
+  $kind = switch ($label) { 'command line' { 'CommandLineDownload' } 'portable' { 'Portable' } 'slim' { 'Slim' } default { throw "No download is named for the build $label." } }
+  if ($source -notmatch "AppCopyKind\.$kind\s*=>\s*(""([^""]+)""|(\w+))\s*,") { throw "AppCopy.cs names no download for $kind." }
+  if ($Matches[2]) { return $Matches[2] }
+  Read-SourceString 'src/InstallerClean.Core/Services/AppCopy.cs' $Matches[3]
+}
+
+# A folder's or file's access list as SDDL, without its owner or group.
+function Get-AccessSddl([string]$path) { (Get-Acl -LiteralPath $path).GetSecurityDescriptorSddlForm('Access') }
+
+# The names a replace leaves beside the exe while it runs (ExeReplacement).
+function Get-ReplaceSuffixes {
+  $file = 'src/InstallerClean.Core/Services/ExeReplacement.cs'
+  @('ReplacingSuffix', 'BackupSuffix', 'LockSuffix' | ForEach-Object { Read-SourceString $file $_ })
+}
+
+# The Application-log entries from InstallerClean's source (EventLogWriter.SourceName)
+# written from $since to $until, those with the event ID $id alone where one is given, and
+# why the log could not be read where it could not. Get-WinEvent takes its StartTime to the
+# whole second, so the entries are then kept by the time each was written, and a run just
+# before cannot answer for this one.
+function Read-ApplicationLog([datetime]$since, [datetime]$until, $id = $null) {
+  $filter = @{ LogName = 'Application'; ProviderName = (Read-SourceString 'src/InstallerClean.Core/Helpers/EventLogWriter.cs' 'SourceName'); StartTime = $since }
+  if ($null -ne $id) { $filter.Id = $id }
+  # No entry matching, and a source never registered or writing to another log, each
+  # come back as an error that means nothing was written here.
+  $noEntry = 'NoMatchingEventsFound', 'NoMatchingProvidersFound', 'LogsAndProvidersDontOverlap'
+  $readErrors = $null
+  try { $logged = @(Get-WinEvent -FilterHashtable $filter -ErrorAction SilentlyContinue -ErrorVariable readErrors) }
+  catch { return [pscustomobject]@{ Entries = @(); Unread = @($_.Exception.Message) } }
+  [pscustomobject]@{
+    Entries = @($logged | Where-Object { $_.TimeCreated -ge $since -and $_.TimeCreated -le $until })
+    Unread = @($readErrors | Where-Object { ($_.FullyQualifiedErrorId -split ',')[0] -notin $noEntry } | ForEach-Object { $_.Exception.Message })
+  }
+}
+
+# The nothing-at-path entries written from $since to five seconds after $until, read once
+# those five seconds have passed, so an entry written as the run ends, and a second one,
+# are each counted, whether one is expected or not.
+function Read-NothingAtPathEntries([datetime]$since, [datetime]$until) {
+  $last = $until.AddSeconds(5)
+  $wait = $last - (Get-Date)
+  if ($wait -gt [TimeSpan]::Zero) { Start-Sleep -Milliseconds ([int][math]::Ceiling($wait.TotalMilliseconds)) }
+  Read-ApplicationLog $since $last (Get-NothingAtPathEventId)
+}
+
+# Judges how a replace run ended, from $end: the run's label and mode ('replaced' or
+# 'nothing'), the build's exe, the target path, the target and staging folders, whether
+# the started event was set, the replacer's exit code, whether a process is still
+# running from the target path or the staging folder, the times it began and ended, and
+# $readEntries, which takes those two times and answers the nothing-at-path entries
+# written around the run (Entries) and why the log could not be read where it could not
+# (Unread). Fails where: the Application log could not be read; the event was not set;
+# the exit code is not 0 for a replace and 1 for nothing at the path; the file at the path
+# is not the build's exe, or is there at all where nothing was left at the path; a name a
+# replace leaves beside the exe is there, or the target folder holds anything but the
+# exe, the control file and the stand-in's exe set aside; for a replace, the staging and
+# target folders' access lists are the same, so the next check could not tell them
+# apart, or the exe's is not the control file's; the entry saying the update was not
+# installed is missing, more than one, or without the releases page where nothing was
+# left, or there at all after a replace; or a process is still running.
+function Test-ReplaceEnd($end) {
+  $label = $end.Label
+  if (-not $end.EventSet) { Fail "$label did not set the started event within 60 s." }
+  $expected = if ($end.Mode -eq 'replaced') { 0 } else { 1 }
+  if ($end.ExitCode -ne $expected) { Fail "$label ended with exit code $($end.ExitCode), where it should end with $expected." }
+  if ($end.Mode -eq 'replaced') {
+    if (-not (Test-Path -LiteralPath $end.Target)) { Fail "$label left nothing at $($end.Target)." }
+    elseif ((Get-FileHash -Algorithm SHA256 -LiteralPath $end.Target).Hash -ne (Get-FileHash -Algorithm SHA256 -LiteralPath $end.BuildExe).Hash) {
+      Fail "$label left a file at $($end.Target) that is not the build's exe."
+    }
+  }
+  elseif (Test-Path -LiteralPath $end.Target) { Fail "$label, with nothing left at the path, has a file at $($end.Target)." }
+  $suffixes = @(Get-ReplaceSuffixes)
+  foreach ($suffix in $suffixes) {
+    if (Test-Path -LiteralPath "$($end.Target)$suffix") { Fail "$label left $($end.Target)$suffix beside the exe." }
+  }
+  # The names a replace leaves are judged above, so each fault is named once.
+  $exeName = Split-Path $end.Target -Leaf
+  $allowed = @($exeName, 'control.txt', "$exeName.aside") + @($suffixes | ForEach-Object { "$exeName$_" })
+  foreach ($stray in @(Get-ChildItem -LiteralPath $end.TargetFolder -Force | Where-Object Name -notin $allowed)) {
+    Fail "$label left $($stray.FullName) in the folder it was put in."
+  }
+  if ($end.Mode -eq 'replaced' -and (Test-Path -LiteralPath $end.Target)) {
+    $staging = Get-AccessSddl $end.Staging
+    $folder = Get-AccessSddl $end.TargetFolder
+    Write-Host "  staging folder's access list: $staging"
+    Write-Host "  target folder's access list: $folder"
+    if ($staging -eq $folder) { Fail "$label's staging and target folders have the same access list, so where the exe's came from could not be told." }
+    else {
+      $exe = Get-AccessSddl $end.Target
+      $control = Get-AccessSddl (Join-Path $end.TargetFolder 'control.txt')
+      if ($exe -ne $control) { Fail "$label left the exe at the path with the access list $exe, where a file made in that folder has $control." }
+      else { Write-Host "  the exe at the path carries the folder's inherited access list: $exe" }
+    }
+  }
+  $read = & $end.ReadEntries $end.Started $end.Ended
+  $entries = @($read.Entries)
+  $releases = Read-SourceString 'src/InstallerClean.Core/Services/UpdateCheckService.cs' 'ReleasesPageUrl'
+  if (@($read.Unread)) {
+    foreach ($message in @($read.Unread)) { Fail "$label`: the Application log could not be read, so what it wrote there was not judged: $message" }
+  }
+  elseif ($end.Mode -eq 'nothing') {
+    if ($entries.Count -ne 1) { Fail "$label, with nothing left at the path, wrote $($entries.Count) entries saying the update was not installed, where it should write one." }
+    elseif (-not $entries[0].Message.Contains($releases)) { Fail "$label's entry saying the update was not installed does not name $releases`: $($entries[0].Message)" }
+    else { Write-Host "  wrote entry $($entries[0].Id): $($entries[0].Message)" }
+  }
+  elseif ($entries.Count) { Fail "$label put the exe in place and wrote $($entries.Count) entries saying the update was not installed." }
+  if ($end.StillRunning) { Fail "$label left a process running from $($end.StillRunning)." }
+}
+
+# Starts $build in replace mode from a new staging folder holding $plants, for the pass
+# $pass, and answers the replacer's run and, with -JudgeCopy, for a window build that put
+# itself in place, the run of the copy it started at the path. With -JudgeCopy that copy
+# runs for the build's own Wait before it is ended; without it, it is ended at once.
+# Each run's end is judged by Test-ReplaceEnd once every process has ended, except
+# with -LoadAlone, for a run with a library the apphost reads planted alone, which can
+# stop the build starting and is judged on what it loads.
+function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]$LoadAlone, [switch]$JudgeCopy) {
+  $staging = New-StagingFolder
+  $exeName = Split-Path $build.Exe -Leaf
+  $stagedName = Get-StagedName $build.AtPath.Label
+  Copy-Item $build.Exe (Join-Path $staging $stagedName)
+  $placed = @(Add-Plants $staging $plants)
+  $targetFolder = Get-RunFolder $pass "$label target"
+  if (Test-Path -LiteralPath $targetFolder) { Remove-Item -LiteralPath $targetFolder -Recurse -Force }
+  New-Item -ItemType Directory -Force -Path $targetFolder | Out-Null
+  $target = Join-Path $targetFolder $exeName
+  Copy-Item (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') $target
+  Set-Content -LiteralPath (Join-Path $targetFolder 'control.txt') -Value 'A file made in the target folder, for its access list.'
+
+  $standIn = Start-Process -FilePath $target -ArgumentList '-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 600' -WindowStyle Hidden -PassThru
+  $null = $standIn.Handle
+  $signal = New-StartedEvent
+  $event = $signal.Handle
+  $contract = 'src/InstallerClean.Core/Helpers/HandOverContract.cs'
+  $arguments = @(
+    "`"$(Read-SourceString $contract 'ReplaceCopySwitch')$target`"",
+    "$(Read-SourceString $contract 'AfterProcessSwitch')$($standIn.Id)",
+    $signal.Argument)
+  $begun = Get-Date
+  $replacer = Start-Process -FilePath (Join-Path $staging $stagedName) -ArgumentList $arguments -WorkingDirectory $staging -PassThru
+  $null = $replacer.Handle
+  $eventSet = $event.WaitOne([TimeSpan]::FromSeconds(60))
+  $event.Dispose()
+  if ($build.Replace -eq 'nothing') { Rename-Item -LiteralPath $target -NewName "$exeName.aside" }
+  Stop-Process -Id $standIn.Id -Force -ErrorAction SilentlyContinue
+  $standIn.WaitForExit()
+  if (-not $replacer.WaitForExit($build.Wait * 1000)) {
+    if (-not $LoadAlone) { Fail "$label was still running $($build.Wait) s after it was started." }
+    Stop-Process -Id $replacer.Id -Force -ErrorAction SilentlyContinue
+    $replacer.WaitForExit()
+  }
+  $ended = Get-Date
+  Write-Host "  ${label}: process $($replacer.Id), ended with $($replacer.ExitCode)"
+
+  $runs = @([pscustomobject]@{
+    Label = $label; Build = $build; Folder = $staging; Exe = $stagedName; Id = $replacer.Id; Started = $begun; Ended = $ended
+    Placed = $placed; Target = $target
+  })
+  $copies = @(Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exeName)) -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $target })
+  if ($build.Replace -eq 'replaced' -and $build.StartsAtPath) {
+    if ($copies.Count -ne 1) { Fail "$label put itself in place and $($copies.Count) copies were running from $target, where it starts one." }
+    if ($JudgeCopy -and $copies) {
+      # The copy gets as far as the build's own start does before it is judged as one.
+      Start-Sleep -Seconds $build.AtPath.Wait
+      foreach ($copy in $copies) {
+        Write-Host "  ${label}: the copy started at the path is process $($copy.Id)"
+        $runs += [pscustomobject]@{
+          Label = "$label, the copy started at the path"; Build = $build.AtPath; Folder = $targetFolder; Exe = $exeName; Id = $copy.Id
+          Started = $begun; Ended = $null; StartedCopy = $true
+        }
+      }
+    }
+  }
+  # The replacer ends only once the copy it started has set its started event, so a copy
+  # ended here has taken the mutex, read its settings and built its view model.
+  foreach ($copy in $copies) { Stop-Process -Id $copy.Id -Force -ErrorAction SilentlyContinue; $copy.WaitForExit() }
+  $copiesEnded = Get-Date
+  foreach ($run in @($runs | Where-Object StartedCopy)) { $run.Ended = $copiesEnded }
+  if (Test-Path -LiteralPath "$target.aside") { Remove-Item -LiteralPath "$target.aside" -Force -ErrorAction SilentlyContinue }
+
+  $left = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and ($_.Path -eq $target -or $_.Path.StartsWith("$staging\", 'OrdinalIgnoreCase')) })
+  foreach ($process in $left) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
+  if ($LoadAlone) {
+    Write-Host "  ${label}: judged on what it loads, its end not judged; the started event was $(if ($eventSet) { 'set' } else { 'not set' })"
+    return $runs
+  }
+  Test-ReplaceEnd ([pscustomobject]@{
+    Label = $label; Mode = $build.Replace; BuildExe = $build.Exe; Target = $target; TargetFolder = $targetFolder; Staging = $staging
+    EventSet = $eventSet; ExitCode = $replacer.ExitCode; Started = $begun; Ended = $ended; ReadEntries = ${function:Read-NothingAtPathEntries}
+    StillRunning = $(if ($left) { $left[0].Path })
+  })
+  $runs
+}
+
+# Runs Test-ReplaceEnd over ends made up for the purpose, each with a fault planted, and
+# one with none, and fails the step unless each fails exactly where it must. Also runs
+# Get-Marker over rows made up for a replace and fails unless it answers the replaced
+# copy at the first row on the target.
+function Test-ReplaceControls {
+  Write-Host "== Control: the checks on how a replace ended"
+  $root = Join-Path ([IO.Path]::GetTempPath()) ('replace-controls-' + [guid]::NewGuid().ToString('N'))
+  try {
+    New-Item -ItemType Directory -Force -Path $root | Out-Null
+    $build = Join-Path $root 'build.exe'
+    Set-Content -LiteralPath $build -Value 'the build'
+    $sddl = Read-SourceString 'src/InstallerClean.Core/Services/UpdateStagingFolder.cs' 'AdministratorsOnly'
+    $staging = Join-Path $root 'staging'
+    $null = New-FolderWithDescriptor $staging $sddl
+    $releases = Read-SourceString 'src/InstallerClean.Core/Services/UpdateCheckService.cs' 'ReleasesPageUrl'
+    $id = Get-NothingAtPathEventId
+    $none = { param($since, $until) [pscustomobject]@{ Entries = @(); Unread = @() } }
+    $two = { param($since, $until) [pscustomobject]@{ Entries = @([pscustomobject]@{ Id = $id; Message = 'one' }, [pscustomobject]@{ Id = $id; Message = 'two' }); Unread = @() } }
+    $unreadable = { param($since, $until) [pscustomobject]@{ Entries = @(); Unread = @('the control cannot read it') } }
+
+    function New-Target([string]$name, [string]$content) {
+      $folder = Join-Path $root $name
+      New-Item -ItemType Directory -Force -Path $folder | Out-Null
+      Set-Content -LiteralPath (Join-Path $folder 'control.txt') -Value 'control'
+      if ($content) { Set-Content -LiteralPath (Join-Path $folder 'InstallerClean.exe') -Value $content }
+      $folder
+    }
+    function New-End($folder, $mode, $read, [string]$stagingFolder = $staging) {
+      [pscustomobject]@{
+        Label = "control $(Split-Path $folder -Leaf)"; Mode = $mode; BuildExe = $build; Target = (Join-Path $folder 'InstallerClean.exe'); TargetFolder = $folder
+        Staging = $stagingFolder; EventSet = $true; ExitCode = $(if ($mode -eq 'replaced') { 0 } else { 1 }); Started = (Get-Date); Ended = (Get-Date); ReadEntries = $read; StillRunning = $null
+      }
+    }
+
+    $good = New-End (New-Target 'good' 'the build') 'replaced' $none
+    $goodNothing = New-End (New-Target 'good-nothing' $null) 'nothing' { param($since, $until) [pscustomobject]@{ Entries = @([pscustomobject]@{ Id = $id; Message = "downloaded again from $releases." }); Unread = @() } }
+
+    $faulted = New-End (New-Target 'faulted' 'another build') 'replaced' $two
+    $faulted.EventSet = $false
+    $faulted.ExitCode = 1
+    $faulted.StillRunning = 'C:\Control\InstallerClean.exe'
+    $suffixes = @(Get-ReplaceSuffixes)
+    Set-Content -LiteralPath "$($faulted.Target)$($suffixes[1])" -Value 'left'
+    Set-Content -LiteralPath (Join-Path $faulted.TargetFolder 'stray.txt') -Value 'left'
+
+    $sameAcl = New-End (New-Target 'same-acl' 'the build') 'replaced' $none -stagingFolder (Join-Path $root 'same-acl')
+
+    $ownAcl = New-End (New-Target 'own-acl' 'the build') 'replaced' $none
+    $acl = Get-Acl -LiteralPath $ownAcl.Target
+    # A list of its own that the runner's account can still read, so the hash is read
+    # and only the list differs.
+    $acl.SetAccessRuleProtection($true, $false)
+    $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new([System.Security.Principal.SecurityIdentifier]::new('S-1-5-18'), 'FullControl', 'Allow'))
+    $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new([System.Security.Principal.WindowsIdentity]::GetCurrent().User, 'FullControl', 'Allow'))
+    Set-Acl -LiteralPath $ownAcl.Target -AclObject $acl
+
+    $nothingLeft = New-End (New-Target 'nothing-left' 'something') 'nothing' { param($since, $until) [pscustomobject]@{ Entries = @([pscustomobject]@{ Id = $id; Message = 'no link' }); Unread = @() } }
+    $nothingLeft.ExitCode = 0
+
+    $unread = New-End (New-Target 'unread' 'the build') 'replaced' $unreadable
+
+    $nothingNone = New-End (New-Target 'nothing-none' $null) 'nothing' $none
+    $nothingTwo = New-End (New-Target 'nothing-two' $null) 'nothing' { param($since, $until) [pscustomobject]@{ Entries = @(1, 2 | ForEach-Object { [pscustomobject]@{ Id = $id; Message = "downloaded again from $releases." } }); Unread = @() } }
+
+    $result = Invoke-Caught { foreach ($end in $good, $goodNothing, $faulted, $sameAcl, $ownAcl, $nothingLeft, $unread, $nothingNone, $nothingTwo) { Test-ReplaceEnd $end } }
+  }
+  finally { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue }
+  Assert-Caught $result.Caught @(
+    'control faulted did not set the started event',
+    'control faulted ended with exit code 1, where it should end with 0',
+    'control faulted left a file at',
+    "control faulted left $($faulted.Target)$($suffixes[1]) beside the exe",
+    'stray.txt in the folder it was put in',
+    'control faulted put the exe in place and wrote 2 entries',
+    'control faulted left a process running from C:\Control\InstallerClean.exe',
+    "control same-acl's staging and target folders have the same access list",
+    'control own-acl left the exe at the path with the access list',
+    'control nothing-left ended with exit code 0, where it should end with 1',
+    'control nothing-left, with nothing left at the path, has a file at',
+    "control nothing-left's entry saying the update was not installed does not name",
+    'control unread: the Application log could not be read, so what it wrote there was not judged: the control cannot read it',
+    'control nothing-none, with nothing left at the path, wrote 0 entries',
+    'control nothing-two, with nothing left at the path, wrote 2 entries') 'how a replace ended'
+
+  Write-Host "== Control: the first act of a replace's own code"
+  $target = 'C:\Control\target\InstallerClean.exe'
+  $run = [pscustomobject]@{ Label = 'replace control'; Build = [pscustomobject]@{ Source = 'src/InstallerClean/LibrarySearch.cs' }; Folder = 'C:\Control\staging'; Exe = 'InstallerClean.exe'; Target = $target }
+  $rows = @(
+    [pscustomobject]@{ Operation = 'CreateFile'; Path = 'C:\Control\staging\InstallerClean.exe'; Detail = '' },
+    [pscustomobject]@{ Operation = 'QueryOpen'; Path = 'C:\Control\target\other.txt'; Detail = '' },
+    [pscustomobject]@{ Operation = 'QueryBasicInformationFile'; Path = $target; Detail = '' },
+    [pscustomobject]@{ Operation = 'CreateFile'; Path = "$target$((Get-ReplaceSuffixes)[2])"; Detail = '' })
+  $marker = Get-Marker $rows $run
+  if (-not $marker -or $marker.First.Kind -ne 'replaced copy' -or $marker.First.Index -ne 3) {
+    Fail "The control on a replace's first act answered $(if ($marker) { "the $($marker.First.Kind) at row $($marker.First.Index)" } else { 'nothing' }), where it should answer the replaced copy at row 3."
+  }
+  else { Write-Host "  answered the replaced copy at row 3, as it must" }
+  $run.Target = $null
+  $marker = Get-Marker $rows $run
+  if ($marker -and $marker.First.Kind -eq 'replaced copy') { Fail "The control on a replace's first act answered the replaced copy for a run with no target." }
+  else { Write-Host "  answered no replaced copy for a run with no target, as it must" }
+}
+
+# Fails unless the run, a start of the slim, loaded each assembly on
+# ImportingAssembliesWhereInstalled before the first act seen of its code in Main or
+# later: the slim runs on the installed desktop runtime, which lists these as trusted
+# platform assemblies, and its module initializer loads each before its Main.
+function Test-WhereInstalledLoads($run, $read) {
+  $label = $run.Label
+  if (-not $read.MainMarker) { Fail "$label showed no act of its code in Main or later, so whether it loads these before its Main was not judged." }
+  foreach ($name in @(Get-WhereInstalled)) {
+    $load = @($read.Loads | Where-Object Name -eq "$name.dll".ToLowerInvariant()) | Select-Object -First 1
+    if (-not $load) { Fail "$label never loaded $name.dll, which it loads before its Main where the installed runtime carries it." }
+    elseif (-not $read.MainMarker) { Write-Host "  loaded $name.dll at row $($load.Index): $($load.Path)" }
+    elseif ($load.Index -gt $read.MainMarker.Index) { Fail "$label loaded $name.dll at row $($load.Index), not before the first act seen of its code in Main or later, where it loads it before its Main." }
+    else { Write-Host "  loaded $name.dll at row $($load.Index), before row $($read.MainMarker.Index), the $($read.MainMarker.Kind): $($load.Path)" }
+  }
+}
+
+# Runs Test-WhereInstalledLoads over reads made up for the purpose: one loading every
+# assembly on the list before its first act in Main, which must pass; one leaving the first
+# unloaded and loading the second after that act; and one with no act in Main seen, each of
+# which must fail where it should.
+function Test-WhereInstalledControls {
+  Write-Host "== Control: the slim's loads before its Main"
+  $names = @(Get-WhereInstalled)
+  if ($names.Count -lt 2) { Fail "The control on the slim's loads needs two assemblies on ImportingAssembliesWhereInstalled, and the list holds $($names.Count)."; return }
+  $main = [pscustomobject]@{ Index = 10; Kind = 'replaced copy' }
+  function New-Load([string]$name, [int]$index) { [pscustomobject]@{ Name = "$name.dll".ToLowerInvariant(); Index = $index; Path = "C:\Control\$name.dll" } }
+  $all = [pscustomobject]@{ Loads = @($names | ForEach-Object { New-Load $_ 5 }); MainMarker = $main }
+  $late = [pscustomobject]@{ Loads = @(New-Load $names[1] 12) + @($names | Select-Object -Skip 2 | ForEach-Object { New-Load $_ 5 }); MainMarker = $main }
+  $unseen = [pscustomobject]@{ Loads = @($names | ForEach-Object { New-Load $_ 5 }); MainMarker = $null }
+  $result = Invoke-Caught {
+    Test-WhereInstalledLoads ([pscustomobject]@{ Label = 'control all' }) $all
+    Test-WhereInstalledLoads ([pscustomobject]@{ Label = 'control late' }) $late
+    Test-WhereInstalledLoads ([pscustomobject]@{ Label = 'control unseen' }) $unseen
+  }
+  Assert-Caught $result.Caught @(
+    "control late never loaded $($names[0]).dll",
+    "control late loaded $($names[1]).dll at row 12, not before",
+    'control unseen showed no act of its code in Main or later') "the slim's loads before its Main"
 }
