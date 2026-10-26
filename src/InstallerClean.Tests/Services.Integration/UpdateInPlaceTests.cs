@@ -872,7 +872,7 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
-    public async Task The_portable_route_downloads_writes_the_newer_version_beside_the_exe_and_leaves_no_staging_folder()
+    public async Task The_portable_route_keeps_the_download_in_its_staging_folder_to_put_at_the_exe_path()
     {
         var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
         var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
@@ -884,30 +884,26 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
-        Assert.Equal(exe, prepared.FileToStart);
+        Assert.Equal(AppCopy.DownloadFileName(AppCopyKind.Portable, CoreRelease), Path.GetFileName(prepared.FileToStart));
+        Assert.StartsWith(stagingRoot, prepared.FileToStart);
+        Assert.Equal(exe, prepared.Replaces);
         Assert.Equal(string.Empty, prepared.Arguments);
-        Assert.Equal(exe + SelfReplacement.NewSuffix, prepared.Replacement);
+        Assert.Equal(Release(2), File.ReadAllBytes(prepared.FileToStart));
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+        Assert.Equal(["InstallerClean.exe"], Directory.EnumerateFileSystemEntries(exeFolder).Select(Path.GetFileName));
 
         prepared.Undo();
 
+        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
     }
 
     [Fact]
-    public async Task The_portable_routes_undo_keeps_the_newer_version_while_nothing_is_at_the_exe_path()
+    public async Task A_command_line_written_beside_its_exe_keeps_the_newer_version_while_nothing_is_at_its_path()
     {
-        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
-        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
-        var exe = Path.Combine(exeFolder, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        var updater = new AppUpdater(AppCopyKind.Portable, exe,
-            new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
-        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+        var (updater, exe, _) = CommandLineDownloadUpdater(new OneAnswer(Release(2)));
+        var prepared = CommandLineUpdate.StageBeside(
+            await updater.PrepareAsync(CoreRelease, null, CancellationToken.None), exe, CancellationToken.None);
         File.Move(exe, exe + SelfReplacement.OldSuffix);
 
         prepared.Undo();
@@ -916,7 +912,7 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
-    public async Task A_prepared_update_holds_the_clean_up_off_until_its_undo_takes_the_newer_version_away()
+    public async Task A_prepared_update_holds_the_clean_up_off_until_its_undo_removes_the_download()
     {
         var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
         var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
@@ -932,22 +928,34 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         prepared.Undo();
 
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        Assert.False(File.Exists(prepared.FileToStart));
         Assert.True(gate.TryRunPass(() => { }));
     }
 
     [Fact]
-    public async Task A_prepared_update_whose_undo_keeps_the_newer_version_keeps_the_clean_up_off()
+    public async Task A_command_line_written_beside_its_exe_holds_the_clean_up_off_until_its_undo()
     {
-        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
-        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
-        var exe = Path.Combine(exeFolder, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
         var gate = new UpdateLeftoverGate();
-        var updater = new AppUpdater(AppCopyKind.Portable, exe,
-            new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, gate);
-        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+        var (updater, exe, stagingRoot) = CommandLineDownloadUpdater(new OneAnswer(Release(2)), gate);
+
+        var prepared = CommandLineUpdate.StageBeside(
+            await updater.PrepareAsync(CoreRelease, null, CancellationToken.None), exe, CancellationToken.None);
+        Assert.False(gate.TryRunPass(() => { }));
+
+        prepared.Undo();
+
+        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task A_command_line_whose_undo_keeps_the_newer_version_keeps_the_clean_up_off()
+    {
+        var gate = new UpdateLeftoverGate();
+        var (updater, exe, _) = CommandLineDownloadUpdater(new OneAnswer(Release(2)), gate);
+        var prepared = CommandLineUpdate.StageBeside(
+            await updater.PrepareAsync(CoreRelease, null, CancellationToken.None), exe, CancellationToken.None);
         File.Move(exe, exe + SelfReplacement.OldSuffix);
 
         prepared.Undo();
@@ -1018,19 +1026,15 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
-    public async Task The_command_lines_own_download_writes_beside_its_file_as_the_portable_does()
+    public async Task The_command_lines_own_download_is_written_beside_its_file_and_the_download_removed()
     {
-        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "tools")).FullName;
-        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
-        var exe = Path.Combine(exeFolder, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe, Program(1));
-        var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
-            new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry, _leftovers);
+        var (updater, exe, stagingRoot) = CommandLineDownloadUpdater(new OneAnswer(Release(2)));
 
-        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+        var prepared = CommandLineUpdate.StageBeside(
+            await updater.PrepareAsync(CoreRelease, null, CancellationToken.None), exe, CancellationToken.None);
 
         Assert.Equal(exe, prepared.FileToStart);
+        Assert.Null(prepared.Replaces);
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
         Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
@@ -1039,6 +1043,20 @@ public sealed class UpdateInPlaceTests : IDisposable
         prepared.Undo();
 
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+    }
+
+    /// <summary>An updater for the command line's own download in its own folder, the exe it updates and the staging root, holding <paramref name="gate"/> where one is given.</summary>
+    private (AppUpdater Updater, string Exe, string StagingRoot) CommandLineDownloadUpdater(
+        OneAnswer network, UpdateLeftoverGate? gate = null)
+    {
+        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "tools")).FullName;
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(exeFolder, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe, Program(1));
+        var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
+            new UpdateDownloadService(network, null), stagingRoot,
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry, gate ?? _leftovers);
+        return (updater, exe, stagingRoot);
     }
 
 #if DEBUG
@@ -1064,24 +1082,11 @@ public sealed class UpdateInPlaceTests : IDisposable
         }
     }
 
-    /// <summary>An updater for the command line's own download in its own folder, and the exe it updates.</summary>
-    private (AppUpdater Updater, string Exe, string StagingRoot) CommandLineUpdater(OneAnswer network)
-    {
-        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "tools")).FullName;
-        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
-        var exe = Path.Combine(exeFolder, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe, Program(1));
-        var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
-            new UpdateDownloadService(network, null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry, _leftovers);
-        return (updater, exe, stagingRoot);
-    }
-
     [Fact]
     public async Task In_a_debug_build_the_local_download_switch_stages_that_file_in_place_of_a_download()
     {
         var network = new OneAnswer(Release(2));
-        var (updater, exe, stagingRoot) = CommandLineUpdater(network);
+        var (updater, exe, stagingRoot) = CommandLineDownloadUpdater(network);
         var local = Path.Combine(_root, "local-newer.exe");
         File.WriteAllBytes(local, Release(4));
 
@@ -1090,9 +1095,9 @@ public sealed class UpdateInPlaceTests : IDisposable
             var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
             Assert.Equal(0, network.Requests);
-            Assert.Equal(Release(4), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+            Assert.Equal(Release(4), File.ReadAllBytes(prepared.FileToStart));
+            Assert.StartsWith(stagingRoot, prepared.FileToStart);
             Assert.Equal(Release(4), File.ReadAllBytes(local));
-            Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
             prepared.Undo();
 
             // The control: the same update with the switch cleared downloads.
@@ -1100,7 +1105,7 @@ public sealed class UpdateInPlaceTests : IDisposable
             prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
             Assert.Equal(1, network.Requests);
-            Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+            Assert.Equal(Release(2), File.ReadAllBytes(prepared.FileToStart));
             prepared.Undo();
         });
     }
@@ -1112,7 +1117,7 @@ public sealed class UpdateInPlaceTests : IDisposable
     public async Task In_a_debug_build_a_local_download_the_download_would_refuse_fails_as_a_download(string which)
     {
         var network = new OneAnswer(Program(2));
-        var (updater, exe, stagingRoot) = CommandLineUpdater(network);
+        var (updater, exe, stagingRoot) = CommandLineDownloadUpdater(network);
         var local = Path.Combine(_root, "local-newer.exe");
         File.WriteAllBytes(local, which == "not a program" ? "PK not a program"u8.ToArray() : Program(4));
         var path = which switch

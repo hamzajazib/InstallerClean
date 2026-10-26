@@ -324,11 +324,11 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// </remarks>
     private StartSeen NewerVersionSaidItStarted(Process process, EventWaitHandle startedEvent, CancellationToken token)
     {
-        var answer = SelfReplacement.AwaitStart(
+        var answer = NewerVersionProcess.AwaitStart(
             process, startedEvent, HandOverContract.StartBound, token.WaitHandle, out var waitError);
         if (answer == NewerVersionStart.Started) return StartSeen.Started;
-        var failure = SelfReplacement.NotStartedFailure(answer, waitError, process, HandOverContract.StartBound);
-        if (!SelfReplacement.EndNewerVersion(process))
+        var failure = NewerVersionProcess.NotStartedFailure(answer, waitError, process, HandOverContract.StartBound);
+        if (!NewerVersionProcess.EndNewerVersion(process))
         {
             try
             {
@@ -339,12 +339,12 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
                 CrashLog.TryWrite(ex);
                 return StartSeen.NotWaitedFor;
             }
-            switch (SelfReplacement.LookAt(startedEvent, out var lookError))
+            switch (NewerVersionProcess.LookAt(startedEvent, out var lookError))
             {
                 case HandleLook.Signalled:
                     return StartSeen.Started;
                 case HandleLook.Failed:
-                    CrashLog.TryWrite(SelfReplacement.LookFailure(lookError));
+                    CrashLog.TryWrite(NewerVersionProcess.LookFailure(lookError));
                     return StartSeen.Started;
             }
         }

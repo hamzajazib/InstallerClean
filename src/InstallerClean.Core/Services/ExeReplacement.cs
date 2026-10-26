@@ -273,10 +273,10 @@ internal static class ExeReplacement
 
         switch ((seams.StartAndAwait ?? StartAndAwait)(exePath))
         {
-            case NewerAtPath.Started:
+            case NewerVersionAnswer.Started:
                 TryDeletePlainFile(backup);
                 return ReplaceOutcome.Replaced;
-            case NewerAtPath.StillRunning:
+            case NewerVersionAnswer.StillRunning:
                 return Fail(ReplaceOutcome.NewerLeftRunning,
                     "The newer version at the exe's path did not say it had started and could not be ended, so it was left "
                     + $"there, still running, and the older version was left beside it under the name ending {BackupSuffix}."
@@ -615,42 +615,16 @@ internal static class ExeReplacement
     /// <summary>
     /// Starts the exe at <paramref name="exePath"/> with a started event and waits up to
     /// <see cref="HandOverContract.StartBound"/> for it to say its own code is running. One
-    /// that does not is ended. Answers <see cref="NewerAtPath.Started"/>, or
-    /// <see cref="NewerAtPath.NotStarted"/> where it could not be started, did not say so
+    /// that does not is ended. Answers <see cref="NewerVersionAnswer.Started"/>, or
+    /// <see cref="NewerVersionAnswer.NotStarted"/> where it could not be started, did not say so
     /// and has been ended, or no event could be made to see it by, or
-    /// <see cref="NewerAtPath.StillRunning"/> where it did not say so and Windows would not
+    /// <see cref="NewerVersionAnswer.StillRunning"/> where it did not say so and Windows would not
     /// end it. What failed is written to crash.log.
     /// </summary>
-    private static NewerAtPath StartAndAwait(string exePath)
-    {
-        var id = Guids.NewGuid();
-        using var started = HandOverContract.CreateStartedEvent(id);
-        if (started is null) return NewerAtPath.NotStarted;
-
-        var info = new ProcessStartInfo(exePath)
-        {
-            UseShellExecute = false,
-            WorkingDirectory = Path.GetDirectoryName(exePath) ?? string.Empty,
-        };
-        info.ArgumentList.Add(HandOverContract.StartedEventArgument(id));
-        Process newer;
-        try
-        {
-            newer = ProcessStartRetry.Start(info, _ => true, interval => Thread.Sleep(interval));
-        }
-        catch (Exception ex)
-        {
-            CrashLog.TryWrite(ex);
-            return NewerAtPath.NotStarted;
-        }
-        using (newer)
-        {
-            var answer = SelfReplacement.AwaitStart(newer, started, HandOverContract.StartBound, cancel: null, out var waitError);
-            if (answer == NewerVersionStart.Started) return NewerAtPath.Started;
-            CrashLog.TryWrite(SelfReplacement.NotStartedFailure(answer, waitError, newer, HandOverContract.StartBound));
-            return SelfReplacement.EndNewerVersion(newer) ? NewerAtPath.NotStarted : NewerAtPath.StillRunning;
-        }
-    }
+    private static NewerVersionAnswer StartAndAwait(string exePath) =>
+        NewerVersionProcess.StartAndAwait(
+            exePath, id => [HandOverContract.StartedEventArgument(id)], HandOverContract.StartBound,
+            interval => Thread.Sleep(interval));
 
     /// <summary>
     /// Starts the exe at <paramref name="exePath"/>, the older version put back or left in
@@ -819,19 +793,6 @@ internal enum ReplaceOutcome
     Failed,
 }
 
-/// <summary>What the exe at the path did once it was started after the replace.</summary>
-internal enum NewerAtPath
-{
-    /// <summary>It said its own code is running.</summary>
-    Started,
-
-    /// <summary>It was not started, or it did not say so and has been ended.</summary>
-    NotStarted,
-
-    /// <summary>It did not say so, and Windows would not end it.</summary>
-    StillRunning,
-}
-
 /// <summary>
 /// Test seams for <see cref="ExeReplacement.Run(ReplaceRequest, bool, ReplaceSeams)"/>. Each null
 /// member is the real part.
@@ -852,7 +813,7 @@ internal sealed record ReplaceSeams(
     TimeSpan? MoveRetryBound = null,
     TimeSpan? HoldRetryBound = null,
     Func<string, string, int>? HardLink = null,
-    Func<string, NewerAtPath>? StartAndAwait = null,
+    Func<string, NewerVersionAnswer>? StartAndAwait = null,
     WaitForEndSeam? WaitForEnd = null);
 
 /// <summary>The shape of <see cref="ReplaceSeams.WaitForEnd"/>.</summary>

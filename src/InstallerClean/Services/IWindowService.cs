@@ -45,9 +45,9 @@ public interface IWindowService
 
     /// <summary>
     /// Hands over to the newer version <paramref name="prepared"/> holds and closes the
-    /// app: runs the newer setup, or puts the newer version written beside the app at its
-    /// own path and starts it. Answers false where it could not be started, with the app
-    /// still running as it was from its own path.
+    /// app: runs the newer setup, or starts the newer version to put itself at the app's
+    /// own path once the app has closed. Answers false where it could not be started, or
+    /// did not say it would carry on, with the app still running as it was.
     /// </summary>
     Task<bool> StartUpdateAndCloseAsync(PreparedUpdate prepared);
 

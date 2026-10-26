@@ -118,8 +118,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Chrome = new ChromeViewModel(windowService, msiInfoService, settingsService,
             updateCheckService, dialogService, Scan,
             isBusy: () => IsBusy,
-            updater: appUpdater,
-            settleBeforeHandOff: SettleBeforeUpdate);
+            updater: appUpdater);
 
         // Surface the completion overlay when a scan finishes with no
         // orphans. Cleanup sets IsOperating=false after the post-
@@ -193,18 +192,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Chrome.OfferUpdate();
         if (!Chrome.IsOfferingUpdate)
             _resultsMayShow.TrySetResult();
-    }
-
-    /// <summary>
-    /// What closing the app settles, done before an update hands over to the newer
-    /// version, which reads the same files as it starts: the move destination still
-    /// being saved, and the report's sends and saves still running, waited for as long
-    /// as closing waits.
-    /// </summary>
-    private void SettleBeforeUpdate()
-    {
-        Cleanup.FlushMoveDestination();
-        Completion.SettleReportOnExit();
     }
 
     /// <summary>

@@ -292,8 +292,7 @@ public class ChromeViewModelTests
     private readonly List<string> _calls = [];
 
     /// <summary>
-    /// A view model whose copy can update itself, with the settling step recorded in
-    /// the order it is called, and a check that has found 9.9.9.
+    /// A view model whose copy can update itself, and a check that has found 9.9.9.
     /// </summary>
     private async Task<ChromeViewModel> CreateUpdatingViewModelAsync()
     {
@@ -305,8 +304,7 @@ public class ChromeViewModelTests
             _windowService, _msiInfoService, _settingsService,
             _updateCheckService, _dialogService, scan,
             checkCooldownOverride: TimeSpan.Zero,
-            updater: _updater,
-            settleBeforeHandOff: () => _calls.Add("settle"));
+            updater: _updater);
         await vm.RunAutomaticUpdateCheckAsync();
         return vm;
     }
@@ -339,7 +337,7 @@ public class ChromeViewModelTests
     }
 
     [Fact]
-    public async Task Update_now_downloads_the_found_version_settles_and_hands_over()
+    public async Task Update_now_downloads_the_found_version_and_hands_over()
     {
         var vm = await CreateUpdatingViewModelAsync();
         var prepared = Prepared();
@@ -350,7 +348,7 @@ public class ChromeViewModelTests
 
         await vm.UpdateNowCommand.ExecuteAsync(null);
 
-        Assert.Equal(["prepare", "settle", "start"], _calls);
+        Assert.Equal(["prepare", "start"], _calls);
         // Handed over, the app is closing, and the card stays up until it has.
         Assert.True(vm.IsUpdating);
         Assert.False(vm.HasUpdateFailure);
@@ -382,7 +380,7 @@ public class ChromeViewModelTests
 
         await vm.UpdateNowCommand.ExecuteAsync(null);
 
-        Assert.Equal(["settle", "undo"], _calls);
+        Assert.Equal(["undo"], _calls);
         Assert.False(vm.IsUpdating);
         Assert.Equal(Strings.UpdateNotice_InstallFailed, vm.UpdateFailureText);
         // Update now stays, so the person can try again, and the link joins it.
@@ -401,29 +399,7 @@ public class ChromeViewModelTests
 
         await vm.UpdateNowCommand.ExecuteAsync(null);
 
-        Assert.Equal(["settle", "undo"], _calls);
-        Assert.False(vm.IsUpdating);
-        Assert.Equal(Strings.UpdateNotice_InstallFailed, vm.UpdateFailureText);
-    }
-
-    [Fact]
-    public async Task A_settle_that_throws_takes_away_what_was_readied_and_starts_nothing()
-    {
-        _updater.Kind.Returns(AppCopyKind.Portable);
-        _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
-        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
-        var vm = new ChromeViewModel(
-            _windowService, _msiInfoService, _settingsService,
-            _updateCheckService, _dialogService, new ScanViewModel(_scanService, _rebootService, _dialogService),
-            checkCooldownOverride: TimeSpan.Zero, updater: _updater,
-            settleBeforeHandOff: () => throw new IOException("no"));
-        await vm.RunAutomaticUpdateCheckAsync();
-        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(Prepared());
-
-        await vm.UpdateNowCommand.ExecuteAsync(null);
-
         Assert.Equal(["undo"], _calls);
-        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!);
         Assert.False(vm.IsUpdating);
         Assert.Equal(Strings.UpdateNotice_InstallFailed, vm.UpdateFailureText);
     }
@@ -480,7 +456,6 @@ public class ChromeViewModelTests
             stage == UpdateFailureStage.Download ? Strings.UpdateNotice_DownloadFailed : Strings.UpdateNotice_InstallFailed,
             vm.UpdateFailureText);
         await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!);
-        Assert.DoesNotContain("settle", _calls);
     }
 
     [Fact]

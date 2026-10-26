@@ -550,6 +550,37 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
+    /// Writes the newer version <paramref name="staged"/> holds beside this exe
+    /// (<see cref="SelfReplacement.StageAsync"/>), where <see cref="SelfReplacement.SwapIn"/>
+    /// takes it from, and deletes the download, whether or not the write went. A write that
+    /// fails takes the rest of <paramref name="staged"/> away too and throws. Answers an
+    /// update for this exe's path whose undo deletes the newer version written beside it
+    /// and then takes away the rest of <paramref name="staged"/>, its folder and its hold on
+    /// the start-up clean-up. Where nothing is at the exe's path, the undo keeps both, the
+    /// newer version being one of the two files that can go there.
+    /// </summary>
+    internal static PreparedUpdate StageBeside(PreparedUpdate staged, string exePath, CancellationToken token)
+    {
+        string replacement;
+        try
+        {
+            replacement = SelfReplacement.StageAsync(exePath, staged.FileToStart, token).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            staged.Undo();
+            throw;
+        }
+        Helpers.StorageHelpers.TryDeleteTempFile(staged.FileToStart);
+        return new PreparedUpdate(staged.Version, exePath, string.Empty, () =>
+        {
+            if (!File.Exists(exePath)) return;
+            try { Helpers.StorageHelpers.TryDeleteTempFile(replacement); }
+            finally { staged.Undo(); }
+        });
+    }
+
+    /// <summary>
     /// Downloads the newer version, puts it in place and runs it. Throws where a part
     /// fails with this exe's file at its own path, having taken away what it changed; the
     /// caller says so and carries on, unless Ctrl+C has come. Answers
@@ -586,6 +617,7 @@ internal sealed class CommandLineUpdate
                 throw new UpdateRefusedException(refusal, latest);
             _host.WriteLine(string.Format(Strings.UpdateNotice_Downloading, latest));
             prepared = _updater.PrepareAsync(latest, null, token).GetAwaiter().GetResult();
+            if (!isSetup) prepared = StageBeside(prepared, exePath, token);
 
             _host.PrepareToMoveAside();
             if (_host.AnotherRunMayBeAlive(exePath))

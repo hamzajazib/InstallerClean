@@ -78,7 +78,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     private readonly TimeSpan _automaticCheckWindow;
     private readonly PropertyChangedEventHandler _scanHandler;
     private readonly IAppUpdater? _updater;
-    private readonly Action _settleBeforeHandOff;
     private CancellationTokenSource? _updateCts;
     private CancellationTokenSource? _downloadCts;
     private CancellationTokenSource? _scoopUpdateCopiedCts;
@@ -100,11 +99,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// <param name="updater">
     /// The update from inside the app. Null in a bare test construction, which
     /// then offers the release page alone, as a build from source does.
-    /// </param>
-    /// <param name="settleBeforeHandOff">
-    /// Settles what closing the app would settle, the move destination still being
-    /// saved and the report still being sent, before the newer version starts and
-    /// reads them.
     /// </param>
     /// <param name="scoopUpdateCopiedForOverride">
     /// Replaces <see cref="ScoopUpdateCopiedFor"/>, so a test can see Copy come back
@@ -128,7 +122,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         Func<bool>? isBusy = null,
         TimeSpan? checkCooldownOverride = null,
         IAppUpdater? updater = null,
-        Action? settleBeforeHandOff = null,
         TimeSpan? scoopUpdateCopiedForOverride = null,
         TimeSpan? requirementsBoundOverride = null,
         TimeSpan? automaticCheckWindowOverride = null)
@@ -142,7 +135,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         _isBusy = isBusy ?? (() => false);
         _checkCooldown = checkCooldownOverride ?? CheckForUpdatesCooldown;
         _updater = updater;
-        _settleBeforeHandOff = settleBeforeHandOff ?? (() => { });
         _scoopUpdateCopiedFor = scoopUpdateCopiedForOverride ?? ScoopUpdateCopiedFor;
         _requirementsBound = requirementsBoundOverride ?? RequirementsBound;
         _automaticCheckWindow = automaticCheckWindowOverride ?? AutomaticCheckWindow;
@@ -668,9 +660,9 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// Update now, on the card saying a newer version is available and on the notice:
     /// downloads the newer version as the same kind of copy, and hands over to it. The
     /// setup's copy runs the newer setup, which starts the app again once it has
-    /// installed; the other copies put the newer version at their own path and start it
-    /// there. Either way this app closes, and the newer version scans as it opens, as
-    /// every start does.
+    /// installed; the other copies start the newer version, which puts itself at their own
+    /// path once this app has closed and starts from there. Either way this app closes,
+    /// and the newer version scans as it opens, as every start does.
     ///
     /// Anything that fails while this app is still open takes the download card away
     /// and puts the line for what failed on the card and the notice, with the link
@@ -709,7 +701,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
             if (cts.IsCancellationRequested) return;
 
             IsHandingOver = true;
-            _settleBeforeHandOff();
             handedOver = await _windowService.StartUpdateAndCloseAsync(prepared);
             if (!handedOver)
                 UpdateFailureText = Strings.UpdateNotice_InstallFailed;

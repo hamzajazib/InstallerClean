@@ -71,35 +71,38 @@ public sealed class PreparedUpdate
 {
     private Action? _undo;
 
-    public PreparedUpdate(string version, string fileToStart, string arguments, Action undo, string? replacement = null)
+    public PreparedUpdate(string version, string fileToStart, string arguments, Action undo, string? replaces = null)
     {
         Version = version;
         FileToStart = fileToStart;
         Arguments = arguments;
-        Replacement = replacement;
+        Replaces = replaces;
         _undo = undo;
     }
 
     /// <summary>The version this is, as the update check gave it.</summary>
     public string Version { get; }
 
-    /// <summary>The program to start: the newer setup, or the app's own path, where the newer version is to go.</summary>
+    /// <summary>
+    /// The program to start: the newer setup, or the newer version itself, in the folder it
+    /// was downloaded to. Where the command line has written the newer version beside its
+    /// own exe (<see cref="CommandLineUpdate.StageBeside"/>), the exe's path.
+    /// </summary>
     public string FileToStart { get; }
 
     /// <summary>The command line it is started with.</summary>
     public string Arguments { get; }
 
     /// <summary>
-    /// Where the copy replaces its own file, the newer version written beside it
-    /// (<see cref="SelfReplacement.StageAsync"/>), which <see cref="SelfReplacement.SwapIn"/>
-    /// puts at <see cref="FileToStart"/>. Null for the setup's copy, whose setup does that.
+    /// Where the newer version at <see cref="FileToStart"/> is started to put itself at the
+    /// running exe's path, that path. Null where something else puts it there: the setup's
+    /// copy's setup, or the command line's rename of the version written beside its exe.
     /// </summary>
-    public string? Replacement { get; }
+    public string? Replaces { get; }
 
     /// <summary>
-    /// Takes away what getting it ready left: the download, or the newer version written
-    /// beside the running exe, which stays where nothing is at the exe's path. Runs once,
-    /// however often it is called, a call that keeps the newer version included. Never throws.
+    /// Takes away what getting it ready left: the download and the folder it was saved in,
+    /// where nothing still runs from them. Runs once, however often it is called. Never throws.
     /// </summary>
     public void Undo()
     {
@@ -111,8 +114,10 @@ public sealed class PreparedUpdate
 /// <summary>
 /// The update from inside the app. The setup's copy downloads the newer setup and runs
 /// it; the portable, the slim and the command line's own download download the newer
-/// version of the same file and write it beside their own. Each download is checked for
-/// the version it was downloaded as before anything uses it. A build from source,
+/// version of the same file. The window starts it to put itself at the running exe's path;
+/// the command line writes it beside its own exe (<see cref="CommandLineUpdate.StageBeside"/>).
+/// Each download is saved in a staging folder only Administrators and SYSTEM can write to,
+/// and checked there for the version it was downloaded as before anything uses it. A build from source,
 /// Scoop's copy and an undetermined copy have no download, and
 /// <see cref="PrepareAsync"/> refuses them.
 /// </summary>
@@ -369,9 +374,11 @@ public sealed class AppUpdater : IAppUpdater
                     "The downloaded file does not carry the version it was downloaded as.");
             }
 
-            if (Kind == AppCopyKind.Setup)
-            {
-                return new PreparedUpdate(version, staged, _setupArguments, () =>
+            // The setup's copy starts the download as a setup; the window's other copies start it
+            // to put itself at the running exe's path. Either runs it from the staging folder, so
+            // the hold stays out until the update is undone or this process ends.
+            var isSetup = Kind == AppCopyKind.Setup;
+            return new PreparedUpdate(version, staged, isSetup ? _setupArguments : string.Empty, () =>
                 {
                     try
                     {
@@ -382,28 +389,8 @@ public sealed class AppUpdater : IAppUpdater
                     {
                         hold.Release();
                     }
-                });
-            }
-
-            string replacement;
-            try
-            {
-                replacement = await SelfReplacement.StageAsync(_exePath, staged, cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                Helpers.StorageHelpers.TryDeleteTempFile(staged);
-                folder.TryRemoveIfEmpty();
-            }
-            // With nothing at the exe's path, the newer version is one of the two files that can
-            // go there, so it stays, and so does the hold, since a pass of the clean-up deletes it.
-            return new PreparedUpdate(version, _exePath, string.Empty, () =>
-                {
-                    if (!File.Exists(_exePath)) return;
-                    try { Helpers.StorageHelpers.TryDeleteTempFile(replacement); }
-                    finally { hold.Release(); }
                 },
-                replacement);
+                isSetup ? null : _exePath);
         }
         catch
         {

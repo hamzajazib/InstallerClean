@@ -6,9 +6,11 @@ namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
 /// The wait a copy updating itself makes for the newer version it started to say its own
-/// code is running (<see cref="SelfReplacement.AwaitStart"/>), and the ending of a newer
+/// code is running (<see cref="NewerVersionProcess.AwaitStart"/>), and the ending of a newer
 /// version that did not say so, against real processes standing in for it: PowerShell
-/// setting the event or sleeping, and programs of Windows that end at once.
+/// setting the event or sleeping, and programs of Windows that end at once. Also the start
+/// of a newer version from the folder it was downloaded to, to put itself at a copy's path
+/// (<see cref="NewerVersionProcess.StartToReplace(string, string)"/>).
 /// </summary>
 public sealed class NewerVersionStartTests : IDisposable
 {
@@ -80,7 +82,7 @@ public sealed class NewerVersionStartTests : IDisposable
         using var _ = started;
         var newer = PowerShellRunning(Sets(id) + "; Start-Sleep -Seconds 60");
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel: null, out var waitError);
+        var answer = NewerVersionProcess.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.Started, answer);
         Assert.Equal(0, waitError);
@@ -95,7 +97,7 @@ public sealed class NewerVersionStartTests : IDisposable
         var newer = PowerShellRunning(Sets(id));
         Assert.True(newer.WaitForExit(TimeSpan.FromSeconds(60)));
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel: null, out var waitError);
+        var answer = NewerVersionProcess.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.Started, answer);
         Assert.Equal(0, waitError);
@@ -110,12 +112,12 @@ public sealed class NewerVersionStartTests : IDisposable
         var bound = TimeSpan.FromSeconds(60);
         var clock = Stopwatch.StartNew();
 
-        var answer = SelfReplacement.AwaitStart(newer, started, bound, cancel: null, out var waitError);
+        var answer = NewerVersionProcess.AwaitStart(newer, started, bound, cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.Ended, answer);
         Assert.True(clock.Elapsed < bound / 2, $"The wait took {clock.Elapsed}.");
-        Assert.Contains("exit code 7", SelfReplacement.NotStartedFailure(answer, waitError, newer, bound).Message);
-        Assert.True(SelfReplacement.EndNewerVersion(newer));
+        Assert.Contains("exit code 7", NewerVersionProcess.NotStartedFailure(answer, waitError, newer, bound).Message);
+        Assert.True(NewerVersionProcess.EndNewerVersion(newer));
     }
 
     [Fact]
@@ -125,11 +127,11 @@ public sealed class NewerVersionStartTests : IDisposable
         using var __ = started;
         var newer = PowerShellRunning("Start-Sleep -Seconds 600");
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(2), cancel: null, out _);
+        var answer = NewerVersionProcess.AwaitStart(newer, started, TimeSpan.FromSeconds(2), cancel: null, out _);
 
         Assert.Equal(NewerVersionStart.TimedOut, answer);
         Assert.False(newer.HasExited);
-        Assert.True(SelfReplacement.EndNewerVersion(newer));
+        Assert.True(NewerVersionProcess.EndNewerVersion(newer));
         Assert.True(newer.HasExited);
     }
 
@@ -140,11 +142,11 @@ public sealed class NewerVersionStartTests : IDisposable
         using var _ = started;
         var newer = PowerShellRunning("Start-Sleep -Seconds 20; " + Sets(id));
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(1), cancel: null, out var waitError);
+        var answer = NewerVersionProcess.AwaitStart(newer, started, TimeSpan.FromSeconds(1), cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.TimedOut, answer);
         Assert.Equal(0, waitError);
-        Assert.True(SelfReplacement.EndNewerVersion(newer));
+        Assert.True(NewerVersionProcess.EndNewerVersion(newer));
         Assert.True(newer.HasExited);
         Assert.False(started.WaitOne(0));
     }
@@ -158,10 +160,10 @@ public sealed class NewerVersionStartTests : IDisposable
         var newer = PowerShellRunning("Start-Sleep -Seconds 600");
         using var timer = new Timer(_ => cancel.Set(), null, TimeSpan.FromMilliseconds(500), Timeout.InfiniteTimeSpan);
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel, out _);
+        var answer = NewerVersionProcess.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel, out _);
 
         Assert.Equal(NewerVersionStart.Cancelled, answer);
-        Assert.True(SelfReplacement.EndNewerVersion(newer));
+        Assert.True(NewerVersionProcess.EndNewerVersion(newer));
         Assert.True(newer.HasExited);
     }
 
@@ -180,14 +182,14 @@ public sealed class NewerVersionStartTests : IDisposable
         var bound = TimeSpan.FromSeconds(30);
         var clock = Stopwatch.StartNew();
 
-        var answer = SelfReplacement.AwaitStart(newer, setOnly, bound, cancel: null, out var waitError);
+        var answer = NewerVersionProcess.AwaitStart(newer, setOnly, bound, cancel: null, out var waitError);
 
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"The wait took {clock.Elapsed}.");
         Assert.Equal(NewerVersionStart.WaitFailed, answer);
         Assert.Equal(ErrorAccessDenied, waitError);
         Assert.Empty(TestCrashLog.Text());
-        Assert.Contains("failed with error 5", SelfReplacement.NotStartedFailure(answer, waitError, newer, bound).Message);
-        Assert.True(SelfReplacement.EndNewerVersion(newer));
+        Assert.Contains("failed with error 5", NewerVersionProcess.NotStartedFailure(answer, waitError, newer, bound).Message);
+        Assert.True(NewerVersionProcess.EndNewerVersion(newer));
         Assert.True(newer.HasExited);
     }
 
@@ -204,11 +206,11 @@ public sealed class NewerVersionStartTests : IDisposable
         Assert.False(full.SafeWaitHandle.IsInvalid);
         var newer = PowerShellRunning("Start-Sleep -Seconds 600");
 
-        var answer = SelfReplacement.AwaitStart(newer, full, TimeSpan.FromSeconds(1), cancel: null, out var waitError);
+        var answer = NewerVersionProcess.AwaitStart(newer, full, TimeSpan.FromSeconds(1), cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.TimedOut, answer);
         Assert.Equal(0, waitError);
-        Assert.True(SelfReplacement.EndNewerVersion(newer));
+        Assert.True(NewerVersionProcess.EndNewerVersion(newer));
     }
 
     [Fact]
@@ -229,5 +231,92 @@ public sealed class NewerVersionStartTests : IDisposable
         Assert.Equal(original, File.ReadAllBytes(exe));
         Assert.Equal(File.ReadAllBytes(newer), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
+    }
+
+    /// <summary>
+    /// A PowerShell script standing in for a staged newer version: it writes the arguments
+    /// it was given to <paramref name="argumentsFile"/>, one to a line, then runs
+    /// <paramref name="then"/>, where <c>$set</c> sets the started event it was handed.
+    /// </summary>
+    private string StagedStandIn(string argumentsFile, string then)
+    {
+        var prefix = HandOverContract.StartedEventName(Guid.Empty)[..^32];
+        var script = Path.Combine(_root, Guid.NewGuid().ToString("N") + ".ps1");
+        File.WriteAllText(script, $$"""
+            $args | Set-Content -LiteralPath '{{argumentsFile}}'
+            $id = ($args | Where-Object { $_ -like '{{HandOverContract.StartedEventSwitch}}*' }).Substring({{HandOverContract.StartedEventSwitch.Length}})
+            $set = { [System.Threading.EventWaitHandle]::OpenExisting('{{prefix}}' + $id).Set() | Out-Null }
+            {{then}}
+            """);
+        return script;
+    }
+
+    private static string[] RunningScript(string script) => ["-NoProfile", "-NonInteractive", "-File", script];
+
+    /// <summary>The process whose ID the stand-in wrote to <paramref name="pidFile"/>, which the test then owns.</summary>
+    private Process Owned(string pidFile)
+    {
+        var process = Process.GetProcessById(
+            int.Parse(File.ReadAllText(pidFile).Trim(), System.Globalization.CultureInfo.InvariantCulture));
+        _started.Add(process);
+        return process;
+    }
+
+    [Fact]
+    public void A_staged_newer_version_that_sets_the_event_is_started_with_the_replace_switches_and_left_running()
+    {
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        var argumentsFile = Path.Combine(_root, "arguments.txt");
+        var pidFile = Path.Combine(_root, "pid.txt");
+        var script = StagedStandIn(argumentsFile, $"$PID | Set-Content -LiteralPath '{pidFile}'; & $set; Start-Sleep -Seconds 60");
+
+        var answer = NewerVersionProcess.StartToReplace(PowerShell, exe, RunningScript(script), TimeSpan.FromSeconds(60));
+
+        Assert.Equal(NewerVersionAnswer.Started, answer);
+        Assert.False(Owned(pidFile).HasExited);
+        Assert.Equal(ReplaceRead.Asked, HandOverContract.ReadReplaceRequest(File.ReadAllLines(argumentsFile), out var request));
+        Assert.Equal(exe, request!.ExePath);
+        Assert.Equal(Environment.ProcessId, request.ProcessId);
+        Assert.Empty(request.Command);
+        Assert.Empty(TestCrashLog.Entries());
+    }
+
+    [Fact]
+    public void A_staged_newer_version_that_ends_without_setting_the_event_is_answered_as_not_started()
+    {
+        var script = StagedStandIn(Path.Combine(_root, "arguments.txt"), "exit 7");
+
+        var answer = NewerVersionProcess.StartToReplace(
+            PowerShell, Path.Combine(_root, "InstallerClean.exe"), RunningScript(script), TimeSpan.FromSeconds(60));
+
+        Assert.Equal(NewerVersionAnswer.NotStarted, answer);
+        Assert.Contains("exit code 7", TestCrashLog.OnlyEntry());
+    }
+
+    [Fact]
+    public void A_staged_newer_version_that_does_not_set_the_event_in_time_is_ended_before_the_answer()
+    {
+        var argumentsFile = Path.Combine(_root, "arguments.txt");
+        var pidFile = Path.Combine(_root, "pid.txt");
+        var script = StagedStandIn(argumentsFile, $"$PID | Set-Content -LiteralPath '{pidFile}'; Start-Sleep -Seconds 60");
+
+        var answer = NewerVersionProcess.StartToReplace(
+            PowerShell, Path.Combine(_root, "InstallerClean.exe"), RunningScript(script), TimeSpan.FromSeconds(5));
+
+        Assert.Equal(NewerVersionAnswer.NotStarted, answer);
+        var pid = int.Parse(File.ReadAllText(pidFile).Trim(), System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Throws<ArgumentException>(() => Process.GetProcessById(pid));
+        Assert.Contains("within 5 seconds", TestCrashLog.OnlyEntry());
+    }
+
+    [Fact]
+    public void A_staged_newer_version_that_cannot_be_started_is_answered_as_not_started()
+    {
+        var missing = Path.Combine(_root, "InstallerClean-portable.exe");
+
+        var answer = NewerVersionProcess.StartToReplace(missing, Path.Combine(_root, "InstallerClean.exe"), [], TimeSpan.FromSeconds(5));
+
+        Assert.Equal(NewerVersionAnswer.NotStarted, answer);
+        Assert.Equal(ProcessStartRetry.Attempts, TestCrashLog.FailedStartsOf(missing));
     }
 }

@@ -30,8 +30,6 @@ public partial class App : Application
     private static InstanceLock? _instanceLock;
     // Set where an update that did not hand over could not take the mutex back.
     private static bool _instanceLockLost;
-    // Set where an update that did not hand over left nothing at the exe's path.
-    private static string? _pathLeftEmpty;
     private static ServiceProvider? _services;
     // Reentry guard: a modal dialog pumps messages, so a queued
     // exception could fire DispatcherUnhandledException recursively.
@@ -323,7 +321,6 @@ public partial class App : Application
         {
             if (args.ExceptionObject is Exception ex)
                 CrashLog.TryWrite(ex);
-            RefillPathLeftEmpty();
         };
 
         TaskScheduler.UnobservedTaskException += (_, args) =>
@@ -832,14 +829,13 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Update now's hand-over to a newer version written beside the app ends the process
-    /// without running this (<see cref="ReplaceAndCloseAsync"/>). Anything that must
-    /// happen before an update hands over goes in MainViewModel.SettleBeforeUpdate, which
-    /// runs before every hand-over.
+    /// Runs on every close, an update's hand-over included: what closing settles, the move
+    /// destination still being saved and the report's sends and saves still running, is
+    /// settled here before the mutex goes, and the newer version an update started puts
+    /// itself in place only once this process has ended.
     /// </summary>
     protected override void OnExit(ExitEventArgs e)
     {
-        RefillPathLeftEmpty();
         _services?.Dispose();
         // Release-before-Dispose: a clean release hands the next instance
         // a released mutex, not an abandoned one. OnExit runs on the
@@ -878,7 +874,6 @@ public partial class App : Application
     /// </summary>
     public void RelaunchForLanguageChange()
     {
-        RefillPathLeftEmpty();
         // Nulled so OnExit's own _services?.Dispose() is a no-op rather than a
         // second teardown; the flush obligation stays in the one place that has
         // always held it, MainViewModel.Dispose.
@@ -914,35 +909,27 @@ public partial class App : Application
     private static readonly TimeSpan UpdateCheckGrace = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// Hands over to the newer version <paramref name="prepared"/> holds: releases the
-    /// single-instance mutex, starts the newer setup or the newer version, and closes the
-    /// app. Answers false where it could not be started, or where the newer version did
-    /// not say its own code was running, having taken the mutex back where it is free, so
-    /// the app carries on as it was.
-    ///
-    /// The mutex goes first because the newer version takes it as it starts, and
-    /// finding it held would send it down the "already running" exit. The setup names
-    /// it as its AppMutex and stops while the name can be opened, and this app's handle
-    /// stays open until it closes, so a setup started from here waits for this app to
-    /// close before that check. The container is not
-    /// disposed first, as the language relaunch disposes it, because a start that
-    /// fails leaves this app running; the caller has already settled what disposing
-    /// would settle.
-    ///
-    /// This runs on the dispatcher thread, from Update now, so the release and the
-    /// retake are on the thread that took the mutex, as the owner-thread rule requires.
+    /// Hands over to the newer version <paramref name="prepared"/> holds and closes the
+    /// app: the newer setup (<see cref="StartSetupAndClose"/>), or the newer version itself,
+    /// started to put itself at this exe's path once the app has closed
+    /// (<see cref="ReplaceAndClose"/>). Answers false where it could not be started, or did
+    /// not say it would carry on, and the app then carries on as it was. Runs on the
+    /// dispatcher thread, from Update now, the thread that took the mutex.
     /// </summary>
     public Task<bool> StartUpdateAndCloseAsync(PreparedUpdate prepared) =>
-        prepared.Replacement is null
-            ? Task.FromResult(StartSetupAndClose(prepared.FileToStart, prepared.Arguments))
-            : ReplaceAndCloseAsync(prepared.FileToStart, prepared.Version);
+        Task.FromResult(prepared.Replaces is { } exePath
+            ? ReplaceAndClose(prepared.FileToStart, exePath)
+            : StartSetupAndClose(prepared.FileToStart, prepared.Arguments));
 
     /// <summary>
-    /// The setup's copy: starts the newer setup, which starts the app again once it has
-    /// installed, and closes the app. A start that fails is tried again through
+    /// The setup's copy: releases the single-instance mutex, starts the newer setup, which
+    /// starts the app again once it has installed, and closes the app. The mutex goes
+    /// first: the setup names it as its AppMutex and stops while the name can be opened,
+    /// and this app's handle stays open until it closes, so a setup started from here
+    /// waits for this app to close before that check. Where the setup cannot be started,
+    /// the mutex is taken back where it is free. A start that fails is tried again through
     /// <see cref="ProcessStartRetry"/>, on the dispatcher thread with its processing held,
-    /// as the in-place swap's hand-over is, so none of the window's own code runs while the
-    /// mutex is released. The setup starts through CreateProcess rather than the shell,
+    /// so none of the window's own code runs while the mutex is released. The setup starts through CreateProcess rather than the shell,
     /// which can wait on a DDE conversation and pump messages; the app runs elevated, so
     /// the setup CreateProcess starts runs elevated too, without a prompt. While the tries
     /// and the waits between them run, the window takes no input and shows the update card
@@ -1025,55 +1012,36 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// A copy that replaces its own file: loads what the hand-over reaches, on a pool
-    /// thread while the running exe's file is still whole, then on this thread renames
-    /// the newer version into place, starts it, waits for it to say its own code is
-    /// running and ends the process (<see cref="SelfReplacement.HandOverAndEnd"/>). That
-    /// ends it without <see cref="OnExit"/>, so the caller has already settled what
-    /// closing would. Where the newer version does not say so, this exe is back at its
-    /// own path and the app's windows come back as they were. Where the hand-over leaves
-    /// nothing at that path, the windows come back all the same, and the app puts one of
-    /// the two files there as it closes or as an unhandled exception ends it
-    /// (<see cref="RefillPathLeftEmpty"/>).
+    /// A copy that replaces its own file: starts the newer version <paramref name="stagedExe"/>
+    /// from the folder it was downloaded to, to put itself at <paramref name="exePath"/> once
+    /// this process has ended, waits for it to say it will
+    /// (<see cref="NewerVersionProcess.StartToReplace(string, string)"/>), and closes the app, which lets go
+    /// of the mutex in <see cref="OnExit"/>. Where it does not say so, it has been ended, and
+    /// the app's windows come back as they were. The mutex is held throughout, so nothing
+    /// else that takes it starts meanwhile.
     /// </summary>
     /// <remarks>
     /// The windows are hidden for the wait, which can run to
     /// <see cref="HandOverContract.StartBound"/>: Windows shows a window that has stopped
-    /// answering as not responding, and closing it then would end this process with the
-    /// newer version not yet seen to start. Dispatcher processing is off for the whole
-    /// hand-over, so a wait on this thread that the hand-over makes through a
-    /// WaitHandle dispatches no window message either. The app's own assembly is walked
-    /// as well as the ones the hand-over reaches, because the app's other threads go on
-    /// running through the wait, with this exe renamed aside.
+    /// answering as not responding, and closing it then would close the app before the
+    /// newer version is seen to start. Dispatcher processing is off for the wait, which
+    /// dispatches nothing, so none of the window's own code runs during it.
     /// </remarks>
-    private async Task<bool> ReplaceAndCloseAsync(string exePath, string version)
+    private bool ReplaceAndClose(string stagedExe, string exePath)
     {
-        await Task.Run(() => SelfReplacement.PrepareToMoveAside(typeof(App).Assembly));
         var hidden = Windows.Cast<Window>().Where(w => w.IsVisible).ToList();
         foreach (var window in hidden) window.Hide();
-        var released = _instanceLock?.Release() == true;
+        NewerVersionAnswer answer;
         using (Dispatcher.DisableProcessing())
-            SelfReplacement.HandOverAndEnd(exePath, version);
-        if (!File.Exists(exePath)) _pathLeftEmpty = exePath;
-        if (released) RetakeAfterHandOverFailed();
+            answer = NewerVersionProcess.StartToReplace(stagedExe, exePath);
+        if (answer == NewerVersionAnswer.Started)
+        {
+            Shutdown();
+            return true;
+        }
         foreach (var window in hidden) window.Show();
         MainWindow?.Activate();
         return false;
-    }
-
-    /// <summary>
-    /// Where an update that did not hand over left nothing at the exe's path, puts the copy
-    /// it renamed aside back there, or the newer version beside it
-    /// (<see cref="SelfReplacement.TryRefillPath"/>), so the next start from a shortcut
-    /// finds a file. Runs as the app closes or relaunches, first, so the container's
-    /// disposal and what follows run with this exe back at its path where it goes there,
-    /// and on the thread of an unhandled exception that ends the process. Where the newer
-    /// version goes there instead, a relaunch for a language starts it.
-    /// </summary>
-    private static void RefillPathLeftEmpty()
-    {
-        if (Interlocked.Exchange(ref _pathLeftEmpty, null) is { } exePath)
-            SelfReplacement.TryRefillPath(exePath);
     }
 
     /// <summary>

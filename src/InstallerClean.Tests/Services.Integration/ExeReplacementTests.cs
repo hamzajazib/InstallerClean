@@ -266,7 +266,7 @@ public sealed class ExeReplacementTests : IDisposable
             ThisExe: NewerFile(), StartAndAwait: path =>
             {
                 readOnlyWhenStarted = File.GetAttributes(path).HasFlag(FileAttributes.ReadOnly);
-                return NewerAtPath.Started;
+                return NewerVersionAnswer.Started;
             }));
         await ending;
 
@@ -288,7 +288,7 @@ public sealed class ExeReplacementTests : IDisposable
         var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
             ThisExe: NewerFile(),
             HardLink: (_, _) => Kernel32.ERROR_INVALID_FUNCTION,
-            StartAndAwait: _ => NewerAtPath.Started));
+            StartAndAwait: _ => NewerVersionAnswer.Started));
         await ending;
 
         Assert.Equal(ReplaceOutcome.Refused, outcome);
@@ -419,7 +419,7 @@ public sealed class ExeReplacementTests : IDisposable
         var ending = EndOnceSet(oldCopy, started);
 
         var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
-            ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(1), StartAndAwait: _ => NewerAtPath.NotStarted));
+            ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(1), StartAndAwait: _ => NewerVersionAnswer.NotStarted));
         await ending;
 
         Assert.Equal(ReplaceOutcome.RolledBack, outcome);
@@ -440,7 +440,7 @@ public sealed class ExeReplacementTests : IDisposable
             ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(1), StartAndAwait: path =>
             {
                 Hold(path);
-                return NewerAtPath.NotStarted;
+                return NewerVersionAnswer.NotStarted;
             }));
         await ending;
 
@@ -832,7 +832,7 @@ public sealed class ExeReplacementTests : IDisposable
             StartAndAwait: path =>
             {
                 atPathWhenStarted = File.ReadAllBytes(path);
-                return NewerAtPath.NotStarted;
+                return NewerVersionAnswer.NotStarted;
             }));
         await ending;
 
@@ -852,7 +852,7 @@ public sealed class ExeReplacementTests : IDisposable
         var ending = EndOnceSet(oldCopy, started);
 
         var outcome = ExeReplacement.Run(request, startAtPath: true,
-            new ReplaceSeams(ThisExe: NewerFile(), StartAndAwait: _ => NewerAtPath.Started));
+            new ReplaceSeams(ThisExe: NewerFile(), StartAndAwait: _ => NewerVersionAnswer.Started));
         await ending;
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
@@ -869,7 +869,7 @@ public sealed class ExeReplacementTests : IDisposable
         var ending = EndOnceSet(oldCopy, started);
 
         var outcome = ExeReplacement.Run(request, startAtPath: true,
-            new ReplaceSeams(ThisExe: NewerFile(), StartAndAwait: _ => NewerAtPath.StillRunning));
+            new ReplaceSeams(ThisExe: NewerFile(), StartAndAwait: _ => NewerVersionAnswer.StillRunning));
         await ending;
 
         Assert.Equal(ReplaceOutcome.NewerLeftRunning, outcome);
@@ -891,7 +891,7 @@ public sealed class ExeReplacementTests : IDisposable
         var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
             ThisExe: NewerFile(),
             HardLink: (_, _) => Kernel32.ERROR_INVALID_FUNCTION,
-            StartAndAwait: _ => NewerAtPath.NotStarted));
+            StartAndAwait: _ => NewerVersionAnswer.NotStarted));
         await ending;
 
         Assert.Equal(ReplaceOutcome.RolledBack, outcome);
