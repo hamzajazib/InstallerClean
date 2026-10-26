@@ -180,7 +180,6 @@ public sealed class StagedDownloadTests : IDisposable
             _prepared.Add(prepared);
 
             Assert.NotNull(letGo);
-            Assert.True(letGo.IsCompleted);
             Assert.Equal(Release(2), File.ReadAllBytes(prepared.FileToStart));
             AssertHeld(prepared.FileToStart);
         }

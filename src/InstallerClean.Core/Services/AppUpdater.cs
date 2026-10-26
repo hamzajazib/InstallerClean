@@ -138,9 +138,10 @@ public sealed class PreparedUpdate
     }
 
     /// <summary>
-    /// Deletes the download and the folder it was saved in where nothing else is in it,
-    /// once what was downloaded has been written elsewhere, and keeps the hold on the
-    /// start-up clean-up until <see cref="Undo"/> or the end of the process. Once the
+    /// Closes the handle holding the download and deletes the download, and the folder it
+    /// was saved in where nothing else is in it, once what was downloaded has been written
+    /// elsewhere. The start-up clean-up stays held off until <see cref="Undo"/> or the end of
+    /// the process. Once the
     /// folder has gone, neither this nor <see cref="Undo"/> reaches into its path again.
     /// Does nothing where the update was not downloaded to a folder of its own, or was
     /// prepared for the command line to run from that folder
@@ -546,7 +547,7 @@ public sealed class AppUpdater : IAppUpdater
             {
                 throw error == 0
                     ? new UpdateFailedException(UpdateFailureStage.Install,
-                        "The downloaded file's name is a reparse point, so it is not held.")
+                        "The downloaded file could not be opened to hold it: its name is not a plain file.")
                     : new UpdateFailedException(UpdateFailureStage.Install,
                         "The downloaded file could not be opened to hold it.",
                         new System.ComponentModel.Win32Exception(error));
@@ -616,6 +617,7 @@ public sealed class AppUpdater : IAppUpdater
                 if (_folderGone) return;
                 lock (HeldForTheProcess) HeldForTheProcess.RemoveAll(_holds.Contains);
                 foreach (var file in _holds) file.Dispose();
+                _holds.Clear();
                 foreach (var path in _staged) Helpers.StorageHelpers.TryDeleteTempFile(path);
                 _folderGone = folder.TryRemoveIfEmpty();
             }
