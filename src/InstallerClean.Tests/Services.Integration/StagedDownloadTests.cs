@@ -11,9 +11,12 @@ using static InstallerClean.Tests.Services.Integration.UpdateInPlaceTests;
 namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
-/// The download the command line runs its command from (<see cref="AppUpdater.PrepareStagedRunAsync"/>):
-/// the command line's own download, and on the setup's copy the setup beside it, each held
-/// open in one staging folder, against a temporary folder standing in for %ProgramData%.
+/// The downloads an update holds open from their check until they are used or taken away:
+/// <see cref="AppUpdater.PrepareAsync"/>'s, which the window starts and the command line copies
+/// beside its exe, and the one the command line runs its
+/// command from (<see cref="AppUpdater.PrepareStagedRunAsync"/>), the command line's own
+/// download and on the setup's copy the setup beside it in one staging folder, against a
+/// temporary folder standing in for %ProgramData%.
 /// </summary>
 public sealed class StagedDownloadTests : IDisposable
 {
@@ -79,9 +82,12 @@ public sealed class StagedDownloadTests : IDisposable
 
     private static string SetupName => AppCopy.DownloadFileName(AppCopyKind.Setup, CoreRelease)!;
 
-    private AppUpdater Updater(AppCopyKind kind, HttpMessageHandler network, IRegistryReader? registry = null) =>
+    private AppUpdater Updater(
+        AppCopyKind kind, HttpMessageHandler network, IRegistryReader? registry = null,
+        TimeSpan? holdRetryBound = null, Action<string>? beforeHold = null) =>
         new(kind, _exe, new UpdateDownloadService(network, null), _stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, registry ?? NoRegistry, _gate);
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, registry ?? NoRegistry, _gate,
+            holdRetryBound, beforeHold);
 
     private async Task<PreparedUpdate> Prepare(AppUpdater updater, CancellationToken cancellationToken = default)
     {
@@ -102,6 +108,34 @@ public sealed class StagedDownloadTests : IDisposable
         Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION, error.HResult & 0xFFFF);
         error = Assert.Throws<IOException>(() => File.Delete(path));
         Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION, error.HResult & 0xFFFF);
+        error = Assert.Throws<IOException>(() => File.Move(path, path + ".moved"));
+        Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION, error.HResult & 0xFFFF);
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.Setup)]
+    [InlineData(AppCopyKind.Portable)]
+    [InlineData(AppCopyKind.Slim)]
+    [InlineData(AppCopyKind.CommandLineDownload)]
+    public async Task A_prepared_download_is_held_from_its_check_until_it_is_deleted(AppCopyKind kind)
+    {
+        var name = AppCopy.DownloadFileName(kind, CoreRelease)!;
+        var network = new ByName(new() { [name] = Release(2) });
+        var prepared = await Updater(kind, network).PrepareAsync(CoreRelease, null, CancellationToken.None);
+        _prepared.Add(prepared);
+
+        // Nothing can change the bytes between the check and the start.
+        Assert.Equal(name, Path.GetFileName(prepared.FileToStart));
+        Assert.Equal(Release(2), File.ReadAllBytes(prepared.FileToStart));
+        AssertHeld(prepared.FileToStart);
+        Assert.False(_gate.TryRunPass(() => { }));
+
+        prepared.DeleteDownload();
+
+        Assert.Empty(Directory.EnumerateFileSystemEntries(_stagingRoot));
+        Assert.False(_gate.TryRunPass(() => { }));
+        prepared.Undo();
+        Assert.True(_gate.TryRunPass(() => { }));
     }
 
     [Fact]
@@ -125,12 +159,78 @@ public sealed class StagedDownloadTests : IDisposable
         AssertNothingLeft();
     }
 
-    [Fact]
-    public async Task The_holds_last_once_nothing_references_the_prepared_update()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_download_another_process_holds_to_write_for_a_second_is_held_once_it_lets_go(bool stagedRun)
+    {
+        var network = new ByName(new() { [AppCopy.CommandLineFileName] = Release(2) });
+        FileStream? writer = null;
+        Task? letGo = null;
+        var updater = Updater(AppCopyKind.CommandLineDownload, network, beforeHold: path =>
+        {
+            writer = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+            letGo = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => writer.Dispose());
+        });
+        try
+        {
+            var prepared = stagedRun
+                ? await updater.PrepareStagedRunAsync(CoreRelease, CancellationToken.None)
+                : await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+            _prepared.Add(prepared);
+
+            Assert.NotNull(letGo);
+            Assert.True(letGo.IsCompleted);
+            Assert.Equal(Release(2), File.ReadAllBytes(prepared.FileToStart));
+            AssertHeld(prepared.FileToStart);
+        }
+        finally
+        {
+            if (letGo is not null) await letGo;
+            writer?.Dispose();
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_download_another_process_holds_to_write_past_the_bound_fails_with_nothing_left(bool stagedRun)
+    {
+        var network = new ByName(new() { [AppCopy.CommandLineFileName] = Release(2) });
+        FileStream? writer = null;
+        var updater = Updater(AppCopyKind.CommandLineDownload, network, holdRetryBound: TimeSpan.FromSeconds(1),
+            beforeHold: path => writer = new FileStream(
+                path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete));
+        try
+        {
+            var error = await Assert.ThrowsAsync<UpdateFailedException>(() => stagedRun
+                ? updater.PrepareStagedRunAsync(CoreRelease, CancellationToken.None)
+                : updater.PrepareAsync(CoreRelease, null, CancellationToken.None));
+
+            Assert.Equal(UpdateFailureStage.Install, error.Stage);
+            Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION,
+                Assert.IsType<System.ComponentModel.Win32Exception>(error.InnerException).NativeErrorCode);
+            // The gate is released, so the clean-up can take whatever the other process kept.
+            Assert.True(_gate.TryRunPass(() => { }));
+        }
+        finally
+        {
+            writer?.Dispose();
+        }
+        // The download was deleted while the other process had it open sharing delete, so it
+        // goes as that process lets go; the folder is then empty.
+        UpdateStagingFolder.RemoveLeftovers(_stagingRoot, ThisAccountExpectation);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(_stagingRoot));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task The_holds_last_once_nothing_references_the_prepared_update(bool stagedRun)
     {
         var network = new ByName(new() { [AppCopy.CommandLineFileName] = Release(2) });
         // Undo is never called, so the file stays held for the rest of the test run.
-        var path = await PrepareAndDrop(Updater(AppCopyKind.CommandLineDownload, network));
+        var path = await PrepareAndDrop(Updater(AppCopyKind.CommandLineDownload, network), stagedRun);
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -141,8 +241,10 @@ public sealed class StagedDownloadTests : IDisposable
 
     /// <summary>Prepares a run and answers only its file, keeping no reference to the update.</summary>
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static async Task<string> PrepareAndDrop(AppUpdater updater) =>
-        (await updater.PrepareStagedRunAsync(CoreRelease, CancellationToken.None)).FileToStart;
+    private static async Task<string> PrepareAndDrop(AppUpdater updater, bool stagedRun) =>
+        (await (stagedRun
+            ? updater.PrepareStagedRunAsync(CoreRelease, CancellationToken.None)
+            : updater.PrepareAsync(CoreRelease, null, CancellationToken.None))).FileToStart;
 
     [Fact]
     public async Task The_setups_copy_holds_its_setup_and_the_command_line_in_one_folder_setup_first()

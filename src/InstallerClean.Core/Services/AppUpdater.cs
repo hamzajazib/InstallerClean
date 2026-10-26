@@ -50,7 +50,10 @@ public interface IAppUpdater
     /// <summary>
     /// Downloads <paramref name="version"/> as the same kind of copy, where its release
     /// allows it (<see cref="CheckRequirementsAsync"/>), checks that the file carries that
-    /// version, and answers with what to start. Reports the fraction
+    /// version, and answers with what to start. The check reads the file through a handle
+    /// that shares only reading, kept open until <see cref="PreparedUpdate.DeleteDownload"/>,
+    /// <see cref="PreparedUpdate.Undo"/> or the end of the process, so the file started is the
+    /// file checked. Reports the fraction
     /// downloaded, or null where the length is not known. Throws
     /// <see cref="UpdateFailedException"/> where any step fails, a download that does not
     /// carry the version included, <see cref="UpdateRefusedException"/> before anything is
@@ -183,6 +186,8 @@ public sealed class AppUpdater : IAppUpdater
     private readonly string _stagingDescriptor;
     private readonly IRegistryReader _registry;
     private readonly UpdateLeftoverGate _leftovers;
+    private readonly TimeSpan _holdRetryBound;
+    private readonly Action<string>? _beforeHold;
     // Read and replaced whole, from whichever pool thread a check or an update runs on.
     private volatile KeptManifest? _manifest;
 
@@ -190,8 +195,8 @@ public sealed class AppUpdater : IAppUpdater
     private sealed record KeptManifest(string Version, byte[] Manifest);
 
     /// <summary>
-    /// The handles holding the files of every run from a staging folder this process has
-    /// prepared and not undone (<see cref="PrepareStagedRunAsync"/>).
+    /// The handles holding every download this process has prepared and not undone or
+    /// deleted, so each is held until then or until the process ends.
     /// </summary>
     private static readonly List<FileStream> HeldForTheProcess = [];
 
@@ -217,13 +222,17 @@ public sealed class AppUpdater : IAppUpdater
     /// Test seam: the staging folder's descriptor given as SDDL, so a suite without
     /// administrator rights can write into it, the registry the PC's .NET Framework
     /// is read from, and the gate the update holds from before it writes anything, which is
-    /// <see cref="UpdateLeftoverGate.ForThisProcess"/> where none is given.
+    /// <see cref="UpdateLeftoverGate.ForThisProcess"/> where none is given. Also how long the
+    /// hold on a download is tried for (<see cref="HoldRetryBound"/> where none is given), and
+    /// what runs with a download's path just before its hold is first tried.
     /// </summary>
     internal AppUpdater(
         AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot,
         string setupArguments, string stagingDescriptor, IRegistryReader registry,
-        UpdateLeftoverGate? leftovers = null)
+        UpdateLeftoverGate? leftovers = null, TimeSpan? holdRetryBound = null, Action<string>? beforeHold = null)
     {
+        _holdRetryBound = holdRetryBound ?? HoldRetryBound;
+        _beforeHold = beforeHold;
         _leftovers = leftovers ?? UpdateLeftoverGate.ForThisProcess;
         Kind = kind;
         _exePath = exePath;
@@ -406,9 +415,7 @@ public sealed class AppUpdater : IAppUpdater
     public async Task<PreparedUpdate> PrepareAsync(
         string version, IProgress<double?>? progress, CancellationToken cancellationToken)
     {
-        var address = AppCopy.DownloadAddress(Kind, version);
-        var fileName = AppCopy.DownloadFileName(Kind, version);
-        if (address is null || fileName is null)
+        if (AppCopy.DownloadFileName(Kind, version) is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
         // Everything after this runs on a pool thread, whatever thread called, so the
@@ -426,77 +433,37 @@ public sealed class AppUpdater : IAppUpdater
         // first write, so a write added above this line moves the hold above it. A cancel
         // that came after the requirements were checked is answered here, before the hold.
         cancellationToken.ThrowIfCancellationRequested();
-        var (hold, folder) = StagingFolderUnderHold();
+        var staging = StagingUnderHold();
         try
         {
-            var staged = Path.Combine(folder.FullPath, fileName);
-            try
-            {
-#if DEBUG
-                if (LocalFile(Kind) is { } local)
-                    await new UpdateDownloadService(new LocalFileAnswer(local, DownloadGate()), null)
-                        .DownloadAsync(address, staged, progress, cancellationToken).ConfigureAwait(false);
-                else
-#endif
-                await _downloader.DownloadAsync(address, staged, progress, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-            catch
-            {
-                folder.TryRemoveIfEmpty();
-                throw;
-            }
-
-            // Read in the staging folder, which only Administrators and SYSTEM can write to. A file
-            // that is not the version asked for is deleted here, before anything copies or starts it.
-            if (Helpers.FileVersionResource.Read(staged) is not { } carried
-                || !Helpers.FileVersionResource.IsRelease(carried, version))
-            {
-                Helpers.StorageHelpers.TryDeleteTempFile(staged);
-                folder.TryRemoveIfEmpty();
-                throw new UpdateFailedException(UpdateFailureStage.Install,
-                    "The downloaded file does not carry the version it was downloaded as.");
-            }
+            // Checked in the staging folder, which only Administrators and SYSTEM can write to,
+            // and held from the check on, so the file started is the file checked. A file that
+            // is not the version asked for is deleted here, before anything copies or starts it.
+            var download = await StageHeldAsync(Kind, version, staging, progress, gated: true, cancellationToken)
+                .ConfigureAwait(false);
 
             // The setup's copy starts the download as a setup; the window's other copies start it
             // to put itself at the running exe's path. Either runs it from the staging folder, so
-            // the hold stays out until the update is undone or this process ends.
-            // The download is deleted by its path, by DeleteDownload or Undo, until its folder
-            // has gone. Once the folder is gone its name is free, and anybody who can write
-            // to the root can make a folder or a link under it, so nothing here reaches into
-            // that path again. A download held open, by an antivirus looking at it say,
-            // keeps the folder, which stays this update's own: an undo tries it again, and
-            // otherwise a later start's clean-up takes it.
+            // the file stays held and the gate stays out until the update is undone or this
+            // process ends. The handle is kept in a list that lives as long as the process, as
+            // a staged run's are. The command line's StageBeside copies the download beside its
+            // exe and then deletes it, which lets go of the file there and then.
+            // The download is deleted by its path, by DeleteDownload or Undo, which first let go
+            // of the hold, until its folder has gone. Once the folder is gone its name is free,
+            // and anybody who can write to the root can make a folder or a link under it, so
+            // nothing here reaches into that path again. A download held open by another
+            // process, an antivirus looking at it say, keeps the folder, which stays this
+            // update's own: an undo tries it again, and otherwise a later start's clean-up takes it.
             var isSetup = Kind == AppCopyKind.Setup;
-            var folderGone = false;
-            var deleteGate = new object();
-            void DeleteDownload()
-            {
-                lock (deleteGate)
-                {
-                    if (folderGone) return;
-                    Helpers.StorageHelpers.TryDeleteTempFile(staged);
-                    folderGone = folder.TryRemoveIfEmpty();
-                }
-            }
-            return new PreparedUpdate(version, staged, isSetup ? _setupArguments : string.Empty, () =>
-                {
-                    try
-                    {
-                        DeleteDownload();
-                    }
-                    finally
-                    {
-                        hold.Release();
-                    }
-                },
-                isSetup ? null : _exePath, DeleteDownload);
+            return staging.Prepared(
+                version, download, isSetup ? _setupArguments : string.Empty, isSetup ? null : _exePath,
+                offersDeleteDownload: true);
         }
         catch
         {
             // A throw from here on leaves nothing this update needs later, so the clean-up
             // may run again and remove whatever of it is still on disk.
-            hold.Release();
+            staging.Abandon();
             throw;
         }
     }
@@ -514,103 +481,177 @@ public sealed class AppUpdater : IAppUpdater
 
         // The hold comes before the first write, as in PrepareAsync.
         cancellationToken.ThrowIfCancellationRequested();
-        var (hold, folder) = StagingFolderUnderHold();
-        var staged = new List<string>();
-        var holds = new List<FileStream>();
-        void TakeAway()
-        {
-            foreach (var file in holds) file.Dispose();
-            foreach (var path in staged) Helpers.StorageHelpers.TryDeleteTempFile(path);
-            folder.TryRemoveIfEmpty();
-        }
-
+        var staging = StagingUnderHold();
         try
         {
             // The setup comes first, so a setup that fails its check costs no download of the
             // command line. Each file is held from its check on, so the start-up clean-up of
             // another process, which takes files of both names, cannot take the first while the
-            // second downloads.
+            // second downloads. A Debug build's gate holds only the command line's download, the
+            // last, so a cancel there takes away a setup already checked and held as well as a
+            // file part written.
             if (Kind == AppCopyKind.Setup)
-                await StageHeldAsync(AppCopyKind.Setup, version, folder, staged, holds, cancellationToken)
+                await StageHeldAsync(AppCopyKind.Setup, version, staging, null, gated: false, cancellationToken)
                     .ConfigureAwait(false);
             var commandLine = await StageHeldAsync(
-                AppCopyKind.CommandLineDownload, version, folder, staged, holds, cancellationToken)
+                AppCopyKind.CommandLineDownload, version, staging, null, gated: true, cancellationToken)
                 .ConfigureAwait(false);
 
             // The run starts the command line from the staging folder, and the newer version
             // puts itself, or on the setup's copy its setup, in this copy's place from there.
             // So once the run has started nothing is undone: the files stay held and the
-            // gate stays out until this process ends. The handles are kept in a list that
-            // lives as long as the process, since a handle nothing references is closed by
-            // its finalizer, whatever the caller keeps.
-            lock (HeldForTheProcess) HeldForTheProcess.AddRange(holds);
-            return new PreparedUpdate(version, commandLine, string.Empty, () =>
-                {
-                    try
-                    {
-                        lock (HeldForTheProcess) HeldForTheProcess.RemoveAll(holds.Contains);
-                        TakeAway();
-                    }
-                    finally
-                    {
-                        hold.Release();
-                    }
-                },
-                _exePath);
+            // gate stays out until this process ends.
+            return staging.Prepared(version, commandLine, string.Empty, _exePath, offersDeleteDownload: false);
         }
         catch
         {
-            try
-            {
-                TakeAway();
-            }
-            finally
-            {
-                hold.Release();
-            }
+            staging.Abandon();
             throw;
         }
     }
 
     /// <summary>
+    /// How long the hold on a download is tried for while another process has it open. An
+    /// antivirus can take several seconds over a program it has just seen written.
+    /// </summary>
+    internal static readonly TimeSpan HoldRetryBound = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Opens <paramref name="path"/> to hold it (<see cref="Helpers.StorageHelpers.OpenHeldToRead"/>).
+    /// A sharing or lock violation, as from a scanner that opens a new program to write as it
+    /// looks at it, is tried again every quarter second for up to <see cref="HoldRetryBound"/>.
+    /// Throws <see cref="UpdateFailedException"/> at the Install stage, carrying the error
+    /// Windows gave, where the file cannot be held.
+    /// </summary>
+    private async Task<FileStream> OpenHeldAsync(string path, CancellationToken cancellationToken)
+    {
+        _beforeHold?.Invoke(path);
+        var tried = System.Diagnostics.Stopwatch.StartNew();
+        while (true)
+        {
+            if (Helpers.StorageHelpers.OpenHeldToRead(path, out var error) is { } handle)
+            {
+                try
+                {
+                    return new FileStream(handle, FileAccess.Read);
+                }
+                catch
+                {
+                    handle.Dispose();
+                    throw;
+                }
+            }
+            if (error is not (Interop.Native.Kernel32.ERROR_SHARING_VIOLATION or Interop.Native.Kernel32.ERROR_LOCK_VIOLATION)
+                || tried.Elapsed >= _holdRetryBound)
+            {
+                throw error == 0
+                    ? new UpdateFailedException(UpdateFailureStage.Install,
+                        "The downloaded file's name is a reparse point, so it is not held.")
+                    : new UpdateFailedException(UpdateFailureStage.Install,
+                        "The downloaded file could not be opened to hold it.",
+                        new System.ComponentModel.Win32Exception(error));
+            }
+            await Task.Delay(250, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// What one update has staged: the gate it holds, the folder its downloads go in, the
+    /// path of each download, and the handles holding the downloads that passed their check.
+    /// </summary>
+    private sealed class Staging(UpdateLeftoverGate.Hold hold, UpdateStagingFolder folder)
+    {
+        private readonly List<string> _staged = [];
+        private readonly List<FileStream> _holds = [];
+        private readonly object _deleteGate = new();
+        private bool _folderGone;
+
+        public string FolderPath => folder.FullPath;
+
+        /// <summary>Records a download's path before anything is written to it.</summary>
+        public void AddStaged(string path) => _staged.Add(path);
+
+        /// <summary>Keeps the handle holding a download that passed its check.</summary>
+        public void AddHold(FileStream held) => _holds.Add(held);
+
+        /// <summary>
+        /// The update to start, holding its downloads until <see cref="PreparedUpdate.Undo"/>
+        /// or the end of the process. The handles are kept in a list that lives as long as the
+        /// process, since a handle nothing references is closed by its finalizer, whatever the
+        /// caller keeps. Its undo takes the downloads away and releases the gate;
+        /// <paramref name="offersDeleteDownload"/> gives it a
+        /// <see cref="PreparedUpdate.DeleteDownload"/> that does the first alone.
+        /// </summary>
+        public PreparedUpdate Prepared(
+            string version, string fileToStart, string arguments, string? replaces, bool offersDeleteDownload)
+        {
+            lock (HeldForTheProcess) HeldForTheProcess.AddRange(_holds);
+            return new PreparedUpdate(
+                version, fileToStart, arguments, Abandon, replaces, offersDeleteDownload ? DeleteDownloads : null);
+        }
+
+        /// <summary>Takes away everything staged and releases the gate.</summary>
+        public void Abandon()
+        {
+            try
+            {
+                DeleteDownloads();
+            }
+            finally
+            {
+                hold.Release();
+            }
+        }
+
+        /// <summary>
+        /// Lets go of the holds, deletes each download by its path, and removes the folder
+        /// where it is empty, until the folder has gone. Once the folder is gone its name is
+        /// free, and anybody who can write to the root can make a folder or a link under it, so
+        /// nothing here reaches into that path again. Never throws.
+        /// </summary>
+        private void DeleteDownloads()
+        {
+            lock (_deleteGate)
+            {
+                if (_folderGone) return;
+                lock (HeldForTheProcess) HeldForTheProcess.RemoveAll(_holds.Contains);
+                foreach (var file in _holds) file.Dispose();
+                foreach (var path in _staged) Helpers.StorageHelpers.TryDeleteTempFile(path);
+                _folderGone = folder.TryRemoveIfEmpty();
+            }
+        }
+    }
+
+    /// <summary>
     /// Downloads the <paramref name="kind"/> download of <paramref name="version"/> into
-    /// <paramref name="folder"/>, adds its path to <paramref name="staged"/> before the
-    /// download starts, and checks the version it carries through a handle that shares only
-    /// reading, which is added to <paramref name="holds"/> and kept open. Answers the path.
-    /// Throws <see cref="UpdateFailedException"/> at the Install stage where the file does not
-    /// carry the version, including where it cannot be opened that way.
+    /// <paramref name="staging"/>'s folder, recording its path there before the download
+    /// starts, and checks the version it carries through a handle that shares only reading,
+    /// which <paramref name="staging"/> keeps. Answers the path. Reports the fraction
+    /// downloaded to <paramref name="progress"/>, and in a Debug build holds the download at
+    /// the download gate where <paramref name="gated"/>. Throws <see cref="UpdateFailedException"/> at the Install
+    /// stage where the file does not carry the version, including where it cannot be opened
+    /// that way.
     /// </summary>
     private async Task<string> StageHeldAsync(
-        AppCopyKind kind, string version, UpdateStagingFolder folder, List<string> staged, List<FileStream> holds,
+        AppCopyKind kind, string version, Staging staging, IProgress<double?>? progress, bool gated,
         CancellationToken cancellationToken)
     {
-        var path = Path.Combine(folder.FullPath, AppCopy.DownloadFileName(kind, version)!);
+        var path = Path.Combine(staging.FolderPath, AppCopy.DownloadFileName(kind, version)!);
         var address = AppCopy.DownloadAddress(kind, version)!;
-        staged.Add(path);
+        staging.AddStaged(path);
 #if DEBUG
-        // The gate holds only the command line's download, the last, so a cancel there takes
-        // away a setup already checked and held as well as a file part written.
         if (LocalFile(kind) is { } local)
-            await new UpdateDownloadService(
-                    new LocalFileAnswer(local, kind == AppCopyKind.CommandLineDownload ? DownloadGate() : null), null)
-                .DownloadAsync(address, path, null, cancellationToken).ConfigureAwait(false);
+            await new UpdateDownloadService(new LocalFileAnswer(local, gated ? DownloadGate() : null), null)
+                .DownloadAsync(address, path, progress, cancellationToken).ConfigureAwait(false);
         else
 #endif
-        await _downloader.DownloadAsync(address, path, null, cancellationToken).ConfigureAwait(false);
+        await _downloader.DownloadAsync(address, path, progress, cancellationToken).ConfigureAwait(false);
 
         // The bytes checked are the bytes held, read through the handle that holds them. The
-        // open shares only reading, so it fails where another process has the file open to
-        // write or delete it.
-        FileStream held;
-        try
-        {
-            held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            throw new UpdateFailedException(UpdateFailureStage.Install,
-                "The downloaded file could not be opened to hold it.", ex);
-        }
+        // open refuses a reparse point at the name, so the handle is on the file the name
+        // starts, and shares only reading, so it fails where another process has the file
+        // open to write or delete it.
+        var held = await OpenHeldAsync(path, cancellationToken).ConfigureAwait(false);
         try
         {
             Version? carried;
@@ -631,7 +672,7 @@ public sealed class AppUpdater : IAppUpdater
             held.Dispose();
             throw;
         }
-        holds.Add(held);
+        staging.AddHold(held);
         return path;
     }
 
@@ -641,12 +682,12 @@ public sealed class AppUpdater : IAppUpdater
     /// clean-up deletes it or anything written in it while the update runs. Where the folder
     /// cannot be made, the hold is released and the update fails at the Install stage.
     /// </summary>
-    private (UpdateLeftoverGate.Hold Hold, UpdateStagingFolder Folder) StagingFolderUnderHold()
+    private Staging StagingUnderHold()
     {
         var hold = _leftovers.HoldForUpdate();
         try
         {
-            return (hold, UpdateStagingFolder.Create(_stagingRoot, _stagingDescriptor));
+            return new Staging(hold, UpdateStagingFolder.Create(_stagingRoot, _stagingDescriptor));
         }
         catch (Exception ex)
         {

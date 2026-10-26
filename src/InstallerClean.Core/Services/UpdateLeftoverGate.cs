@@ -54,7 +54,7 @@ public sealed class UpdateLeftoverGate
     /// Holds the gate for an update about to write its first file, once any pass already
     /// running has ended, blocking the calling thread until then. No pass runs until every
     /// hold taken has been released. An update takes it in AppUpdater's
-    /// StagingFolderUnderHold, on the pool thread <see cref="AppUpdater.PrepareAsync"/> or
+    /// StagingUnderHold, on the pool thread <see cref="AppUpdater.PrepareAsync"/> or
     /// <see cref="AppUpdater.PrepareStagedRunAsync"/> moves to, never the window's.
     /// </summary>
     internal Hold HoldForUpdate()

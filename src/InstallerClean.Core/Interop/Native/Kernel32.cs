@@ -861,6 +861,7 @@ internal static partial class Kernel32
     public const uint OPEN_EXISTING          = 3;
     public const uint OPEN_ALWAYS            = 4;
 
+    public const uint FILE_SHARE_READ        = 0x00000001;
     public const uint FILE_SHARE_ALL         = 0x00000007;
 
     public const uint FILE_FLAG_BACKUP_SEMANTICS    = 0x02000000;

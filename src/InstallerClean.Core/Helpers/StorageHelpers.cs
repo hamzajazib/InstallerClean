@@ -74,6 +74,16 @@ internal static class StorageHelpers
     internal static SafeFileHandle? CreateHeld(string path, out int error) =>
         Open(path, Kernel32.GENERIC_WRITE, Kernel32.CREATE_NEW, out error, share: 0, Kernel32.FILE_FLAG_DELETE_ON_CLOSE);
 
+    /// <summary>
+    /// Opens the existing file <paramref name="path"/> to read it, with the same reparse-point
+    /// refusal as <see cref="OpenAtomic"/>, shared only for reading, so nobody else can write,
+    /// rename or delete it while the handle is held. Returns null on any failure, another
+    /// handle already open to write or delete it among them, with the error Windows gave in
+    /// <paramref name="error"/>, or 0 where the name is a reparse point.
+    /// </summary>
+    internal static SafeFileHandle? OpenHeldToRead(string path, out int error) =>
+        Open(path, Kernel32.GENERIC_READ, Kernel32.OPEN_EXISTING, out error, share: Kernel32.FILE_SHARE_READ);
+
     private static SafeFileHandle? Open(
         string path, uint desiredAccess, uint disposition, uint share = Kernel32.FILE_SHARE_ALL, uint moreFlags = 0) =>
         Open(path, desiredAccess, disposition, out _, share, moreFlags);
