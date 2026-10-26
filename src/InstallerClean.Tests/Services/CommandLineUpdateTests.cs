@@ -57,9 +57,21 @@ public sealed class CommandLineUpdateTests : IDisposable
             }
             .Run(canAsk, command, arguments ?? [command], _exe, token);
 
-    /// <summary>The separate download: the updater has written the newer file beside the exe.</summary>
-    private FakeUpdater Download() => new(AppCopyKind.CommandLineDownload, _exe,
-        onPrepare: () => File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new"));
+    /// <summary>
+    /// The separate download: the updater has downloaded the newer file into a folder of its
+    /// own, from where the update writes it beside the exe, and then runs
+    /// <paramref name="then"/>.
+    /// </summary>
+    private FakeUpdater Download(Action? then = null) =>
+        new(AppCopyKind.CommandLineDownload, DownloadPath, onPrepare: () =>
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(DownloadPath)!);
+            File.WriteAllText(DownloadPath, "new");
+            then?.Invoke();
+        });
+
+    /// <summary>Where the stand-in for the command line's own download saves the newer version.</summary>
+    private string DownloadPath => Path.Combine(_folder, "download", AppCopy.CommandLineFileName);
 
     private FakeUpdater Setup() => new(AppCopyKind.Setup, Path.Combine(_folder, "InstallerClean-3.5.0-setup.exe"));
 
@@ -134,6 +146,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal("new", run.ExeHeld);
         Assert.Equal("old", File.ReadAllText(_exe + SelfReplacement.OldSuffix));
         Assert.Equal(new[] { "old" }, _host.PreparedWhileExeHeld);
+        Assert.False(Directory.Exists(Path.GetDirectoryName(DownloadPath)));
     }
 
     [Fact]
@@ -396,7 +409,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     public void A_refusal_that_comes_back_with_Ctrl_C_pressed_ends_the_run_as_cancelled()
     {
         using var cts = new CancellationTokenSource();
-        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe, onPrepare: () =>
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, DownloadPath, onPrepare: () =>
         {
             cts.Cancel();
             throw new UpdateRefusedException(UpdateRefusal.NeedsNetFramework48, Latest);
@@ -412,7 +425,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     public void Ctrl_C_during_the_download_cancels_and_starts_nothing()
     {
         using var cts = new CancellationTokenSource();
-        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe, onPrepare: () =>
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, DownloadPath, onPrepare: () =>
         {
             cts.Cancel();
             cts.Token.ThrowIfCancellationRequested();
@@ -431,7 +444,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     public void A_failed_download_or_install_says_so_and_carries_on_with_this_version(
         UpdateFailureStage stage, string line)
     {
-        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe,
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, DownloadPath,
             onPrepare: () => throw new UpdateFailedException(stage, "failed"));
 
         var result = Run(updater, canAsk: false);
@@ -451,7 +464,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     [InlineData(true)]
     public void A_failed_download_whose_lines_the_console_refuses_carries_on_with_one_crash_log_entry(bool refusesRunningInstead)
     {
-        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe,
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, DownloadPath,
             onPrepare: () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed"));
         var refused = refusesRunningInstead
             ? string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current)
@@ -469,7 +482,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     [Fact]
     public void A_closing_line_that_fails_other_than_as_a_console_refusal_is_written_after_the_runs_entry()
     {
-        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe,
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, DownloadPath,
             onPrepare: () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed"));
         _host.OnWriteLine = line =>
         {
@@ -1641,7 +1654,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     public void A_download_that_fails_after_Ctrl_C_says_so_and_runs_nothing()
     {
         using var cts = new CancellationTokenSource();
-        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe, onPrepare: () =>
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, DownloadPath, onPrepare: () =>
         {
             cts.Cancel();
             throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
@@ -1703,11 +1716,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         using var cts = new CancellationTokenSource();
         var updater = kind == AppCopyKind.Setup
             ? new FakeUpdater(kind, Path.Combine(_folder, "InstallerClean-3.5.0-setup.exe"), onPrepare: cts.Cancel)
-            : new FakeUpdater(kind, _exe, onPrepare: () =>
-            {
-                File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new");
-                cts.Cancel();
-            });
+            : Download(cts.Cancel);
 
         var result = Run(updater, canAsk: false, token: cts.Token);
 
@@ -2015,7 +2024,20 @@ public sealed class CommandLineUpdateTests : IDisposable
             onPrepare?.Invoke();
             return Task.FromResult(kind == AppCopyKind.Setup
                 ? new PreparedUpdate(version, fileToStart, "/VERYSILENT /SP-", () => Undone = true)
-                : new PreparedUpdate(version, fileToStart, string.Empty, () => Undone = true, fileToStart + SelfReplacement.NewSuffix));
+                : new PreparedUpdate(version, fileToStart, string.Empty, () =>
+                    {
+                        DeleteDownload();
+                        Undone = true;
+                    },
+                    deleteDownload: DeleteDownload));
+        }
+
+        /// <summary>Deletes the download and its folder where nothing else is in it, as the real download does.</summary>
+        private void DeleteDownload()
+        {
+            InstallerClean.Helpers.StorageHelpers.TryDeleteTempFile(fileToStart);
+            try { Directory.Delete(Path.GetDirectoryName(fileToStart)!, recursive: false); }
+            catch (IOException) { }
         }
     }
 
