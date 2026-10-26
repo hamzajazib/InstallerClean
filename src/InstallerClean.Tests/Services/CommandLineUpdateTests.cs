@@ -782,8 +782,12 @@ public sealed class CommandLineUpdateTests : IDisposable
         // The setup's failure is what ended the run, and the line the console refused is not.
         Assert.Equal(nameof(UpdateFailedException), Assert.IsType<CommandLineUpdateResult.Stopped>(result).FailureType);
         Assert.Null(_host.NewerVersionRun);
-        var entry = TestCrashLog.OnlyEntry();
-        Assert.Contains("The setup ended with exit code 1.", entry);
+        // The put-back's refused rename of the setup's file onto the folder at .new writes
+        // its own entry first, and the run's entry follows it.
+        var entries = TestCrashLog.Entries();
+        Assert.Equal(2, entries.Count);
+        Assert.Contains("System.IO.", entries[0]);
+        Assert.Contains("The setup ended with exit code 1.", entries[1]);
     }
 
     [Fact]
