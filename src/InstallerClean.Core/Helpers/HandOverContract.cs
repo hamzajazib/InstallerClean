@@ -129,6 +129,17 @@ internal static class HandOverContract
     /// </summary>
     internal const string AfterProcessSwitch = "/afterprocess:";
 
+    /// <summary>The crash.log line for a replace request that also carries a command, which replaces nothing.</summary>
+    internal const string ReplaceWithCommandRefusal =
+        "A request to put this version at another copy's path also carried a command, so nothing was replaced.";
+
+    /// <summary>
+    /// The crash.log line for a replace switch in a request that does not carry the three once
+    /// each and well formed, which replaces nothing.
+    /// </summary>
+    internal const string ReplaceNotWellFormedRefusal =
+        "A request to put this version at another copy's path did not carry its three switches once each and well formed, so nothing was replaced.";
+
     /// <summary>
     /// The switch a newer version that could not put itself at a copy's path starts that
     /// copy with, having left it there: the window opens saying the update couldn't be
@@ -168,7 +179,9 @@ internal static class HandOverContract
     /// path. <see cref="ReplaceRead.NotAsked"/> where no argument starts with
     /// <see cref="ReplaceCopySwitch"/> or <see cref="AfterProcessSwitch"/>, and
     /// <see cref="ReplaceRead.Refused"/> where one does and the three are not each there
-    /// once and well formed: such a start runs nothing and sets no event.
+    /// once and well formed: such a start replaces nothing and sets no event, the window
+    /// ending at once and the command line refusing the switch as an argument it does not
+    /// know.
     /// </summary>
     /// <remarks>
     /// Do not change what this reads. A copy from <see cref="FirstVersionTakingHandOverSwitches"/>
@@ -290,7 +303,7 @@ internal enum ReplaceRead
     /// <summary>The three switches ask it, well formed.</summary>
     Asked,
 
-    /// <summary>A replace switch is there and the three are not: this start runs nothing.</summary>
+    /// <summary>A replace switch is there and the three are not: this start replaces nothing and sets no event.</summary>
     Refused,
 }
 

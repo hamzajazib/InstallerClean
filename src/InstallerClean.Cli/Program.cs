@@ -35,8 +35,12 @@ internal static class Program
         // A newer version a copy downloaded, started to put itself at that copy's path once
         // the copy has ended, does that and nothing else, printing nothing: it runs with no
         // console of its own. Exit code 0 where the newer version is in place, 1 otherwise,
-        // with what failed in crash.log. A request carrying a command, or one not well
-        // formed, runs nothing and sets no event.
+        // with what failed in crash.log. A request carrying a command runs nothing and sets
+        // no event. A replace switch in a request not well formed goes on to the arguments'
+        // own check, which refuses it as an argument the command does not know, with the
+        // usage error and its Application-log entry; the started event it may carry is
+        // taken out unset, so no copy reads this run as the newer version starting. Both
+        // refusals write crash.log a line saying which it was.
         switch (HandOverContract.ReadReplaceRequest(args, out var replaceRequest))
         {
             case ReplaceRead.Asked when replaceRequest!.Command.Count == 0:
@@ -44,8 +48,13 @@ internal static class Program
                 return ExeReplacement.Run(replaceRequest, startAtPath: false) == ReplaceOutcome.Replaced
                     ? ExitOk
                     : ExitError;
-            case ReplaceRead.Asked or ReplaceRead.Refused:
+            case ReplaceRead.Asked:
+                CrashLog.TryWrite(new ArgumentException(HandOverContract.ReplaceWithCommandRefusal));
                 return ExitError;
+            case ReplaceRead.Refused:
+                CrashLog.TryWrite(new ArgumentException(HandOverContract.ReplaceNotWellFormedRefusal));
+                args = HandOverContract.TakeStartedEvent(args, out _);
+                break;
         }
 
         CancelKey.Process.Hook();
@@ -368,8 +377,8 @@ internal static class Program
             // RunWorkAsync would hop the continuation onto a thread-pool
             // thread and the finally's ReleaseMutex would throw
             // ApplicationException, orphaning the mutex until process
-            // exit and forcing the next instance through the
-            // AbandonedMutexException path. A console Main has no
+            // exit and handing the next instance an abandoned
+            // mutex. A console Main has no
             // SynchronizationContext, so GetResult here cannot deadlock
             // on captured-context resumption.
             exitCode = RunWorkAsync(arg, invocation, cts.Token, output: output, report: report)

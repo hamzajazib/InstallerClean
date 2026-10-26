@@ -431,6 +431,64 @@ public class CliConsoleGuardTests
         }
     }
 
+    [Fact]
+    public void A_replace_switch_in_a_request_not_well_formed_is_refused_as_an_argument_and_sets_no_event()
+    {
+        var id = Guid.NewGuid();
+        using var started = HandOverContract.CreateStartedEvent(id)!;
+        var console = new StringWriter();
+        var original = Console.Out;
+        using var crashLog = TestCrashLog.OwnFolder();
+        try
+        {
+            Console.SetOut(console);
+            EventLogRecorder.Clear();
+
+            // Without /afterprocess:, so the three are not all there. A scan, which changes
+            // nothing were the refusal ever to fail.
+            var exitCode = Program.Main(["/s", "/replacecopy:C:\\x.exe", HandOverContract.StartedEventArgument(id)]);
+
+            Assert.NotEqual(CliExitCode.Ok, exitCode);
+            Assert.Contains("/replacecopy:C:\\x.exe", console.ToString());
+            Assert.Contains(EventLogRecorder.Entries, entry => entry.Class == CliEventClass.HardError);
+            Assert.False(started.WaitOne(0));
+            Assert.Contains(HandOverContract.ReplaceNotWellFormedRefusal, TestCrashLog.Text());
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+    }
+
+    [Fact]
+    public void A_replace_request_carrying_a_command_runs_nothing_sets_no_event_and_says_so_in_crash_log()
+    {
+        var id = Guid.NewGuid();
+        using var started = HandOverContract.CreateStartedEvent(id)!;
+        var console = new StringWriter();
+        var original = Console.Out;
+        using var crashLog = TestCrashLog.OwnFolder();
+        try
+        {
+            Console.SetOut(console);
+            EventLogRecorder.Clear();
+
+            // A scan beside the three, which changes nothing were the refusal ever to fail.
+            string[] args = [.. HandOverContract.ReplaceArguments(@"C:\x.exe", Environment.ProcessId, id), "/s"];
+            var exitCode = Program.Main(args);
+
+            Assert.Equal(CliExitCode.Error, exitCode);
+            Assert.Equal("", console.ToString());
+            Assert.Empty(EventLogRecorder.Entries);
+            Assert.False(started.WaitOne(0));
+            Assert.Contains(HandOverContract.ReplaceWithCommandRefusal, TestCrashLog.Text());
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+    }
+
     // ---- fixtures ----
 
     /// <summary>A console that fails at the first write carrying the words of <paramref name="value"/> up to its first placeholder.</summary>

@@ -76,13 +76,19 @@ public partial class App : Application
         // does that and nothing else: no window, no scan, no setting read. Before the
         // language preference is applied, so the Application-log entry it can write is
         // built in English (MachineCulture). A request carrying a command, or one not
-        // well formed, ends at once with nothing shown and no event set.
+        // well formed, ends at once with nothing shown and no event set, and crash.log
+        // says which of the two it was.
         switch (HandOverContract.ReadReplaceRequest(e.Args, out var replaceRequest))
         {
             case ReplaceRead.Asked when replaceRequest!.Command.Count == 0:
                 ReplaceAndEnd(replaceRequest);
                 return;
-            case ReplaceRead.Asked or ReplaceRead.Refused:
+            case ReplaceRead.Asked:
+                CrashLog.TryWrite(new ArgumentException(HandOverContract.ReplaceWithCommandRefusal));
+                Shutdown(1);
+                return;
+            case ReplaceRead.Refused:
+                CrashLog.TryWrite(new ArgumentException(HandOverContract.ReplaceNotWellFormedRefusal));
                 Shutdown(1);
                 return;
         }
@@ -539,17 +545,7 @@ public partial class App : Application
             _splashClosedByApp = true;
             splash.Close();
 
-            // Where the check has not found the newer version, so no card or notice carries
-            // the line saying the update couldn't be installed, a dialog says it, once the
-            // check has answered or its time is up.
-            if (updateFailed)
-            {
-                var left = UpdateCheckService.RequestTimeout + UpdateCheckGrace - sinceCheckStart.Elapsed;
-                if (left > TimeSpan.Zero)
-                    await Task.WhenAny(viewModel.Chrome.AutomaticCheck, Task.Delay(left));
-                if (!viewModel.Chrome.HasNewerVersion)
-                    MessageDialog.Show(Strings.UpdateNotice_InstallFailed, Strings.Window_Main_Title, MessageKind.Warning);
-            }
+            if (updateFailed) _ = SayUpdateFailedUnlessShownAsync(viewModel.Chrome, window, sinceCheckStart);
         }
         // Both arms show the dialog before EndFailedStart, and the order is
         // load-bearing: see EndFailedStart. Anything the composition build, the
@@ -595,6 +591,30 @@ public partial class App : Application
         {
             CrashLog.TryWrite(ex);
             Shutdown(1);
+        }
+    }
+
+    /// <summary>
+    /// Once the automatic check has answered or its time is up, shows a dialog saying the
+    /// update couldn't be installed where no card or notice carries that line: where the
+    /// check has not found the newer version, or found one its release rules this copy out
+    /// of, which takes the line off. Not where <paramref name="window"/> has closed
+    /// meanwhile. A failure is written to crash.log and goes no further.
+    /// </summary>
+    private static async Task SayUpdateFailedUnlessShownAsync(
+        ChromeViewModel chrome, Window window, Stopwatch sinceCheckStart)
+    {
+        try
+        {
+            var left = UpdateCheckService.RequestTimeout + UpdateCheckGrace - sinceCheckStart.Elapsed;
+            if (left > TimeSpan.Zero)
+                await Task.WhenAny(chrome.AutomaticCheck, Task.Delay(left));
+            if (!window.IsVisible || (chrome.HasNewerVersion && chrome.HasUpdateFailure)) return;
+            MessageDialog.Show(Strings.UpdateNotice_InstallFailed, Strings.Window_Main_Title, MessageKind.Warning);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
         }
     }
 
