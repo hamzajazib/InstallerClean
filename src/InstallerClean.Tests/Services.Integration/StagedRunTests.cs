@@ -70,11 +70,10 @@ public sealed class StagedRunTests : IDisposable
         EventLogRecorder.Clear();
 
         var answer = StagedRun.StartReplace(request, DetachedStandIn.Exe, DetachedStandIn.Before(_root, "set"), TimeSpan.FromSeconds(60));
-        var standIn = Owned();
 
         Assert.Equal(NewerVersionAnswer.Started, answer);
+        Assert.False(Owned().HasExited);
         Assert.Empty(EventLogRecorder.Entries);
-        Assert.False(standIn.HasExited);
         Assert.Equal(ReplaceRead.Asked, HandOverContract.ReadReplaceRequest(File.ReadAllLines(Path.Combine(_root, "arguments.txt")), out var passed));
         Assert.Equal(request.ExePath, passed!.ExePath);
         Assert.Equal(4, passed.ProcessId);
