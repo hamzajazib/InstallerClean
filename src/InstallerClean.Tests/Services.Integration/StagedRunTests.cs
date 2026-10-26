@@ -25,6 +25,20 @@ public sealed class StagedRunTests : IDisposable
     {
         try
         {
+            // A stand-in the test did not take, an assertion having failed first, is ended
+            // too, where the process with the ID it wrote is still the stand-in.
+            if (_owned.Count == 0 && TryReadPid() is { } pid)
+            {
+                try
+                {
+                    var unowned = Process.GetProcessById(pid);
+                    if (string.Equals(unowned.MainModule?.FileName, DetachedStandIn.Exe, StringComparison.OrdinalIgnoreCase))
+                        _owned.Add(unowned);
+                    else
+                        unowned.Dispose();
+                }
+                catch { }
+            }
             foreach (var process in _owned)
             {
                 // Waited for, so the stand-in's exe is free to delete once the test run ends.
@@ -44,6 +58,19 @@ public sealed class StagedRunTests : IDisposable
     /// <summary>A request standing for a copy at a path in the test's folder, run by process <paramref name="processId"/>.</summary>
     private ReplaceRequest Request(int processId) =>
         new(Path.Combine(_root, "installerclean-cli.exe"), processId, Guid.NewGuid().ToString("N"), ["/s"]);
+
+    /// <summary>The process ID the stand-in wrote to pid.txt in the test's folder, or null where it wrote none.</summary>
+    private int? TryReadPid()
+    {
+        try
+        {
+            return int.TryParse(File.ReadAllText(Path.Combine(_root, "pid.txt")).Trim(), out var pid) ? pid : null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// The process whose ID the stand-in wrote to pid.txt in the test's folder, which the
