@@ -158,18 +158,14 @@ internal sealed class FirstRunMark : IFirstRunMark
     /// and <see cref="ReleaseClaimLock"/> may await: a continuation on another thread
     /// would fail the release and leave the lock held until the process ends.
     /// </summary>
-    private bool WaitForClaimLock(Mutex claimLock)
-    {
-        try
-        {
-            return claimLock.WaitOne(_claimLockWait);
-        }
-        catch (AbandonedMutexException)
-        {
-            // Its last holder ended without releasing it; the runtime hands it to this thread.
-            return true;
-        }
-    }
+    /// <remarks>
+    /// The wait dispatches nothing meanwhile (<see cref="HandleWait"/>): the window claims on
+    /// its own thread, and no message sent to it is handled before the claim is answered.
+    /// Abandoned is its last holder having ended without releasing it, and Windows hands it
+    /// to this thread.
+    /// </remarks>
+    private bool WaitForClaimLock(Mutex claimLock) =>
+        HandleWait.One(claimLock.SafeWaitHandle, _claimLockWait) is not HandleWaitResult.TimedOut;
 
     private static void ReleaseClaimLock(Mutex? claimLock, bool held)
     {

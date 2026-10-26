@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 using Microsoft.Win32.SafeHandles;
 
 namespace InstallerClean.Tests.Services.Integration;
@@ -128,11 +129,28 @@ public class MutexProbeTests
     }
 
     [Fact]
+    public void A_sample_and_an_acquire_hand_no_wait_to_the_threads_synchronisation_context()
+    {
+        using var existing = new Mutex(initiallyOwned: false, _name);
+
+        var waits = WaitRecordingContext.RunOnThreadWithIt(context =>
+        {
+            var probe = new MutexProbe();
+            Assert.Equal(MutexSample.NotHeld, probe.Sample(_name).State);
+            using (var lease = probe.TryAcquire(_name, out var outcome))
+                Assert.Equal(MutexAcquireOutcome.Acquired, outcome);
+            return context.Waits;
+        });
+
+        Assert.Equal(0, waits);
+    }
+
+    [Fact]
     public void An_abandoned_mutex_is_acquired_rather_than_reported_as_held()
     {
         // A holder thread that exits without releasing leaves the mutex
-        // abandoned, which surfaces as AbandonedMutexException on the next
-        // acquire WITH ownership already transferred. Reporting that as
+        // abandoned, which the next acquire's wait answers as abandoned, WITH
+        // ownership already transferred. Reporting that as
         // held by another would refuse every batch after a crashed installer,
         // and go on refusing until the machine restarted.
         var holder = new Thread(() =>

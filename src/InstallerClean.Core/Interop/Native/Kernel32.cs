@@ -665,8 +665,9 @@ internal static partial class Kernel32
     /// <summary>
     /// Waits until one of <paramref name="lpHandles"/> is signalled or
     /// <paramref name="dwMilliseconds"/> have passed, and answers <see cref="WAIT_OBJECT_0"/>
-    /// plus the index of the lowest-numbered handle signalled, <see cref="WAIT_TIMEOUT"/>
-    /// or <see cref="WAIT_FAILED"/>. It never dispatches a window message or a COM call,
+    /// plus the index of the lowest-numbered handle signalled, <see cref="WAIT_ABANDONED_0"/>
+    /// plus that index for a mutex abandoned by its owner, <see cref="WAIT_TIMEOUT"/> or
+    /// <see cref="WAIT_FAILED"/>. It never dispatches a window message or a COM call,
     /// so no window code runs on the waiting thread meanwhile.
     /// </summary>
     [LibraryImport(Library, EntryPoint = "WaitForMultipleObjects", SetLastError = true)]
@@ -674,6 +675,10 @@ internal static partial class Kernel32
         uint nCount, IntPtr[] lpHandles, [MarshalAs(UnmanagedType.Bool)] bool bWaitAll, uint dwMilliseconds);
 
     public const uint WAIT_OBJECT_0 = 0;
+
+    /// <summary>A mutex waited on whose last owner ended without releasing it: the waiting thread now owns it.</summary>
+    public const uint WAIT_ABANDONED_0 = 0x80;
+
     public const uint WAIT_TIMEOUT = 0x102;
     public const uint WAIT_FAILED = 0xFFFFFFFF;
 

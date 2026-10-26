@@ -28,15 +28,11 @@ internal sealed class MutexProbe : IMutexProbe
                 bool acquired = false;
                 try
                 {
-                    acquired = mutex.WaitOne(0);
+                    // Abandoned: the previous owner died while holding it;
+                    // ownership transferred to this thread, so nothing is
+                    // installing. The wait dispatches nothing (HandleWait).
+                    acquired = HandleWait.One(mutex.SafeWaitHandle, TimeSpan.Zero) is not HandleWaitResult.TimedOut;
                     return acquired ? MutexSample.NotHeld : MutexSample.Held;
-                }
-                catch (AbandonedMutexException)
-                {
-                    // The previous owner died while holding it; ownership
-                    // transferred to this thread, so nothing is installing.
-                    acquired = true;
-                    return MutexSample.NotHeld;
                 }
                 finally
                 {
@@ -133,13 +129,10 @@ internal sealed class MutexProbe : IMutexProbe
         bool acquired;
         try
         {
-            acquired = mutex.WaitOne(0);
-        }
-        catch (AbandonedMutexException)
-        {
-            // The previous owner died while holding it; ownership transferred to
-            // this thread, so nothing is installing and we now hold it.
-            acquired = true;
+            // Abandoned: the previous owner died while holding it; ownership
+            // transferred to this thread, so nothing is installing and this thread now
+            // holds it. The wait dispatches nothing (HandleWait).
+            acquired = HandleWait.One(mutex.SafeWaitHandle, TimeSpan.Zero) is not HandleWaitResult.TimedOut;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {

@@ -1,4 +1,5 @@
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 
 namespace InstallerClean.Tests.Services.Integration;
 
@@ -88,6 +89,66 @@ public class InstanceLockTests
         Assert.True(instanceLock.TryTake());
         Assert.True(instanceLock.IsHeld);
         instanceLock.Release();
+    }
+
+    [Fact]
+    public void A_lock_waiting_for_the_mutex_takes_it_as_its_holder_lets_go()
+    {
+        using var holding = new ManualResetEventSlim();
+        using var letGo = new ManualResetEventSlim();
+        var holder = new Thread(() =>
+        {
+            using var first = new InstanceLock(_name);
+            first.TryTake();
+            holding.Set();
+            letGo.Wait();
+            first.Release();
+        }) { IsBackground = true };
+        holder.Start();
+        Assert.True(holding.Wait(TimeSpan.FromSeconds(10)));
+
+        using var second = new InstanceLock(_name);
+        Assert.False(second.TryTake());
+
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        letGo.Set();
+        Assert.True(second.TryTake(TimeSpan.FromSeconds(30)));
+        Assert.True(waited.Elapsed < TimeSpan.FromSeconds(20));
+        Assert.True(second.IsHeld);
+        second.Release();
+        holder.Join();
+    }
+
+    [Fact]
+    public void A_wait_for_a_mutex_held_throughout_answers_that_it_is_not_taken()
+    {
+        using var first = new InstanceLock(_name);
+        first.TryTake();
+
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        var secondTook = OnOtherThread(() =>
+        {
+            using var second = new InstanceLock(_name);
+            return second.TryTake(TimeSpan.FromMilliseconds(300));
+        });
+
+        Assert.False(secondTook);
+        Assert.True(waited.Elapsed >= TimeSpan.FromMilliseconds(250));
+        first.Release();
+    }
+
+    [Fact]
+    public void Taking_the_lock_with_a_wait_hands_no_wait_to_the_threads_synchronisation_context()
+    {
+        var waits = WaitRecordingContext.RunOnThreadWithIt(context =>
+        {
+            using var instanceLock = new InstanceLock(_name);
+            Assert.True(instanceLock.TryTake(TimeSpan.FromSeconds(5)));
+            instanceLock.Release();
+            return context.Waits;
+        });
+
+        Assert.Equal(0, waits);
     }
 
     [Fact]

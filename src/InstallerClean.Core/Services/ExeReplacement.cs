@@ -117,11 +117,8 @@ internal static class ExeReplacement
     {
         var version = typeof(ExeReplacement).Assembly.GetName().Version ?? new Version(0, 0, 0);
         EventLogWriter.Write(CliEventClass.UpdateNotInstalledNotice, () => MachineCulture.English(() =>
-        {
-            var named = $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}";
-            return string.Format(CultureInfo.InvariantCulture, Strings.Cli_EventLogUpdateNothingAtPath,
-                named, UpdateCheckService.ReleasesPageUrl);
-        }));
+            string.Format(CultureInfo.InvariantCulture, Strings.Cli_EventLogUpdateNothingAtPath,
+                version.ToString(3), UpdateCheckService.ReleasesPageUrl)));
     }
 
     private static ReplaceOutcome RunSteps(ReplaceRequest request, bool startAtPath, ReplaceSeams seams)
@@ -605,36 +602,14 @@ internal static class ExeReplacement
     private static bool WaitForEnd(SafeProcessHandle process, TimeSpan notice, out int error)
     {
         var milliseconds = (uint)Math.Clamp(notice.TotalMilliseconds, 0, uint.MaxValue - 1);
-        var result = WaitOn(process, milliseconds, out error);
+        var result = HandleWait.One(process, milliseconds, out error);
         if (result == Kernel32.WAIT_TIMEOUT)
         {
             CrashLog.TryWrite(new TimeoutException(
                 $"The copy to be replaced had not closed {notice.TotalSeconds:0} seconds after it was told to; the replace waits on for it."));
-            result = WaitOn(process, Kernel32.INFINITE, out error);
+            result = HandleWait.One(process, Kernel32.INFINITE, out error);
         }
         return result == Kernel32.WAIT_OBJECT_0;
-    }
-
-    /// <summary>
-    /// Waits up to <paramref name="milliseconds"/> for <paramref name="process"/> and answers
-    /// what WaitForMultipleObjects answered, with the error code in <paramref name="error"/>
-    /// where it refused the wait.
-    /// </summary>
-    private static uint WaitOn(SafeProcessHandle process, uint milliseconds, out int error)
-    {
-        error = 0;
-        var added = false;
-        try
-        {
-            process.DangerousAddRef(ref added);
-            var result = Kernel32.WaitForMultipleObjects(1, [process.DangerousGetHandle()], bWaitAll: false, milliseconds);
-            if (result == Kernel32.WAIT_FAILED) error = Marshal.GetLastPInvokeError();
-            return result;
-        }
-        finally
-        {
-            if (added) process.DangerousRelease();
-        }
     }
 
     /// <summary>

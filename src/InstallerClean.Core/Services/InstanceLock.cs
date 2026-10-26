@@ -1,3 +1,5 @@
+using InstallerClean.Helpers;
+
 namespace InstallerClean.Services;
 
 /// <summary>
@@ -35,18 +37,22 @@ internal sealed class InstanceLock : IDisposable
     /// Takes the mutex without waiting where nothing else holds it, and answers whether this
     /// lock holds it. A mutex whose last owner ended without releasing it is taken.
     /// </summary>
-    public bool TryTake()
+    public bool TryTake() => TryTake(TimeSpan.Zero);
+
+    /// <summary>
+    /// <see cref="TryTake()"/>, waiting up to <paramref name="wait"/> for whatever holds the
+    /// mutex to let go of it. Windows hands the mutex to the waiting thread as the holder lets
+    /// go. The wait dispatches nothing meanwhile, whatever the calling thread
+    /// (<see cref="HandleWait"/>). Throws where Windows refuses the wait or answers it with
+    /// anything but taken, abandoned or timed out.
+    /// </summary>
+    public bool TryTake(TimeSpan wait)
     {
         if (IsHeld) return true;
-        try
-        {
-            IsHeld = _mutex.WaitOne(TimeSpan.Zero);
-        }
-        catch (AbandonedMutexException)
-        {
-            // Its last owner ended without releasing it; the runtime hands it to this thread.
-            IsHeld = true;
-        }
+
+        // Abandoned: its last owner ended without releasing it, and Windows hands it to this
+        // thread.
+        IsHeld = HandleWait.One(_mutex.SafeWaitHandle, wait) is not HandleWaitResult.TimedOut;
         return IsHeld;
     }
 

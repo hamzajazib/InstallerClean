@@ -234,7 +234,8 @@ public partial class App : Application
             return;
         }
 
-        // Single instance: the mutex is taken without waiting and released
+        // Single instance: the mutex is taken without waiting, or after a wait for a start
+        // that follows a copy that has just closed (InstanceLockWait), and released
         // in OnExit. A process that ends without releasing it hands it to
         // the next instance, which InstanceLock counts as taken.
         //
@@ -245,7 +246,10 @@ public partial class App : Application
         try
         {
             _instanceLock = new InstanceLock();
-            tookInstanceLock = TakeInstanceLock(_instanceLock, wait: startedEvent is not null || updateFailed);
+            // The wait dispatches nothing, so no message sent to this thread is handled
+            // before the handlers below are hooked.
+            tookInstanceLock = _instanceLock.TryTake(
+                startedEvent is not null || updateFailed ? InstanceLockWait : TimeSpan.Zero);
         }
         catch (Exception ex)
         {
@@ -618,28 +622,13 @@ public partial class App : Application
         }
     }
 
-    /// <summary>How long a start following a copy that has just closed waits for the single-instance mutex.</summary>
-    private static readonly TimeSpan InstanceLockWait = TimeSpan.FromSeconds(15);
-
     /// <summary>
-    /// Takes <paramref name="instanceLock"/> without waiting, or where <paramref name="wait"/>,
-    /// tries again every tenth of a second for up to <see cref="InstanceLockWait"/>: a copy
-    /// that has just told this one to start, or put it back, may still be closing and holding
-    /// the mutex. Answers whether it is taken. Runs on the dispatcher thread, which releases
-    /// it in <see cref="OnExit"/>.
+    /// How long a start following a copy that has just closed waits for the single-instance
+    /// mutex: a copy that has just told this one to start, or put it back, may still be
+    /// closing and holding it, and Windows hands the mutex to the waiting thread as that copy
+    /// lets go of it.
     /// </summary>
-    private static bool TakeInstanceLock(InstanceLock instanceLock, bool wait)
-    {
-        if (instanceLock.TryTake()) return true;
-        if (!wait) return false;
-        var waited = Stopwatch.StartNew();
-        while (waited.Elapsed < InstanceLockWait)
-        {
-            Thread.Sleep(100);
-            if (instanceLock.TryTake()) return true;
-        }
-        return false;
-    }
+    private static readonly TimeSpan InstanceLockWait = TimeSpan.FromSeconds(15);
 
     /// <summary>
     /// Ends a start that failed, with exit code 1, and closes <paramref name="splash"/>
@@ -852,8 +841,8 @@ public partial class App : Application
     {
         RefillPathLeftEmpty();
         _services?.Dispose();
-        // Release-before-Dispose: a clean release lets the next instance
-        // skip the AbandonedMutexException path. OnExit runs on the
+        // Release-before-Dispose: a clean release hands the next instance
+        // a released mutex, not an abandoned one. OnExit runs on the
         // dispatcher thread (same thread that took the mutex in
         // OnStartup), so ReleaseMutex can't throw ApplicationException.
         _instanceLock?.Release();

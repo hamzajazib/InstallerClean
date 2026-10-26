@@ -1,4 +1,5 @@
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 using Microsoft.Win32;
 
 namespace InstallerClean.Tests.Services.Integration;
@@ -89,6 +90,16 @@ public sealed class FirstRunMarkTests : IDisposable
 
     private FirstRunMark ClaimingMark(TimeSpan? wait = null) =>
         new(RegistryHive.CurrentUser, _keyPath, _claimLock, wait ?? TimeSpan.FromSeconds(10));
+
+    [Fact]
+    public void A_claim_hands_no_wait_to_the_threads_synchronisation_context()
+    {
+        var (claimed, waits) = WaitRecordingContext.RunOnThreadWithIt(context =>
+            (ClaimingMark().TryClaim(), context.Waits));
+
+        Assert.True(claimed);
+        Assert.Equal(0, waits);
+    }
 
     [Fact]
     public void The_first_claim_sets_the_mark_and_the_next_is_refused()
