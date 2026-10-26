@@ -8,9 +8,9 @@
 // version it is given, one makes the check wait out its own bound and answer as timed
 // out, and one answers with a release tag it is given without asking GitHub. In the
 // update itself, one has the app take itself for another kind of copy, one runs a
-// setup already on disk in place of downloading one, and one copies a newer file
-// already on disk in place of downloading it; and one holds either of those two local
-// files part way until a gate file appears. Code between #if DEBUG and its #endif is compiled
+// setup already on disk in place of downloading one, one copies a newer file already
+// on disk in place of downloading it, and one holds either of those two local files
+// part way until a gate file appears. Code between #if DEBUG and its #endif is compiled
 // only where DEBUG is defined, so a switch's name and its read sit there, and nothing
 // that builds a Release defines DEBUG. This checks both.
 //

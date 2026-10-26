@@ -303,7 +303,6 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         var (file, gate, bytes) = GatedLocalFile();
         // Left by an earlier run; a gate already there would not hold this one.
         File.WriteAllText(gate, string.Empty);
-        File.WriteAllText(gate + AppUpdater.GateReachedSuffix, string.Empty);
         var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, gate), TimeSpan.FromSeconds(30));
         var reported = new List<double?>();
 
@@ -330,6 +329,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         Assert.True(File.Exists(gate + AppUpdater.GateReachedSuffix));
         Assert.False(File.Exists(Destination));
     }
+
     [Fact]
     public async Task A_gate_that_is_not_a_full_path_fails_the_download()
     {

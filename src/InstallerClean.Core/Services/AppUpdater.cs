@@ -471,11 +471,12 @@ public sealed class AppUpdater : IAppUpdater
     /// <see cref="GateReachedSuffix"/> on the end, and waits until the gate file exists before
     /// passing the rest, so Cancel and Ctrl+C can be pressed while a partial download is on disk.
     /// A gate file and a reached file left by an earlier download are deleted as the download
-    /// starts. The wait is a read of the download, so it ends where the download's own token
+    /// starts, so one gate serves one download at a time, and the gate's folder has to exist
+    /// by then. The wait is a read of the download, so it ends where the download's own token
     /// does: on Cancel, on Ctrl+C, and on the download's stall timeout, which fails a download
     /// held at the gate longer than that timeout as one that stopped arriving. A download from
-    /// GitHub is never held. A gate that is not a full path, or a reached file that cannot be
-    /// written, fails the download. Held inside <c>#if DEBUG</c> the same way.
+    /// GitHub is never held. A gate that is not a full path or whose folder is not there, or a
+    /// reached file that cannot be written, fails the download. Held inside <c>#if DEBUG</c> the same way.
     /// </summary>
     internal const string DownloadGateVariable = "INSTALLERCLEAN_DEBUG_DOWNLOAD_GATE";
 
@@ -484,7 +485,7 @@ public sealed class AppUpdater : IAppUpdater
     /// passed when it stops: 8 MB, or half the file where that is less, so every kind of copy
     /// stops with part of it on disk.
     /// </summary>
-    internal static long GatePoint(long length) => Math.Min(8 * 1024 * 1024, length / 2);
+    internal static long GatePoint(long length) => Math.Max(1, Math.Min(8 * 1024 * 1024, length / 2));
 
     /// <summary>Put on the end of the gate's path to name the file written as the download reaches the gate.</summary>
     internal const string GateReachedSuffix = ".reached";
