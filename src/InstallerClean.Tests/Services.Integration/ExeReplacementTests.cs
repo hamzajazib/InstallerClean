@@ -153,7 +153,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_copy_that_takes_a_while_to_close_is_replaced_once_it_has()
+    public void A_copy_still_closing_past_the_notice_is_waited_for_and_replaced_once_it_has()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -166,11 +166,13 @@ public sealed class ExeReplacementTests : IDisposable
             await oldCopy.WaitForExitAsync();
         });
 
-        var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(ThisExe: NewerFile()));
+        var outcome = ExeReplacement.Run(request, startAtPath: false,
+            new ReplaceSeams(ThisExe: NewerFile(), OldCopyNotice: TimeSpan.FromSeconds(1)));
         ending.Wait();
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
         Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
+        Assert.Contains("the replace waits on for it", TestCrashLog.Text());
     }
 
     [Fact]
@@ -234,6 +236,30 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.Equal(ReplaceOutcome.RolledBack, outcome);
         Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+    }
+
+    [Fact]
+    public void A_read_only_exe_is_read_only_again_where_the_older_version_cannot_be_put_back()
+    {
+        var oldCopy = StartOldCopy();
+        File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = EndOnceSet(oldCopy, started);
+
+        var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
+            ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(1), StartAndAwait: path =>
+            {
+                Hold(path);
+                return NewerAtPath.NotStarted;
+            }));
+        ending.Wait();
+
+        Assert.Equal(ReplaceOutcome.NotRolledBack, outcome);
+        foreach (var held in _held) held.Dispose();
+        Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
+        Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+        Assert.True(File.Exists(Backup));
     }
 
     [Fact]
@@ -408,7 +434,7 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.Equal(ReplaceOutcome.RolledBack, outcome);
         Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
         Assert.False(File.Exists(Backup));
-        Assert.Contains($"is a copy, the volume having refused a second name with error {Interop.Native.Kernel32.ERROR_INVALID_FUNCTION}", TestCrashLog.Text());
+        Assert.Contains($"The volume refused the exe a second name with error {Interop.Native.Kernel32.ERROR_INVALID_FUNCTION}.", TestCrashLog.Text());
     }
 
     [Fact]

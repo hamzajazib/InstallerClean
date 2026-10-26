@@ -778,6 +778,7 @@ internal static partial class Kernel32
 
     public const uint FILE_FLAG_BACKUP_SEMANTICS    = 0x02000000;
     public const uint FILE_FLAG_OPEN_REPARSE_POINT  = 0x00200000;
+    public const uint FILE_FLAG_DELETE_ON_CLOSE     = 0x04000000;
 
     public const uint FILE_ATTRIBUTE_REPARSE_POINT  = 0x00000400;
     public const uint FILE_ATTRIBUTE_DIRECTORY      = 0x00000010;

@@ -60,14 +60,27 @@ internal static class StorageHelpers
             Kernel32.FILE_APPEND_DATA | Kernel32.FILE_READ_ATTRIBUTES,
             Kernel32.OPEN_ALWAYS);
 
-    private static SafeFileHandle? Open(string path, uint desiredAccess, uint disposition)
+    /// <summary>
+    /// Creates <paramref name="path"/> as a new file, with the same reparse-point refusal as
+    /// <see cref="OpenAtomic"/>, shared with nothing, and deleted by Windows as the handle
+    /// closes, however the process holding it ends. Returns null on any failure, a file
+    /// already at the name among them.
+    ///
+    /// Shared with nothing, the file cannot be opened or deleted by anyone else while it is
+    /// held, so a delete that is refused says somebody holds it.
+    /// </summary>
+    internal static SafeFileHandle? CreateHeld(string path) =>
+        Open(path, Kernel32.GENERIC_WRITE, Kernel32.CREATE_NEW, share: 0, Kernel32.FILE_FLAG_DELETE_ON_CLOSE);
+
+    private static SafeFileHandle? Open(
+        string path, uint desiredAccess, uint disposition, uint share = Kernel32.FILE_SHARE_ALL, uint moreFlags = 0)
     {
         if (string.IsNullOrEmpty(path)) return null;
 
-        uint flags = Kernel32.FILE_FLAG_OPEN_REPARSE_POINT;
+        uint flags = Kernel32.FILE_FLAG_OPEN_REPARSE_POINT | moreFlags;
 
         var handle = Kernel32.CreateFile(
-            path, desiredAccess, Kernel32.FILE_SHARE_ALL, IntPtr.Zero,
+            path, desiredAccess, share, IntPtr.Zero,
             disposition, flags, IntPtr.Zero);
         if (handle.IsInvalid) return null;
 
