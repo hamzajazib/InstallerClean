@@ -60,6 +60,13 @@ internal static class ExeReplacement
     /// </summary>
     internal static readonly TimeSpan MoveRetryBound = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// How long a replace tries again to hold the file named with <see cref="LockSuffix"/>
+    /// where it cannot. <see cref="TryRemoveLeftovers"/> holds that file for as long as its
+    /// deletes take, and a replace starting meanwhile takes it once they are done.
+    /// </summary>
+    internal static readonly TimeSpan HoldRetryBound = TimeSpan.FromSeconds(2);
+
     private static readonly TimeSpan FirstMoveRetryInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan LongestMoveRetryInterval = TimeSpan.FromSeconds(2);
 
@@ -112,10 +119,11 @@ internal static class ExeReplacement
             return Fail(ReplaceOutcome.NotHandedOver,
                 $"The file to be replaced is not the one process {request.ProcessId} runs from.");
 
-        using var held = TryHold(exePath, out var holdFailure);
+        using var held = TryHold(exePath, seams.HoldRetryBound ?? HoldRetryBound, out var holdFailure);
         if (held is null)
             return Fail(ReplaceOutcome.NotHandedOver,
-                "Another replace or clean-up of this exe is running, or the file it holds could not be made.", holdFailure);
+                $"The file ending {LockSuffix}, which a replace or a clean-up of this exe holds while it runs, could not be held.",
+                holdFailure);
 
         if (!TryWriteNew(replacing, seams.ThisExe ?? Environment.ProcessPath, out var writeFailure))
             return Fail(ReplaceOutcome.NotHandedOver, "The newer version could not be written beside the exe.", writeFailure);
@@ -135,44 +143,47 @@ internal static class ExeReplacement
                 $"Waiting for the copy to be replaced to end failed with error {waitError}; nothing was replaced.");
         }
 
-        // A move over a read-only file is refused, so the attribute comes off the exe for the
-        // replace and goes back on whichever version is at the path once it is done.
         if (!TryReadAttributes(exePath, out attributes, out readFailure))
         {
             TryDeletePlainFile(replacing);
-            return Fail(ReplaceOutcome.Refused, "The exe could not be read once its copy had ended.", readFailure);
+            return IsNothingThere(readFailure)
+                ? Fail(ReplaceOutcome.NothingAtPath, NothingAtPathMessage, readFailure)
+                : Fail(ReplaceOutcome.Refused, "The exe could not be read once its copy had ended.", readFailure);
         }
+        // A move over a read-only file is refused, so the attribute comes off the exe for the
+        // replace. It goes back on whichever version is at the path straight after each move,
+        // so the path is read-only again before anything is started from it.
         var readOnly = (attributes & FileAttributes.ReadOnly) != 0;
-        if (readOnly && !TrySetAttributes(exePath, attributes & ~FileAttributes.ReadOnly, out var attributeFailure))
+        if (readOnly && !TrySetReadOnly(exePath, on: false, out var attributeFailure))
         {
             TryDeletePlainFile(replacing);
             return Fail(ReplaceOutcome.Refused, "The exe's read-only attribute could not be taken off.", attributeFailure);
         }
-        try
-        {
-            return Replace(exePath, startAtPath, seams);
-        }
-        finally
-        {
-            if (readOnly) PutReadOnlyBack(exePath);
-        }
+        return Replace(exePath, readOnly, startAtPath, seams);
     }
 
     /// <summary>
     /// The steps of <see cref="Run(ReplaceRequest, bool, ReplaceSeams)"/> once the copy has
     /// ended: the second name, the move, and where <paramref name="startAtPath"/>, the start
-    /// and the putting back.
+    /// and the putting back. Where <paramref name="readOnly"/>, the exe's read-only attribute
+    /// has been taken off and goes back on whichever version each step leaves at the path.
     /// </summary>
-    private static ReplaceOutcome Replace(string exePath, bool startAtPath, ReplaceSeams seams)
+    private static ReplaceOutcome Replace(string exePath, bool readOnly, bool startAtPath, ReplaceSeams seams)
     {
         var replacing = exePath + ReplacingSuffix;
         var backup = exePath + BackupSuffix;
 
+        // The second name, where it is a link, is the exe's own file and carries its
+        // attributes, so an exit below that deletes it does so before read-only goes back on
+        // the exe.
         var kept = TryMakeBackup(exePath, backup, seams.HardLink ?? HardLink, out var linkError, out var backupFailure);
         var linkNote = linkError == 0 ? string.Empty : $" The volume refused the exe a second name with error {linkError}.";
         if (!kept)
         {
             TryDeletePlainFile(replacing);
+            if (IsNothingThere(backupFailure))
+                return Fail(ReplaceOutcome.NothingAtPath, NothingAtPathMessage + linkNote, backupFailure);
+            if (readOnly) PutReadOnlyBack(exePath);
             return Fail(ReplaceOutcome.Refused, "The exe could not be kept before it was replaced." + linkNote, backupFailure);
         }
 
@@ -181,9 +192,11 @@ internal static class ExeReplacement
         {
             TryDeletePlainFile(replacing);
             TryDeletePlainFile(backup);
+            if (readOnly) PutReadOnlyBack(exePath);
             return Fail(ReplaceOutcome.Refused,
                 $"The newer version could not be moved over the exe; the last try failed with error {moveError}." + linkNote);
         }
+        if (readOnly) PutReadOnlyBack(exePath);
 
         if (!startAtPath)
         {
@@ -203,36 +216,74 @@ internal static class ExeReplacement
                     + linkNote);
         }
 
+        const string notPutBack = "The newer version at the exe's path did not start, and the older version could not be put back; ";
+        string leftAsItIs = "The newer version is at the path, not running, and the older version is beside it under the name "
+            + $"ending {BackupSuffix}." + linkNote;
+        if (readOnly && !TrySetReadOnly(exePath, on: false, out var newerAttributeFailure))
+            return Fail(ReplaceOutcome.NotRolledBack,
+                notPutBack + "the newer version's read-only attribute could not be taken off. " + leftAsItIs, newerAttributeFailure);
         if (TryMoveOver(backup, exePath, retryBound, out var backError))
+        {
+            if (readOnly) PutReadOnlyBack(exePath);
             return Fail(ReplaceOutcome.RolledBack,
                 "The newer version at the exe's path did not start, so the older version was put back there." + linkNote);
-        return Fail(ReplaceOutcome.NotRolledBack,
-            "The newer version at the exe's path did not start, and the older version could not be put back; the last "
-            + $"try failed with error {backError}. The newer version is at the path, not running, and the older version "
-            + $"is beside it under the name ending {BackupSuffix}." + linkNote);
+        }
+        if (readOnly) PutReadOnlyBack(exePath);
+        return Fail(ReplaceOutcome.NotRolledBack, notPutBack + $"the last try failed with error {backError}. " + leftAsItIs);
     }
+
+    /// <summary>What crash.log says where nothing is at the exe's path once its copy has ended.</summary>
+    private const string NothingAtPathMessage =
+        "Nothing was at the exe's path once its copy had ended, so the newer version was not put there.";
+
+    /// <summary>
+    /// Whether <paramref name="failure"/> is Windows answering that a file, its folder or its
+    /// drive is not there: errors 2, 3 and 15.
+    /// </summary>
+    private static bool IsNothingThere(Exception? failure) =>
+        failure is FileNotFoundException or DirectoryNotFoundException or DriveNotFoundException;
 
     /// <summary>
     /// Holds the file named for <paramref name="exePath"/> with <see cref="LockSuffix"/> on
     /// the end (<see cref="StorageHelpers.CreateHeld"/>), and answers its handle; null where
-    /// it cannot, with what failed in <paramref name="failure"/>. A plain file at the name is
-    /// one Windows had no chance to delete, as where the PC lost power, and is deleted first;
-    /// one somebody holds cannot be, and a reparse point there is refused.
+    /// it cannot, with the last failure in <paramref name="failure"/>. A plain file at the
+    /// name is one Windows had no chance to delete, as where the PC lost power, and is deleted
+    /// first; one somebody holds cannot be. Each failure is tried again, a little later each
+    /// time, for up to <paramref name="bound"/>, except a reparse point at the name, which is
+    /// refused at once.
     /// </summary>
-    private static SafeFileHandle? TryHold(string exePath, out Exception? failure)
+    private static SafeFileHandle? TryHold(string exePath, TimeSpan bound, out Exception? failure)
     {
-        failure = null;
         var path = exePath + LockSuffix;
-        try
+        var started = Stopwatch.GetTimestamp();
+        var interval = FirstMoveRetryInterval;
+        while (true)
         {
-            if (File.Exists(path)) DeletePlainFile(path);
-            return StorageHelpers.CreateHeld(path)
-                ?? throw new IOException($"The file ending {LockSuffix} could not be created.");
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            failure = ex;
-            return null;
+            try
+            {
+                if (File.Exists(path)) DeletePlainFile(path);
+                var handle = StorageHelpers.CreateHeld(path, out var error);
+                if (handle is not null)
+                {
+                    failure = null;
+                    return handle;
+                }
+                if (error == 0) throw new ReparsePointRefusedException(path);
+                failure = new IOException($"The file ending {LockSuffix} could not be created: error {error}.");
+            }
+            catch (ReparsePointRefusedException ex)
+            {
+                failure = ex;
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                failure = ex;
+            }
+            var left = bound - Stopwatch.GetElapsedTime(started);
+            if (left <= TimeSpan.Zero) return null;
+            Thread.Sleep(interval < left ? interval : left);
+            interval = interval * 2 < LongestMoveRetryInterval ? interval * 2 : LongestMoveRetryInterval;
         }
     }
 
@@ -270,13 +321,22 @@ internal static class ExeReplacement
     }
 
     /// <summary>
+    /// Puts the read-only attribute on <paramref name="path"/> where <paramref name="on"/>,
+    /// and takes it off otherwise, and answers whether it did, with what failed in
+    /// <paramref name="failure"/>.
+    /// </summary>
+    private static bool TrySetReadOnly(string path, bool on, out Exception? failure) =>
+        TryReadAttributes(path, out var attributes, out failure)
+        && TrySetAttributes(
+            path, on ? attributes | FileAttributes.ReadOnly : attributes & ~FileAttributes.ReadOnly, out failure);
+
+    /// <summary>
     /// Puts the read-only attribute on whatever is at <paramref name="exePath"/>. A failure
     /// is written to crash.log.
     /// </summary>
     private static void PutReadOnlyBack(string exePath)
     {
-        if (!TryReadAttributes(exePath, out var attributes, out var failure)
-            || !TrySetAttributes(exePath, attributes | FileAttributes.ReadOnly, out failure))
+        if (!TrySetReadOnly(exePath, on: true, out var failure))
             CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
                 "The read-only attribute could not be put back on the exe.", failure));
     }
@@ -409,7 +469,7 @@ internal static class ExeReplacement
         var result = WaitOn(process, milliseconds, out error);
         if (result == Kernel32.WAIT_TIMEOUT)
         {
-            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
+            CrashLog.TryWrite(new TimeoutException(
                 $"The copy to be replaced had not closed {notice.TotalSeconds:0} seconds after it was told to; the replace waits on for it."));
             result = WaitOn(process, Kernel32.INFINITE, out error);
         }
@@ -504,19 +564,30 @@ internal static class ExeReplacement
     /// <summary>
     /// Deletes what a replace left beside <paramref name="exePath"/>: the newer version that
     /// waited there and the older version's second name, each only where it is a plain file,
-    /// and only while a file is at the path. It holds the file a replace holds
-    /// (<see cref="LockSuffix"/>) while it deletes, so it runs only where no replace of the
-    /// exe is running, and no replace starts until it is done. Answers whether nothing is
+    /// and only while a file is at the path. Where any of those or the file a replace holds
+    /// (<see cref="LockSuffix"/>) is beside the exe, it holds that file while it deletes, so
+    /// it runs only where no replace of the exe is running, and no replace starts until it
+    /// is done; it tries once, for a caller that tries again. Answers whether nothing is
     /// left. Never throws.
     /// </summary>
-    public static bool TryRemoveLeftovers(string exePath)
+    public static bool TryRemoveLeftovers(string exePath) => TryRemoveLeftovers(exePath, whileHeld: null);
+
+    /// <summary>
+    /// Test seam: <see cref="TryRemoveLeftovers(string)"/>, running <paramref name="whileHeld"/>
+    /// while the file is held and before anything is deleted.
+    /// </summary>
+    internal static bool TryRemoveLeftovers(string exePath, Action? whileHeld)
     {
         try
         {
             if (!File.Exists(exePath)) return false;
-            using var held = TryHold(exePath, out _);
+            var replacing = exePath + ReplacingSuffix;
+            var backup = exePath + BackupSuffix;
+            if (!File.Exists(replacing) && !File.Exists(backup) && !File.Exists(exePath + LockSuffix)) return true;
+            using var held = TryHold(exePath, TimeSpan.Zero, out _);
             if (held is null) return false;
-            return TryDeletePlainFile(exePath + ReplacingSuffix) & TryDeletePlainFile(exePath + BackupSuffix);
+            whileHeld?.Invoke();
+            return TryDeletePlainFile(replacing) & TryDeletePlainFile(backup);
         }
         catch (Exception ex)
         {
@@ -547,9 +618,13 @@ internal static class ExeReplacement
     private static void DeletePlainFile(string path)
     {
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException("The file in the way is a reparse point.");
+            throw new ReparsePointRefusedException(path);
         File.Delete(path);
     }
+
+    /// <summary>A reparse point at a name a replace writes, holds or deletes, which it never follows.</summary>
+    private sealed class ReparsePointRefusedException(string path)
+        : IOException($"The file ending {Path.GetExtension(path)} is a reparse point.");
 }
 
 /// <summary>How a replace (<see cref="ExeReplacement.Run(ReplaceRequest, bool)"/>) ended.</summary>
@@ -565,6 +640,12 @@ internal enum ReplaceOutcome
 
     /// <summary>The copy has ended, and its exe is at the path still: the newer version could not be put there.</summary>
     Refused,
+
+    /// <summary>
+    /// The copy has ended and nothing is at its path. The newer version was not put there,
+    /// and nothing was started.
+    /// </summary>
+    NothingAtPath,
 
     /// <summary>The newer version is at the path, and where it was started, said it had started.</summary>
     Replaced,
@@ -608,11 +689,13 @@ internal enum NewerAtPath
 /// <param name="ThisExe">The file copied as the newer version, in place of this process's own.</param>
 /// <param name="OldCopyNotice">In place of <see cref="ExeReplacement.OldCopyNotice"/>.</param>
 /// <param name="MoveRetryBound">In place of <see cref="ExeReplacement.MoveRetryBound"/>.</param>
+/// <param name="HoldRetryBound">In place of <see cref="ExeReplacement.HoldRetryBound"/>.</param>
 /// <param name="HardLink">Makes the second name, answering 0, or the error it was refused with.</param>
 /// <param name="StartAndAwait">Starts the exe at the path and answers what it did.</param>
 internal sealed record ReplaceSeams(
     string? ThisExe = null,
     TimeSpan? OldCopyNotice = null,
     TimeSpan? MoveRetryBound = null,
+    TimeSpan? HoldRetryBound = null,
     Func<string, string, int>? HardLink = null,
     Func<string, NewerAtPath>? StartAndAwait = null);

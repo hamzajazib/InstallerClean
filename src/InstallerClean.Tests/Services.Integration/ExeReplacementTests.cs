@@ -1,5 +1,8 @@
 using System.Diagnostics;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using InstallerClean.Helpers;
+using InstallerClean.Interop.Native;
 using InstallerClean.Services;
 
 namespace InstallerClean.Tests.Services.Integration;
@@ -88,6 +91,32 @@ public sealed class ExeReplacementTests : IDisposable
         oldCopy.WaitForExit();
     });
 
+    /// <summary>
+    /// Denies this account the right to add a file to <paramref name="folder"/>, which Windows
+    /// applies to an administrator too, until the test ends.
+    /// </summary>
+    private void DenyAddingFiles(string folder)
+    {
+        var info = new DirectoryInfo(folder);
+        var deny = new FileSystemAccessRule(WindowsIdentity.GetCurrent().User!, FileSystemRights.CreateFiles, AccessControlType.Deny);
+        var security = info.GetAccessControl();
+        security.AddAccessRule(deny);
+        info.SetAccessControl(security);
+        _held.Add(new Undo(() =>
+        {
+            var again = info.GetAccessControl();
+            again.RemoveAccessRule(deny);
+            info.SetAccessControl(again);
+        }));
+        // The rule has to refuse a new file, or this is a test of a folder that takes one.
+        Assert.Throws<UnauthorizedAccessException>(() => File.WriteAllText(Path.Combine(folder, "probe.txt"), string.Empty));
+    }
+
+    private sealed class Undo(Action undo) : IDisposable
+    {
+        public void Dispose() => undo();
+    }
+
     /// <summary>Opens <paramref name="path"/> sharing reading alone, which refuses its replacement, until the answer is disposed.</summary>
     private FileStream Hold(string path)
     {
@@ -97,7 +126,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void The_newer_version_replaces_the_copy_once_it_has_ended_and_nothing_is_left_beside_it()
+    public async Task The_newer_version_replaces_the_copy_once_it_has_ended_and_nothing_is_left_beside_it()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -105,7 +134,7 @@ public sealed class ExeReplacementTests : IDisposable
         var ending = EndOnceSet(oldCopy, started);
 
         var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(ThisExe: NewerFile()));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
         Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
@@ -114,7 +143,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void The_newer_version_is_written_beside_the_copy_before_the_event_is_set()
+    public async Task The_newer_version_is_written_beside_the_copy_before_the_event_is_set()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -129,7 +158,7 @@ public sealed class ExeReplacementTests : IDisposable
         });
 
         ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(ThisExe: NewerFile()));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(NewerBytes, besideWhenSet);
     }
@@ -153,7 +182,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_copy_still_closing_past_the_notice_is_waited_for_and_replaced_once_it_has()
+    public async Task A_copy_still_closing_past_the_notice_is_waited_for_and_replaced_once_it_has()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -168,11 +197,13 @@ public sealed class ExeReplacementTests : IDisposable
 
         var outcome = ExeReplacement.Run(request, startAtPath: false,
             new ReplaceSeams(ThisExe: NewerFile(), OldCopyNotice: TimeSpan.FromSeconds(1)));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
         Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
-        Assert.Contains("the replace waits on for it", TestCrashLog.Text());
+        Assert.Contains(
+            "System.TimeoutException: The copy to be replaced had not closed 1 seconds after it was told to; the replace waits on for it.",
+            TestCrashLog.Text());
     }
 
     [Fact]
@@ -202,7 +233,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_read_only_exe_is_replaced_and_the_newer_version_is_read_only_too()
+    public async Task A_read_only_exe_is_replaced_and_the_newer_version_is_read_only_too()
     {
         var oldCopy = StartOldCopy();
         File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
@@ -212,7 +243,7 @@ public sealed class ExeReplacementTests : IDisposable
 
         var outcome = ExeReplacement.Run(request, startAtPath: false,
             new ReplaceSeams(ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(1)));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
         Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
@@ -221,7 +252,52 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_read_only_exe_put_back_is_read_only_again()
+    public async Task A_read_only_exe_replaced_is_read_only_before_the_newer_version_is_started()
+    {
+        var oldCopy = StartOldCopy();
+        File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = EndOnceSet(oldCopy, started);
+        bool? readOnlyWhenStarted = null;
+
+        var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
+            ThisExe: NewerFile(), StartAndAwait: path =>
+            {
+                readOnlyWhenStarted = File.GetAttributes(path).HasFlag(FileAttributes.ReadOnly);
+                return NewerAtPath.Started;
+            }));
+        await ending;
+
+        Assert.Equal(ReplaceOutcome.Replaced, outcome);
+        Assert.True(readOnlyWhenStarted);
+    }
+
+    [Fact]
+    public async Task A_read_only_exe_that_cannot_be_kept_is_left_read_only_with_nothing_beside_it()
+    {
+        var oldCopy = StartOldCopy();
+        File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
+        // A folder at the second name refuses the copy written where the link is refused.
+        Directory.CreateDirectory(Backup);
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = EndOnceSet(oldCopy, started);
+
+        var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
+            ThisExe: NewerFile(),
+            HardLink: (_, _) => Kernel32.ERROR_INVALID_FUNCTION,
+            StartAndAwait: _ => NewerAtPath.Started));
+        await ending;
+
+        Assert.Equal(ReplaceOutcome.Refused, outcome);
+        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
+        Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+        Assert.False(File.Exists(Replacing));
+    }
+
+    [Fact]
+    public async Task A_read_only_exe_put_back_is_read_only_again()
     {
         var oldCopy = StartOldCopy();
         File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
@@ -231,7 +307,7 @@ public sealed class ExeReplacementTests : IDisposable
 
         var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
             ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(1), StartAndAwait: _ => NewerAtPath.NotStarted));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.RolledBack, outcome);
         Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
@@ -239,7 +315,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_read_only_exe_is_read_only_again_where_the_older_version_cannot_be_put_back()
+    public async Task A_read_only_exe_is_read_only_again_where_the_older_version_cannot_be_put_back()
     {
         var oldCopy = StartOldCopy();
         File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
@@ -253,7 +329,7 @@ public sealed class ExeReplacementTests : IDisposable
                 Hold(path);
                 return NewerAtPath.NotStarted;
             }));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.NotRolledBack, outcome);
         foreach (var held in _held) held.Dispose();
@@ -270,7 +346,8 @@ public sealed class ExeReplacementTests : IDisposable
         var (request, started) = RequestFor(oldCopy);
         using var _ = started;
 
-        var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(ThisExe: NewerFile()));
+        var outcome = ExeReplacement.Run(request, startAtPath: false,
+            new ReplaceSeams(ThisExe: NewerFile(), HoldRetryBound: TimeSpan.FromMilliseconds(300)));
 
         Assert.Equal(ReplaceOutcome.NotHandedOver, outcome);
         Assert.False(started.WaitOne(0));
@@ -278,7 +355,72 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_replace_holds_its_file_while_it_runs_and_it_is_gone_once_it_ends()
+    public void A_replace_started_while_a_clean_up_holds_its_file_past_the_retries_is_not_handed_over()
+    {
+        var oldCopy = StartOldCopy();
+        File.WriteAllText(Backup, "left by an earlier update");
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        ReplaceOutcome? outcome = null;
+
+        var removed = ExeReplacement.TryRemoveLeftovers(Exe, whileHeld: () =>
+            outcome = ExeReplacement.Run(request, startAtPath: false,
+                new ReplaceSeams(ThisExe: NewerFile(), HoldRetryBound: TimeSpan.FromMilliseconds(300))));
+
+        Assert.True(removed);
+        Assert.Equal(ReplaceOutcome.NotHandedOver, outcome);
+        Assert.False(started.WaitOne(0));
+        Assert.False(File.Exists(Replacing));
+        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
+    }
+
+    [Fact]
+    public async Task A_replace_started_while_a_clean_up_holds_its_file_goes_ahead_once_the_clean_up_is_done()
+    {
+        var oldCopy = StartOldCopy();
+        File.WriteAllText(Backup, "left by an earlier update");
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = EndOnceSet(oldCopy, started);
+        var newer = NewerFile();
+        Task<ReplaceOutcome>? replace = null;
+        bool? waitingWhileHeld = null;
+
+        var removed = ExeReplacement.TryRemoveLeftovers(Exe, whileHeld: () =>
+        {
+            replace = Task.Run(() => ExeReplacement.Run(request, startAtPath: false,
+                new ReplaceSeams(ThisExe: newer, HoldRetryBound: TimeSpan.FromSeconds(20))));
+            Thread.Sleep(TimeSpan.FromSeconds(1));
+            waitingWhileHeld = !replace.IsCompleted && !started.WaitOne(0);
+        });
+        var outcome = await replace!;
+        await ending;
+
+        Assert.True(removed);
+        Assert.True(waitingWhileHeld);
+        Assert.Equal(ReplaceOutcome.Replaced, outcome);
+        Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
+        Assert.False(File.Exists(Backup));
+    }
+
+    [Fact]
+    public void A_replace_that_cannot_make_its_held_file_says_what_Windows_answered()
+    {
+        var oldCopy = StartOldCopy();
+        DenyAddingFiles(Path.GetDirectoryName(Exe)!);
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+
+        var outcome = ExeReplacement.Run(request, startAtPath: false,
+            new ReplaceSeams(ThisExe: NewerFile(), HoldRetryBound: TimeSpan.FromMilliseconds(300)));
+
+        Assert.Equal(ReplaceOutcome.NotHandedOver, outcome);
+        Assert.False(started.WaitOne(0));
+        Assert.Contains($"could not be created: error {Kernel32.ERROR_ACCESS_DENIED}.", TestCrashLog.Text());
+    }
+
+    [Fact]
+    public async Task A_replace_holds_its_file_while_it_runs_and_it_is_gone_once_it_ends()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -293,7 +435,7 @@ public sealed class ExeReplacementTests : IDisposable
         });
 
         var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(ThisExe: NewerFile()));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
         Assert.False(removedWhileRunning);
@@ -302,7 +444,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void An_exe_held_past_the_retries_is_left_in_place_with_nothing_beside_it()
+    public async Task An_exe_held_past_the_retries_is_left_in_place_with_nothing_beside_it()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -312,7 +454,7 @@ public sealed class ExeReplacementTests : IDisposable
 
         var outcome = ExeReplacement.Run(request, startAtPath: false,
             new ReplaceSeams(ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(1)));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.Refused, outcome);
         foreach (var held in _held) held.Dispose();
@@ -321,8 +463,8 @@ public sealed class ExeReplacementTests : IDisposable
         // Windows answers a move over a file held open with a sharing violation or access denied.
         var log = TestCrashLog.Text();
         Assert.True(
-            log.Contains($"failed with error {Interop.Native.Kernel32.ERROR_SHARING_VIOLATION}.")
-                || log.Contains($"failed with error {Interop.Native.Kernel32.ERROR_ACCESS_DENIED}."),
+            log.Contains($"failed with error {Kernel32.ERROR_SHARING_VIOLATION}.")
+                || log.Contains($"failed with error {Kernel32.ERROR_ACCESS_DENIED}."),
             log);
         // The second name is the exe's own file where the volume links it, so the hold that
         // refused the move can refuse its delete as well. A clean-up made with nothing
@@ -332,7 +474,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void An_exe_let_go_of_inside_the_retries_is_replaced()
+    public async Task An_exe_let_go_of_inside_the_retries_is_replaced()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -349,14 +491,68 @@ public sealed class ExeReplacementTests : IDisposable
 
         var outcome = ExeReplacement.Run(request, startAtPath: false,
             new ReplaceSeams(ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(20)));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
         Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
     }
 
     [Fact]
-    public void A_newer_version_that_does_not_start_at_the_path_is_replaced_by_the_older_one_again()
+    public async Task Nothing_is_put_at_a_path_left_empty_once_the_copy_has_ended()
+    {
+        var oldCopy = StartOldCopy();
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var aside = Exe + ".aside";
+        // Windows lets a running exe be renamed, so the path is empty as the copy ends.
+        var ending = Task.Run(() =>
+        {
+            if (!started.WaitOne(TimeSpan.FromSeconds(60))) return;
+            File.Move(Exe, aside);
+            oldCopy.Kill();
+            oldCopy.WaitForExit();
+        });
+
+        var outcome = ExeReplacement.Run(request, startAtPath: true,
+            new ReplaceSeams(ThisExe: NewerFile(), StartAndAwait: _ => throw new InvalidOperationException("started")));
+        await ending;
+
+        Assert.Equal(ReplaceOutcome.NothingAtPath, outcome);
+        Assert.False(File.Exists(Exe));
+        Assert.False(File.Exists(Replacing));
+        Assert.False(File.Exists(Backup));
+        var log = TestCrashLog.Text();
+        Assert.Contains("Nothing was at the exe's path once its copy had ended", log);
+        Assert.Contains(nameof(FileNotFoundException), log);
+    }
+
+    [Fact]
+    public async Task Nothing_is_put_at_a_path_left_empty_as_the_exe_is_kept()
+    {
+        var oldCopy = StartOldCopy();
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = EndOnceSet(oldCopy, started);
+
+        var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
+            ThisExe: NewerFile(),
+            HardLink: (_, existing) =>
+            {
+                File.Move(existing, existing + ".aside");
+                return Kernel32.ERROR_FILE_NOT_FOUND;
+            },
+            StartAndAwait: _ => throw new InvalidOperationException("started")));
+        await ending;
+
+        Assert.Equal(ReplaceOutcome.NothingAtPath, outcome);
+        Assert.False(File.Exists(Exe));
+        Assert.False(File.Exists(Replacing));
+        Assert.False(File.Exists(Backup));
+        Assert.Contains("Nothing was at the exe's path once its copy had ended", TestCrashLog.Text());
+    }
+
+    [Fact]
+    public async Task A_newer_version_that_does_not_start_at_the_path_is_replaced_by_the_older_one_again()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -371,7 +567,7 @@ public sealed class ExeReplacementTests : IDisposable
                 atPathWhenStarted = File.ReadAllBytes(path);
                 return NewerAtPath.NotStarted;
             }));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.RolledBack, outcome);
         Assert.Equal(NewerBytes, atPathWhenStarted);
@@ -381,7 +577,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_newer_version_that_starts_at_the_path_stays_and_the_older_one_goes()
+    public async Task A_newer_version_that_starts_at_the_path_stays_and_the_older_one_goes()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -390,7 +586,7 @@ public sealed class ExeReplacementTests : IDisposable
 
         var outcome = ExeReplacement.Run(request, startAtPath: true,
             new ReplaceSeams(ThisExe: NewerFile(), StartAndAwait: _ => NewerAtPath.Started));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
         Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
@@ -398,7 +594,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_newer_version_that_will_not_end_is_left_at_the_path_with_the_older_one_kept_beside_it()
+    public async Task A_newer_version_that_will_not_end_is_left_at_the_path_with_the_older_one_kept_beside_it()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -407,7 +603,7 @@ public sealed class ExeReplacementTests : IDisposable
 
         var outcome = ExeReplacement.Run(request, startAtPath: true,
             new ReplaceSeams(ThisExe: NewerFile(), StartAndAwait: _ => NewerAtPath.StillRunning));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.NewerLeftRunning, outcome);
         Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
@@ -418,7 +614,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void Where_the_volume_will_not_link_the_exe_a_copy_of_it_is_what_is_put_back()
+    public async Task Where_the_volume_will_not_link_the_exe_a_copy_of_it_is_what_is_put_back()
     {
         var oldCopy = StartOldCopy();
         var (request, started) = RequestFor(oldCopy);
@@ -427,18 +623,18 @@ public sealed class ExeReplacementTests : IDisposable
 
         var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
             ThisExe: NewerFile(),
-            HardLink: (_, _) => Interop.Native.Kernel32.ERROR_INVALID_FUNCTION,
+            HardLink: (_, _) => Kernel32.ERROR_INVALID_FUNCTION,
             StartAndAwait: _ => NewerAtPath.NotStarted));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.RolledBack, outcome);
         Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
         Assert.False(File.Exists(Backup));
-        Assert.Contains($"The volume refused the exe a second name with error {Interop.Native.Kernel32.ERROR_INVALID_FUNCTION}.", TestCrashLog.Text());
+        Assert.Contains($"The volume refused the exe a second name with error {Kernel32.ERROR_INVALID_FUNCTION}.", TestCrashLog.Text());
     }
 
     [Fact]
-    public void A_plain_file_left_at_the_newer_versions_name_is_written_over()
+    public async Task A_plain_file_left_at_the_newer_versions_name_is_written_over()
     {
         var oldCopy = StartOldCopy();
         File.WriteAllText(Replacing, "left by an earlier update");
@@ -447,7 +643,7 @@ public sealed class ExeReplacementTests : IDisposable
         var ending = EndOnceSet(oldCopy, started);
 
         var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(ThisExe: NewerFile()));
-        ending.Wait();
+        await ending;
 
         Assert.Equal(ReplaceOutcome.Replaced, outcome);
         Assert.Equal(NewerBytes, File.ReadAllBytes(Exe));
@@ -491,6 +687,17 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.False(File.Exists(Replacing));
         Assert.False(File.Exists(Backup));
         Assert.True(File.Exists(Exe));
+    }
+
+    [Fact]
+    public void Nothing_beside_the_exe_is_nothing_left_in_a_folder_that_takes_no_new_file()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Exe)!);
+        File.WriteAllText(Exe, "exe");
+        DenyAddingFiles(Path.GetDirectoryName(Exe)!);
+
+        Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
+        Assert.False(File.Exists(Lock));
     }
 
     [Fact]

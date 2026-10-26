@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using InstallerClean.Interop.Native;
 
@@ -64,17 +65,26 @@ internal static class StorageHelpers
     /// Creates <paramref name="path"/> as a new file, with the same reparse-point refusal as
     /// <see cref="OpenAtomic"/>, shared with nothing, and deleted by Windows as the handle
     /// closes, however the process holding it ends. Returns null on any failure, a file
-    /// already at the name among them.
+    /// already at the name among them, with the error Windows gave in
+    /// <paramref name="error"/>, or 0 where the name is a reparse point.
     ///
     /// Shared with nothing, the file cannot be opened or deleted by anyone else while it is
-    /// held, so a delete that is refused says somebody holds it.
+    /// held.
     /// </summary>
-    internal static SafeFileHandle? CreateHeld(string path) =>
-        Open(path, Kernel32.GENERIC_WRITE, Kernel32.CREATE_NEW, share: 0, Kernel32.FILE_FLAG_DELETE_ON_CLOSE);
+    internal static SafeFileHandle? CreateHeld(string path, out int error) =>
+        Open(path, Kernel32.GENERIC_WRITE, Kernel32.CREATE_NEW, out error, share: 0, Kernel32.FILE_FLAG_DELETE_ON_CLOSE);
 
     private static SafeFileHandle? Open(
-        string path, uint desiredAccess, uint disposition, uint share = Kernel32.FILE_SHARE_ALL, uint moreFlags = 0)
+        string path, uint desiredAccess, uint disposition, uint share = Kernel32.FILE_SHARE_ALL, uint moreFlags = 0) =>
+        Open(path, desiredAccess, disposition, out _, share, moreFlags);
+
+    // Answers null on any failure, with the error Windows gave in error, or 0 where the
+    // path is empty or its final component is a reparse point.
+    private static SafeFileHandle? Open(
+        string path, uint desiredAccess, uint disposition, out int error,
+        uint share = Kernel32.FILE_SHARE_ALL, uint moreFlags = 0)
     {
+        error = 0;
         if (string.IsNullOrEmpty(path)) return null;
 
         uint flags = Kernel32.FILE_FLAG_OPEN_REPARSE_POINT | moreFlags;
@@ -82,10 +92,15 @@ internal static class StorageHelpers
         var handle = Kernel32.CreateFile(
             path, desiredAccess, share, IntPtr.Zero,
             disposition, flags, IntPtr.Zero);
-        if (handle.IsInvalid) return null;
+        if (handle.IsInvalid)
+        {
+            error = Marshal.GetLastPInvokeError();
+            return null;
+        }
 
         if (!Kernel32.GetFileInformationByHandle(handle, out var info))
         {
+            error = Marshal.GetLastPInvokeError();
             handle.Dispose();
             return null;
         }
