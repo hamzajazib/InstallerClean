@@ -170,7 +170,7 @@ internal static class ExeReplacement
 
         if (!HandOverContract.SignalStarted(request.StartedEvent))
         {
-            TryDeletePlainFile(replacing);
+            DeleteOrSayWhy(replacing);
             return ReplaceOutcome.NotHandedOver;
         }
 
@@ -178,7 +178,7 @@ internal static class ExeReplacement
         // wait has no bound: a copy that takes long to close is still replaced once it has.
         if (!WaitForEnd(oldCopy, seams.OldCopyNotice ?? OldCopyNotice, out var waitError))
         {
-            TryDeletePlainFile(replacing);
+            DeleteOrSayWhy(replacing);
             return Fail(ReplaceOutcome.OldCopyNotSeenToEnd,
                 $"Waiting for the copy to be replaced to end failed with error {waitError}; nothing was replaced.");
         }
@@ -245,13 +245,15 @@ internal static class ExeReplacement
         // A stop once the copy has ended and before the move. The exe is where it was, or
         // Windows says nothing is at the path. Which of the two is read from the exe itself,
         // the failure in hand being able to name another file, the second name among them.
-        // Where aboutTheExe, the failure in hand is the answer for the exe itself, and is all
+        // Where aboutTheExe and the failure in hand already says the exe is not there, it is all
         // crash.log needs; otherwise it goes beside the answer for the exe.
         ReplaceOutcome NotMoved(string message, Exception? failure, bool aboutTheExe)
         {
             if (!TakeBackBeforeTheMove(exePath, state.ReadOnlyTakenOff, out var gone))
                 return Fail(ReplaceOutcome.Refused, message, failure);
-            var inner = failure is null ? gone : aboutTheExe ? failure : new AggregateException(gone!, failure);
+            var inner = failure is null ? gone
+                : aboutTheExe && IsNothingThere(failure) ? failure
+                : new AggregateException(gone!, failure);
             return Fail(ReplaceOutcome.NothingAtPath, $"{NothingAtPathMessage} The step that stopped the replace: {message}", inner);
         }
     }
@@ -454,8 +456,7 @@ internal static class ExeReplacement
     /// Copies <paramref name="source"/> to <paramref name="path"/>, a file created new
     /// through <see cref="StorageHelpers.OpenAtomic"/> in the exe's folder, so it takes
     /// that folder's inherited permissions, and flushed to the disk. A plain file left at
-    /// that name is deleted first; a folder or a reparse point there is refused, and a
-    /// reparse point is never followed.
+    /// that name is deleted first; a reparse point there is refused and never followed.
     /// Answers whether it was written, with what failed in <paramref name="failure"/>,
     /// having left nothing of its own at the name.
     /// </summary>
@@ -466,7 +467,7 @@ internal static class ExeReplacement
         try
         {
             if (source is null) throw new IOException("This process has no path to copy.");
-            DeletePlainFile(path);
+            if (File.Exists(path)) DeletePlainFile(path);
             using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var handle = StorageHelpers.OpenAtomic(path, FileAccess.Write, StorageHelpers.AtomicOpenMode.CreateNew)
                 ?? throw new IOException($"The file ending {Path.GetExtension(path)} could not be created.");
@@ -498,7 +499,7 @@ internal static class ExeReplacement
         linkError = 0;
         try
         {
-            DeletePlainFile(backup);
+            if (File.Exists(backup)) DeletePlainFile(backup);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -670,7 +671,7 @@ internal static class ExeReplacement
             // that cannot delete it while leaving the read-only attribute alone clears that
             // attribute for the delete, so it is put back on the exe here.
             var readOnly = TryReadAttributes(exePath, out var attributes, out _) && (attributes & FileAttributes.ReadOnly) != 0;
-            var removed = TryRemoveLeftover(replacing) & TryRemoveLeftover(backup);
+            var removed = TryDeletePlainFile(replacing) & TryDeletePlainFile(backup);
             if (readOnly && TryReadAttributes(exePath, out attributes, out _) && (attributes & FileAttributes.ReadOnly) == 0)
                 PutReadOnlyBack(exePath);
             return removed;
@@ -692,16 +693,9 @@ internal static class ExeReplacement
     private static void DeleteOrSayWhy(string path)
     {
         if (!TryDelete(path, out var error))
-            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
+            CrashLog.TryWrite(new IOException(
                 $"The name ending {Path.GetExtension(path)} beside the exe could not be deleted, with error {error}, and is left there."));
     }
-
-    /// <summary>
-    /// <see cref="TryDeletePlainFile"/> for a clean-up of what a replace leaves: a folder at
-    /// the name is none of a replace's, and counts as nothing left.
-    /// </summary>
-    private static bool TryRemoveLeftover(string path) =>
-        TryDelete(path, out var error) || error == Kernel32.ERROR_DIRECTORY_NOT_SUPPORTED;
 
     /// <summary>
     /// Deletes <paramref name="path"/> where it is a plain file, through

@@ -380,19 +380,6 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public void A_folder_beside_the_exe_under_a_replace_name_is_not_a_leftover()
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(Exe)!);
-        File.WriteAllText(Exe, "exe");
-        Directory.CreateDirectory(Replacing);
-        File.WriteAllText(Backup, "backup");
-
-        Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
-        Assert.True(Directory.Exists(Replacing));
-        Assert.False(File.Exists(Backup));
-    }
-
-    [Fact]
     public void A_read_only_second_name_left_beside_the_exe_goes()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Exe)!);
