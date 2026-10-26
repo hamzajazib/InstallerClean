@@ -312,7 +312,35 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.Equal(ReplaceOutcome.Failed, outcome);
         Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+        Assert.False(File.Exists(Replacing));
+        Assert.False(File.Exists(Backup));
         Assert.Contains("thrown by the link", TestCrashLog.Text());
+    }
+
+    [Fact]
+    public async Task A_step_that_throws_once_the_exe_is_linked_leaves_no_second_name_beside_the_read_only_exe()
+    {
+        var oldCopy = StartOldCopy();
+        File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = EndOnceSet(oldCopy, started);
+        var linked = false;
+
+        var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
+            ThisExe: NewerFile(),
+            HardLink: (link, existing) =>
+            {
+                linked = Kernel32.CreateHardLink(link, existing, IntPtr.Zero);
+                throw new InvalidOperationException("thrown once linked");
+            }));
+        await ending;
+
+        Assert.True(linked);
+        Assert.Equal(ReplaceOutcome.Failed, outcome);
+        Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+        Assert.False(File.Exists(Backup));
+        Assert.False(File.Exists(Replacing));
     }
 
     [Fact]
@@ -374,6 +402,25 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
+    public void A_folder_at_the_held_files_name_is_refused_without_waiting_out_the_retries()
+    {
+        var oldCopy = StartOldCopy();
+        Directory.CreateDirectory(Lock);
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var timer = Stopwatch.StartNew();
+
+        var outcome = ExeReplacement.Run(request, startAtPath: false,
+            new ReplaceSeams(ThisExe: NewerFile(), HoldRetryBound: TimeSpan.FromSeconds(30)));
+
+        Assert.Equal(ReplaceOutcome.NotHandedOver, outcome);
+        Assert.True(timer.Elapsed < TimeSpan.FromSeconds(10), timer.Elapsed.ToString());
+        Assert.False(started.WaitOne(0));
+        Assert.True(Directory.Exists(Lock));
+        Assert.Contains("is a folder or a reparse point", TestCrashLog.Text());
+    }
+
+    [Fact]
     public void A_link_at_the_held_files_name_is_refused_without_waiting_out_the_retries()
     {
         var oldCopy = StartOldCopy();
@@ -397,7 +444,7 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.True(timer.Elapsed < TimeSpan.FromSeconds(10), timer.Elapsed.ToString());
         Assert.False(started.WaitOne(0));
         Assert.True(Directory.Exists(elsewhere));
-        Assert.Contains("is a reparse point", TestCrashLog.Text());
+        Assert.Contains("is a folder or a reparse point", TestCrashLog.Text());
     }
 
     [Fact]

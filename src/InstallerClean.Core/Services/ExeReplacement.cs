@@ -157,20 +157,11 @@ internal static class ExeReplacement
         if (readOnly && !TrySetReadOnly(exePath, on: false, out var attributeFailure))
         {
             TryDeletePlainFile(replacing);
-            if (IsNothingAt(exePath, out var goneFailure))
-                return Fail(ReplaceOutcome.NothingAtPath, NothingAtPathMessage, goneFailure);
-            return Fail(ReplaceOutcome.Refused, "The exe's read-only attribute could not be taken off.", attributeFailure);
+            return IsNothingThere(attributeFailure)
+                ? Fail(ReplaceOutcome.NothingAtPath, NothingAtPathMessage, attributeFailure)
+                : Fail(ReplaceOutcome.Refused, "The exe's read-only attribute could not be taken off.", attributeFailure);
         }
-        try
-        {
-            return Replace(exePath, readOnly, startAtPath, seams);
-        }
-        catch when (readOnly)
-        {
-            // A step that throws leaves the path read-only too, whichever version is there.
-            PutReadOnlyBack(exePath);
-            throw;
-        }
+        return Replace(exePath, readOnly, startAtPath, seams);
     }
 
     /// <summary>
@@ -181,35 +172,55 @@ internal static class ExeReplacement
     /// </summary>
     private static ReplaceOutcome Replace(string exePath, bool readOnly, bool startAtPath, ReplaceSeams seams)
     {
-        var replacing = exePath + ReplacingSuffix;
+        var moved = false;
+        try
+        {
+            return ReplaceSteps(exePath, readOnly, startAtPath, seams, () => moved = true);
+        }
+        catch when (!moved)
+        {
+            TakeBackBeforeTheMove(exePath, readOnly);
+            throw;
+        }
+        catch when (readOnly)
+        {
+            PutReadOnlyBack(exePath);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Deletes the newer version waiting beside <paramref name="exePath"/> and the exe's
+    /// second name, then, where <paramref name="readOnly"/>, puts the read-only attribute back
+    /// on the exe. Until the newer version is moved over the exe, the second name, where it is
+    /// a link, is the exe's own file and carries its attributes, which is why it goes first.
+    /// </summary>
+    private static void TakeBackBeforeTheMove(string exePath, bool readOnly)
+    {
+        TryDeletePlainFile(exePath + ReplacingSuffix);
+        TryDeletePlainFile(exePath + BackupSuffix);
+        if (readOnly) PutReadOnlyBack(exePath);
+    }
+
+    /// <summary>
+    /// <see cref="Replace"/>'s steps, calling <paramref name="moved"/> once the newer version
+    /// is at the path.
+    /// </summary>
+    private static ReplaceOutcome ReplaceSteps(
+        string exePath, bool readOnly, bool startAtPath, ReplaceSeams seams, Action moved)
+    {
         var backup = exePath + BackupSuffix;
 
-        // Until the newer version is moved over the exe, the second name, where it is a link,
-        // is the exe's own file and carries its attributes, so the exits before that move
-        // delete it before read-only goes back on the exe. Each of those exits answers that
-        // nothing is at the path where Windows says the exe is not there.
         var kept = TryMakeBackup(exePath, backup, seams.HardLink ?? HardLink, out var linkError, out var backupFailure);
         var linkNote = linkError == 0 ? string.Empty : $" The volume refused the exe a second name with error {linkError}.";
         if (!kept)
-        {
-            TryDeletePlainFile(replacing);
-            if (IsNothingAt(exePath, out var goneFailure))
-                return Fail(ReplaceOutcome.NothingAtPath, NothingAtPathMessage, goneFailure);
-            if (readOnly) PutReadOnlyBack(exePath);
-            return Fail(ReplaceOutcome.Refused, "The exe could not be kept before it was replaced." + linkNote, backupFailure);
-        }
+            return NotMoved("The exe could not be kept before it was replaced." + linkNote, backupFailure);
 
         var retryBound = seams.MoveRetryBound ?? MoveRetryBound;
-        if (!TryMoveOver(replacing, exePath, retryBound, out var moveError))
-        {
-            TryDeletePlainFile(replacing);
-            TryDeletePlainFile(backup);
-            if (IsNothingAt(exePath, out var goneFailure))
-                return Fail(ReplaceOutcome.NothingAtPath, NothingAtPathMessage, goneFailure);
-            if (readOnly) PutReadOnlyBack(exePath);
-            return Fail(ReplaceOutcome.Refused,
-                $"The newer version could not be moved over the exe; the last try failed with error {moveError}." + linkNote);
-        }
+        if (!TryMoveOver(exePath + ReplacingSuffix, exePath, retryBound, out var moveError))
+            return NotMoved(
+                $"The newer version could not be moved over the exe; the last try failed with error {moveError}." + linkNote, null);
+        moved();
         if (readOnly) PutReadOnlyBack(exePath);
 
         if (!startAtPath)
@@ -244,6 +255,18 @@ internal static class ExeReplacement
         }
         if (readOnly) PutReadOnlyBack(exePath);
         return Fail(ReplaceOutcome.NotRolledBack, notPutBack + $"the last try failed with error {backError}. " + leftAsItIs);
+
+        // The exe is where it was, or Windows says nothing is at the path. Which of the two is
+        // read from the exe itself, the failure in hand being able to name another file, the
+        // second name among them.
+        ReplaceOutcome NotMoved(string message, Exception? failure)
+        {
+            TakeBackBeforeTheMove(exePath, readOnly: false);
+            if (IsNothingAt(exePath, out var gone))
+                return Fail(ReplaceOutcome.NothingAtPath, NothingAtPathMessage + " " + message, gone);
+            if (readOnly) PutReadOnlyBack(exePath);
+            return Fail(ReplaceOutcome.Refused, message, failure);
+        }
     }
 
     /// <summary>What crash.log says where nothing is at the exe's path once its copy has ended.</summary>
@@ -278,20 +301,24 @@ internal static class ExeReplacement
         var path = exePath + LockSuffix;
         SafeFileHandle? held = null;
         Exception? last = null;
-        Retry(bound, () =>
+        var taken = Retry(bound, () =>
         {
             try
             {
-                // Path.Exists sees a folder or a junction at the name too, which is then
-                // refused here rather than met by the create as a name already taken.
-                if (Path.Exists(path)) DeletePlainFile(path);
+                // A folder or a link at the name is refused at once; a plain file is deleted.
+                if (TryReadAttributes(path, out var found, out _))
+                {
+                    if ((found & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0)
+                        throw new NotAPlainFileException(path);
+                    File.Delete(path);
+                }
                 held = StorageHelpers.CreateHeld(path, out var error);
                 if (held is not null) return RetryStep.Done;
-                if (error == 0) throw new ReparsePointRefusedException(path);
+                if (error == 0) throw new NotAPlainFileException(path);
                 last = new IOException($"The file ending {LockSuffix} could not be created: error {error}.");
                 return RetryStep.Again;
             }
-            catch (ReparsePointRefusedException ex)
+            catch (NotAPlainFileException ex)
             {
                 last = ex;
                 return RetryStep.Stop;
@@ -302,8 +329,8 @@ internal static class ExeReplacement
                 return RetryStep.Again;
             }
         });
-        failure = held is null ? last : null;
-        return held;
+        failure = taken ? null : last;
+        return taken ? held : null;
     }
 
     /// <summary>What one try of <see cref="Retry"/> answered.</summary>
@@ -666,13 +693,16 @@ internal static class ExeReplacement
     private static void DeletePlainFile(string path)
     {
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new ReparsePointRefusedException(path);
+            throw new NotAPlainFileException(path);
         File.Delete(path);
     }
 
-    /// <summary>A reparse point at a name a replace writes, holds or deletes, which it never follows.</summary>
-    private sealed class ReparsePointRefusedException(string path)
-        : IOException($"The file ending {Path.GetExtension(path)} is a reparse point.");
+    /// <summary>
+    /// Something other than a plain file at a name a replace writes, holds or deletes: a
+    /// folder, or a reparse point, which it never follows.
+    /// </summary>
+    private sealed class NotAPlainFileException(string path)
+        : IOException($"The name ending {Path.GetExtension(path)} is a folder or a reparse point, not a plain file.");
 }
 
 /// <summary>How a replace (<see cref="ExeReplacement.Run(ReplaceRequest, bool)"/>) ended.</summary>
