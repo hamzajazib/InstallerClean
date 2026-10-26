@@ -129,9 +129,19 @@ internal static class HandOverContract
     /// </summary>
     internal const string AfterProcessSwitch = "/afterprocess:";
 
-    /// <summary>The crash.log line for a replace request that also carries a command, which replaces nothing.</summary>
+    /// <summary>
+    /// The crash.log line for a replace request to the window that also carries a command, which
+    /// replaces nothing: only the command line runs a command standing for another copy.
+    /// </summary>
     internal const string ReplaceWithCommandRefusal =
         "A request to put this version at another copy's path also carried a command, so nothing was replaced.";
+
+    /// <summary>
+    /// The crash.log line for a request to run a command standing for a copy whose process is
+    /// not running from the file at the request's path, which runs nothing.
+    /// </summary>
+    internal const string NotTheCopyRefusal =
+        "A request to run a command standing for another copy named a process that does not run from that copy's file, so nothing was run.";
 
     /// <summary>
     /// The crash.log line for a replace switch in a request that does not carry the three once
@@ -184,11 +194,28 @@ internal static class HandOverContract
     /// know.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Do not change what this reads. A copy from <see cref="FirstVersionTakingHandOverSwitches"/>
     /// on is to start the newer version it updates to with these three, and on the command
     /// line with the command as typed, <see cref="CliContract.CancelEventSwitch"/> and
     /// <see cref="CliContract.NoUpdateSwitch"/> beside them, for every newer version it ever
     /// updates to. A later version reading them another way is one no such copy can update to.
+    /// </para>
+    /// <para>
+    /// What the command line's two sides hold each other to, which every later version keeps
+    /// as well. The newer version runs the command standing for the copy at the path: it
+    /// decides what kind of copy it is from that path, and runs only where the process
+    /// <see cref="AfterProcessSwitch"/> names runs from the file there. It sets the started
+    /// event before it runs anything, and once the command has ended it starts itself again
+    /// with the path, the same process ID and an event of its own, to put itself in place
+    /// once that process has ended, and exits with the command's exit code, which the older
+    /// copy ends with. For <c>/d</c> and <c>/m</c> the older copy holds the single-instance
+    /// mutex until the newer version has ended, so the newer version goes on where it cannot
+    /// take it, and takes it where nothing holds it. On
+    /// the setup's copy the newer setup waits in the newer version's own folder under
+    /// <see cref="Services.AppCopy.DownloadFileName"/>'s name for it, and putting the newer
+    /// version in place means running that setup, which opens nothing.
+    /// </para>
     /// </remarks>
     internal static ReplaceRead ReadReplaceRequest(string[] args, out ReplaceRequest? request)
     {

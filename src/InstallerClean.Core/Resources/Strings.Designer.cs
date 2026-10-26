@@ -226,9 +226,15 @@ public static class Strings
     public static string Cli_EventLogUpdateInstallFailed => Get("Cli.EventLogUpdateInstallFailed");
     public static string Cli_EventLogUpdateInstallFailedThenCancelled => Get("Cli.EventLogUpdateInstallFailedThenCancelled");
     public static string Cli_EventLogUpdateInUse => Get("Cli.EventLogUpdateInUse");
+    public static string Cli_EventLogUpdateInUseAfterWait => Get("Cli.EventLogUpdateInUseAfterWait");
     public static string Cli_EventLogUpdateInUseThenCancelled => Get("Cli.EventLogUpdateInUseThenCancelled");
     public static string Cli_EventLogUpdateNothingAtPath => Get("Cli.EventLogUpdateNothingAtPath");
+    public static string Cli_EventLogUpdateNotInstalled => Get("Cli.EventLogUpdateNotInstalled");
     public static string Cli_EventLogUpdateNotStarted => Get("Cli.EventLogUpdateNotStarted");
+    public static string Cli_EventLogUpdateSetupExitCode => Get("Cli.EventLogUpdateSetupExitCode");
+    public static string Cli_EventLogUpdateSetupNotInPlace => Get("Cli.EventLogUpdateSetupNotInPlace");
+    public static string Cli_EventLogUpdateSetupNotThisVersion => Get("Cli.EventLogUpdateSetupNotThisVersion");
+    public static string Cli_EventLogUpdateStoppedPartWay => Get("Cli.EventLogUpdateStoppedPartWay");
     public static string Cli_EventLogValidationFailed => Get("Cli.EventLogValidationFailed");
     public static string Cli_EventLogWindowsError => Get("Cli.EventLogWindowsError");
     public static string Cli_FoundNoOrphans => Get("Cli.FoundNoOrphans");

@@ -35,22 +35,34 @@ internal static class Program
         // A newer version a copy downloaded, started to put itself at that copy's path once
         // the copy has ended, does that and nothing else, printing nothing: it runs with no
         // console of its own. Exit code 0 where the newer version is in place, 1 otherwise,
-        // with what failed in crash.log. A request carrying a command runs nothing and sets
-        // no event. A replace switch in a request not well formed goes on to the arguments'
-        // own check, which refuses it as an argument the command does not know, with the
-        // usage error and its Application-log entry; the started event it may carry is
-        // taken out unset, so no copy reads this run as the newer version starting. Both
-        // refusals write crash.log a line saying which it was.
+        // with what failed in crash.log and the Application log. A request carrying a command
+        // runs that command standing for the copy at the path, and then starts the replace;
+        // where the process it names does not run from the file at the path, it runs nothing,
+        // sets no event and writes crash.log a line saying so. A replace switch in a request
+        // not well formed goes on to the arguments' own check, which refuses it as an argument
+        // the command does not know, with the usage error and its Application-log entry; the
+        // started event it may carry is taken out unset, so no copy reads this run as the
+        // newer version starting, and crash.log says which it was.
+        s_standsFor = null;
+        s_copyHeld?.Dispose();
+        s_copyHeld = null;
+        string? startedEvent;
         switch (HandOverContract.ReadReplaceRequest(args, out var replaceRequest))
         {
             case ReplaceRead.Asked when replaceRequest!.Command.Count == 0:
                 StorageHelpers.TurnOffCriticalErrorBoxForTheProcess();
-                return ExeReplacement.Run(replaceRequest, startAtPath: false) == ReplaceOutcome.Replaced
-                    ? ExitOk
-                    : ExitError;
+                return CommandLineReplacement.Run(replaceRequest) ? ExitOk : ExitError;
             case ReplaceRead.Asked:
-                CrashLog.TryWrite(new ArgumentException(HandOverContract.ReplaceWithCommandRefusal));
-                return ExitError;
+                StorageHelpers.TurnOffCriticalErrorBoxForTheProcess();
+                s_copyHeld = StagedRun.HoldCopy(replaceRequest);
+                if (s_copyHeld is null)
+                {
+                    CrashLog.TryWrite(new ArgumentException(HandOverContract.NotTheCopyRefusal));
+                    return ExitError;
+                }
+                s_standsFor = replaceRequest;
+                args = [.. replaceRequest.Command];
+                break;
             case ReplaceRead.Refused:
                 CrashLog.TryWrite(new ArgumentException(HandOverContract.ReplaceNotWellFormedRefusal));
                 args = HandOverContract.TakeStartedEvent(args, out _);
@@ -62,13 +74,14 @@ internal static class Program
         // A version that updated itself passes the one it starts an event it sets on Ctrl+C,
         // and one it waits on until that version sets it. Their switches come out here,
         // before anything reads, prints or records the arguments, and the second is set at
-        // once: the copy that started this one ends it and puts itself back where it is not
+        // once: the copy that started this one ends it and goes on as itself where it is not
         // set in time. Where it cannot be set, this run ends here with the error code,
         // having printed and run nothing, and the crash log says why. The copy that started
-        // it writes the Application-log entry for the run.
+        // it writes the Application-log entry for the update. A run standing for another copy
+        // has its started event in the request.
         args = CliContract.TakeCancelEvent(args, out var cancelEvent);
-        args = HandOverContract.TakeStartedEvent(args, out var startedEvent);
-        if (!HandOverContract.SignalStarted(startedEvent)) return ExitError;
+        args = HandOverContract.TakeStartedEvent(args, out startedEvent);
+        if (!HandOverContract.SignalStarted(s_standsFor?.StartedEvent ?? startedEvent)) return ExitError;
         if (cancelEvent is not null) CancelKey.Process.Watch(cancelEvent);
 
         // No critical-error box for the whole run: a read reaching a drive with no disc or card in
@@ -99,21 +112,59 @@ internal static class Program
         // handed the guard, so a run whose product is its output can answer for a
         // write that failed.
         var previousOutputEncoding = TrySetUtf8Output();
+        int exitCode;
         try
         {
             var output = new ConsoleGuard(Console.Out);
             Console.SetOut(output);
-            return Run(args, output);
+            exitCode = Run(args, output);
         }
         catch (Exception ex)
         {
-            return ReportRunFailure(args, ex);
+            exitCode = ReportRunFailure(args, ex);
         }
         finally
         {
             if (!_newerVersionHasConsole) RestoreOutputEncoding(previousOutputEncoding);
         }
+
+        // A run standing for another copy starts the replace once its command has ended,
+        // however it ended, and ends with the command's exit code whether or not the replace
+        // said it had started: the copy it stands for ends with that code.
+        if (s_standsFor is { } standsFor) StartReplace(standsFor);
+        s_copyHeld?.Dispose();
+        s_copyHeld = null;
+        return exitCode;
     }
+
+    /// <summary>
+    /// The request this run stands for another copy under, where it runs a command for an
+    /// older copy that downloaded it (<see cref="StagedRun"/>), and null on every other run.
+    /// What the run decides from its own path it decides from the request's path instead.
+    /// </summary>
+    private static ReplaceRequest? s_standsFor;
+
+    /// <summary>
+    /// The process of the copy this run stands for, held open from the check that it runs
+    /// from the file at the path until the replace has been started, so its process ID names
+    /// that process and no other when the replace opens it.
+    /// </summary>
+    private static Microsoft.Win32.SafeHandles.SafeProcessHandle? s_copyHeld;
+
+    /// <summary>
+    /// The path of the copy this run is: the copy it stands for where it stands for one, and
+    /// otherwise its own, or null where the process has no path.
+    /// </summary>
+    private static string? CopyPath =>
+        s_standsFor?.ExePath ?? (Environment.ProcessPath is { Length: > 0 } own ? own : null);
+
+    /// <summary>
+    /// Test seam: starts the replace for the request a run stood for once its command has
+    /// ended (<see cref="StagedRun.StartReplace(ReplaceRequest, string)"/>), so a test of a run standing for a copy
+    /// starts nothing.
+    /// </summary>
+    internal static Action<ReplaceRequest> StartReplace { get; set; } =
+        request => StagedRun.StartReplace(request, Environment.ProcessPath ?? string.Empty);
 
     /// <summary>
     /// Whether this run ends while the newer version it started may still be running in this
@@ -266,8 +317,9 @@ internal static class Program
         using var cts = new CancellationTokenSource();
         var updateHost = new ConsoleUpdateHost(arg);
         // This run's own file is held against renaming for as long as it runs, so another
-        // run's update of the same file cannot move it aside under this one.
-        updateHost.HoldOwnFile();
+        // run's update of the same file cannot move it aside under this one. A run standing
+        // for another copy runs from the staging folder, where no update renames anything.
+        if (s_standsFor is null) updateHost.HoldOwnFile();
 
         // A Ctrl+C from here until the run returns cancels the run, before the update and the
         // mutex as well as during the work, and one that came before this line does so as it
@@ -305,8 +357,10 @@ internal static class Program
 
         // What an earlier update left beside this exe: the copy it renamed aside, which
         // could not be deleted while it was still running, a newer version written beside
-        // it that never took its place, and what a replace left beside it.
-        if (Environment.ProcessPath is { Length: > 0 } ownPath)
+        // it that never took its place, and what a replace left beside it. A run standing for
+        // another copy runs from the staging folder and leaves that copy's folder to the
+        // copy itself.
+        if (s_standsFor is null && Environment.ProcessPath is { Length: > 0 } ownPath)
         {
             SelfReplacement.TryRemoveOldCopy(ownPath);
             ExeReplacement.TryRemoveLeftovers(ownPath);
@@ -325,11 +379,19 @@ internal static class Program
         // mutex the WPF GUI uses, so a CLI invocation cannot race the
         // GUI mid-delete or mid-move (and a second concurrent CLI run
         // is also rejected). /s is read-only and runs unconditionally.
+        // For /d and /m the copy a run stands for holds it until this run has ended
+        // (HandOverContract.ReadReplaceRequest), so such a run goes on where it cannot take
+        // it, and takes it where nothing holds it, as where that copy has ended.
         InstanceLock? instanceLock = null;
         if (arg is "/d" or "/m")
         {
             instanceLock = new InstanceLock();
-            if (!instanceLock.TryTake())
+            if (!instanceLock.TryTake() && s_standsFor is not null)
+            {
+                instanceLock.Dispose();
+                instanceLock = null;
+            }
+            else if (!instanceLock.IsHeld)
             {
                 // Nothing on this path may reach Main's catch-all, and the two
                 // halves of it fail differently. A throw before the write costs
@@ -414,10 +476,11 @@ internal static class Program
 
     /// <summary>
     /// The kind of copy this command-line tool is, as the report names it
-    /// (<see cref="AppCopy.DetectRunningCommandLine"/>), or not known where the process has no path.
+    /// (<see cref="AppCopy.DetectRunningCommandLine"/>), decided from <see cref="CopyPath"/>,
+    /// or not known where there is none.
     /// </summary>
     private static AppCopyKind RunningCopy(IServiceProvider services) =>
-        Environment.ProcessPath is { Length: > 0 } exePath
+        CopyPath is { } exePath
             ? AppCopy.DetectRunningCommandLine(exePath, services.GetRequiredService<IRegistryReader>())
             : AppCopyKind.Undetermined;
 
@@ -466,8 +529,8 @@ internal static class Program
     /// exit code where the run ends here, or null where it goes on with this version, as
     /// <see cref="ConcludeUpdate"/> decides from what the update ended in.
     ///
-    /// Nothing is checked where <c>/noupdate</c> was given or this account's settings turn
-    /// the check off. A throw from building what the update needs goes to crash.log and
+    /// Nothing is checked where <c>/noupdate</c> was given, this account's settings turn
+    /// the check off, or the run stands for another copy, being that copy's update itself. A throw from building what the update needs goes to crash.log and
     /// the run goes on, as it does after an update that fails with this version's file
     /// at its path.
     /// </summary>
@@ -477,7 +540,7 @@ internal static class Program
         CommandLineUpdateResult result;
         try
         {
-            if (invocation.SkipUpdate || Environment.ProcessPath is not { Length: > 0 } exePath)
+            if (invocation.SkipUpdate || s_standsFor is not null || Environment.ProcessPath is not { Length: > 0 } exePath)
                 return null;
             if (!new SettingsService().Load().AutoUpdateCheck)
                 return null;

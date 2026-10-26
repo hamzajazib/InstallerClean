@@ -6,7 +6,7 @@ namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
 /// The wait a copy updating itself makes for the newer version it started to say its own
-/// code is running (<see cref="NewerVersionProcess.AwaitStart"/>), and the ending of a newer
+/// code is running (<see cref="NewerVersionProcess.AwaitStart(Process, WaitHandle, TimeSpan, WaitHandle?, out int)"/>), and the ending of a newer
 /// version that did not say so, against real processes standing in for it: PowerShell
 /// setting the event or sleeping, and programs of Windows that end at once. Also the start
 /// of a newer version from the folder it was downloaded to, to put itself at a copy's path

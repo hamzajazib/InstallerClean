@@ -1,0 +1,196 @@
+using System.Diagnostics;
+using System.IO.Pipes;
+using InstallerClean.Helpers;
+using InstallerClean.Interop.Native;
+using InstallerClean.Tests.Helpers;
+using InstallerClean.Services;
+
+namespace InstallerClean.Tests.Services.Integration;
+
+/// <summary>
+/// A newer command line running a command from the staging folder for an older copy: the
+/// detached start of the replace once the command has ended
+/// (<see cref="StagedRun.StartReplace(ReplaceRequest, string)"/>), the start itself
+/// (<see cref="DetachedProcess"/>), and the check that the copy it stands for is running
+/// (<see cref="StagedRun.HoldCopy"/>), against real processes: PowerShell standing in for
+/// the replace, and cmd.
+/// </summary>
+public sealed class StagedRunTests : IDisposable
+{
+    private readonly string _root = Directory.CreateTempSubdirectory("ic-staged-").FullName;
+    private readonly List<Process> _owned = [];
+    private readonly IDisposable _crashLog = TestCrashLog.OwnFolder();
+
+    public void Dispose()
+    {
+        try
+        {
+            foreach (var process in _owned)
+            {
+                try { if (!process.HasExited) process.Kill(); } catch { }
+                process.Dispose();
+            }
+            TestCrashLog.TryDelete(_root);
+        }
+        finally
+        {
+            _crashLog.Dispose();
+        }
+    }
+
+    private static readonly string PowerShell =
+        Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe");
+
+    private static readonly string Cmd = Path.Combine(Environment.SystemDirectory, "cmd.exe");
+
+    /// <summary>A request standing for a copy at a path in the test's folder, run by process <paramref name="processId"/>.</summary>
+    private ReplaceRequest Request(int processId) =>
+        new(Path.Combine(_root, "installerclean-cli.exe"), processId, Guid.NewGuid().ToString("N"), ["/s"]);
+
+    /// <summary>
+    /// A PowerShell script standing in for the replace: it writes the arguments it was
+    /// given to <paramref name="argumentsFile"/>, one to a line, and its working folder to
+    /// <paramref name="folderFile"/>, then runs <paramref name="then"/>, where <c>$set</c>
+    /// sets the started event it was handed.
+    /// </summary>
+    private string StandIn(string argumentsFile, string folderFile, string then)
+    {
+        var prefix = HandOverContract.StartedEventName(Guid.Empty)[..^32];
+        var script = Path.Combine(_root, Guid.NewGuid().ToString("N") + ".ps1");
+        File.WriteAllText(script, $$"""
+            $args | Set-Content -LiteralPath '{{argumentsFile}}'
+            (Get-Location).Path | Set-Content -LiteralPath '{{folderFile}}'
+            $id = ($args | Where-Object { $_ -like '{{HandOverContract.StartedEventSwitch}}*' }).Substring({{HandOverContract.StartedEventSwitch.Length}})
+            $set = { [System.Threading.EventWaitHandle]::OpenExisting('{{prefix}}' + $id).Set() | Out-Null }
+            {{then}}
+            """);
+        return script;
+    }
+
+    private static string[] RunningScript(string script) => ["-NoProfile", "-NonInteractive", "-File", script];
+
+    /// <summary>The process whose ID the stand-in wrote to <paramref name="pidFile"/>, which the test then owns.</summary>
+    private Process Owned(string pidFile)
+    {
+        var process = Process.GetProcessById(
+            int.Parse(File.ReadAllText(pidFile).Trim(), System.Globalization.CultureInfo.InvariantCulture));
+        _owned.Add(process);
+        return process;
+    }
+
+    [Fact]
+    public void The_replace_is_given_the_copys_path_and_process_and_an_event_of_its_own_and_works_in_its_own_folder()
+    {
+        var arguments = Path.Combine(_root, "arguments.txt");
+        var folder = Path.Combine(_root, "folder.txt");
+        var pid = Path.Combine(_root, "pid.txt");
+        var script = StandIn(arguments, folder, $"$PID | Set-Content -LiteralPath '{pid}'; & $set; Start-Sleep -Seconds 60");
+        // A process ID that is not this one, so the test sees the request's ID passed on.
+        var request = Request(processId: 4);
+
+        EventLogRecorder.Clear();
+
+        var answer = StagedRun.StartReplace(request, PowerShell, RunningScript(script), TimeSpan.FromSeconds(60));
+
+        Assert.Equal(NewerVersionAnswer.Started, answer);
+        Assert.Empty(EventLogRecorder.Entries);
+        Assert.False(Owned(pid).HasExited);
+        Assert.Equal(ReplaceRead.Asked, HandOverContract.ReadReplaceRequest(File.ReadAllLines(arguments), out var passed));
+        Assert.Equal(request.ExePath, passed!.ExePath);
+        Assert.Equal(4, passed.ProcessId);
+        Assert.NotEqual(request.StartedEvent, passed.StartedEvent);
+        Assert.Empty(passed.Command);
+        Assert.Equal(Path.GetDirectoryName(PowerShell), File.ReadAllText(folder).Trim(), ignoreCase: true);
+        Assert.Empty(TestCrashLog.Entries());
+    }
+
+    [Fact]
+    public void A_replace_that_does_not_set_its_event_in_time_is_ended_and_said_in_crash_log()
+    {
+        var script = StandIn(Path.Combine(_root, "arguments.txt"), Path.Combine(_root, "folder.txt"), "Start-Sleep -Seconds 60");
+
+        EventLogRecorder.Clear();
+
+        var answer = StagedRun.StartReplace(Request(Environment.ProcessId), PowerShell, RunningScript(script), TimeSpan.FromSeconds(5));
+
+        Assert.Equal(NewerVersionAnswer.NotStarted, answer);
+        Assert.Contains("within 5 seconds", TestCrashLog.OnlyEntry());
+        Assert.Equal(CliEventClass.UpdateNotInstalledNotice, Assert.Single(EventLogRecorder.Entries).Class);
+    }
+
+    [Fact]
+    public void A_replace_that_ends_by_itself_without_setting_its_event_leaves_the_notice_to_itself()
+    {
+        var script = StandIn(Path.Combine(_root, "arguments.txt"), Path.Combine(_root, "folder.txt"), "exit 1");
+        EventLogRecorder.Clear();
+
+        var answer = StagedRun.StartReplace(Request(Environment.ProcessId), PowerShell, RunningScript(script), TimeSpan.FromSeconds(60));
+
+        Assert.Equal(NewerVersionAnswer.NotStarted, answer);
+        Assert.Empty(EventLogRecorder.Entries);
+    }
+
+    [Fact]
+    public void A_replace_that_cannot_be_started_is_tried_again_and_answered_as_not_started()
+    {
+        var missing = Path.Combine(_root, "installerclean-cli.exe");
+
+        EventLogRecorder.Clear();
+
+        var answer = StagedRun.StartReplace(Request(Environment.ProcessId), missing, [], TimeSpan.FromSeconds(5));
+
+        Assert.Equal(NewerVersionAnswer.NotStarted, answer);
+        Assert.Equal(ProcessStartRetry.Attempts, TestCrashLog.FailedStartsOf(missing));
+        Assert.Equal(CliEventClass.UpdateNotInstalledNotice, Assert.Single(EventLogRecorder.Entries).Class);
+    }
+
+    [Fact]
+    public async Task A_detached_program_holds_no_handle_of_the_starting_process()
+    {
+        // An inheritable pipe: a program that inherited the write end would hold it open, and
+        // the read below would wait for it to end.
+        using var pipe = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
+        var pid = Path.Combine(_root, "pid.txt");
+
+        using var started = DetachedProcess.Start(
+            PowerShell, ["-NoProfile", "-NonInteractive", "-Command", $"$PID | Set-Content -LiteralPath '{pid}'; Start-Sleep -Seconds 30"],
+            _root);
+        Assert.NotNull(started);
+        var clock = Stopwatch.StartNew();
+        while (!File.Exists(pid) && clock.Elapsed < TimeSpan.FromSeconds(30)) Thread.Sleep(100);
+        var child = Owned(pid);
+
+        pipe.DisposeLocalCopyOfClientHandle();
+        var read = pipe.ReadAsync(new byte[1]).AsTask();
+
+        Assert.Same(read, await Task.WhenAny(read, Task.Delay(TimeSpan.FromSeconds(5))));
+        Assert.Equal(0, await read);
+        Assert.False(child.HasExited);
+    }
+
+    [Fact]
+    public void A_detached_program_works_in_the_folder_it_is_given()
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(_root, "work here")).FullName;
+
+        using var started = DetachedProcess.Start(Cmd, ["/d", "/c", "cd>where.txt"], folder);
+
+        Assert.NotNull(started);
+        Assert.Equal(Kernel32.WAIT_OBJECT_0, HandleWait.One(started!, 30_000, out _));
+        Assert.Equal(folder, File.ReadAllText(Path.Combine(folder, "where.txt")).Trim(), ignoreCase: true);
+    }
+
+    [Fact]
+    public void A_run_stands_for_a_copy_only_where_the_process_runs_from_the_file_at_the_path()
+    {
+        var own = Environment.ProcessPath!;
+        var elsewhere = Path.Combine(_root, "installerclean-cli.exe");
+        File.Copy(own, elsewhere);
+
+        using (var held = StagedRun.HoldCopy(new ReplaceRequest(own, Environment.ProcessId, Guid.NewGuid().ToString("N"), ["/s"])))
+            Assert.NotNull(held);
+        Assert.Empty(TestCrashLog.Entries());
+        Assert.Null(StagedRun.HoldCopy(new ReplaceRequest(elsewhere, Environment.ProcessId, Guid.NewGuid().ToString("N"), ["/s"])));
+        Assert.Contains("is not the one process", TestCrashLog.OnlyEntry());
+    }
+}

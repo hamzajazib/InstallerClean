@@ -1205,27 +1205,29 @@ function Read-NothingAtPathEntries([datetime]$since, [datetime]$until) {
   Read-ApplicationLog $since $last (Get-NothingAtPathEventId)
 }
 
-# Judges how a replace run ended, from $end: the run's label and mode ('replaced' or
-# 'nothing'), the build's exe, the target path and folder, the staging folder's access
+# Judges how a replace run ended, from $end: the run's label and mode ('replaced',
+# 'nothing', or 'command' for a run of /s standing for the copy at the path, which then
+# starts the replace itself), the build's exe, the target path and folder, the staging folder's access
 # list as the folder was made, whether the started event was set, the replacer's exit
 # code, whether a process is still running from the target path or the staging folder, the
 # times it began and ended, and $readEntries, which takes those two times and answers the
 # nothing-at-path entries written around the run (Entries) and why the log could not be
 # read where it could not (Unread). Fails where: the Application log could not be read;
-# the event was not set; the exit code is not 0 for a replace and 1 for nothing at the
-# path; the file at the path is not the build's exe, or is there at all where nothing was
+# the event was not set; the exit code is not 0 for a replace or a command and 1 for nothing
+# at the path; the file at the path is not the build's exe, or is there at all where nothing was
 # left at the path; a name a replace leaves beside the exe is there, or the target folder
 # holds anything but the exe, the control file and the stand-in's exe set aside; for a
-# replace, the staging and target folders' access lists are the same, so the next check
+# replace or a command, the staging and target folders' access lists are the same, so the next check
 # could not tell them apart, or the exe's is not the control file's; the entry saying the
 # update was not installed is missing, more than one, or without the releases page where
-# nothing was left, or there at all after a replace; or a process is still running.
+# nothing was left, or there at all after a replace or a command; or a process is still running.
 function Test-ReplaceEnd($end) {
   $label = $end.Label
   if (-not $end.EventSet) { Fail "$label did not set the started event within 60 s." }
-  $expected = if ($end.Mode -eq 'replaced') { 0 } else { 1 }
+  $putInPlace = $end.Mode -in 'replaced', 'command'
+  $expected = if ($putInPlace) { 0 } else { 1 }
   if ($end.ExitCode -ne $expected) { Fail "$label ended with exit code $($end.ExitCode), where it should end with $expected." }
-  if ($end.Mode -eq 'replaced') {
+  if ($putInPlace) {
     if (-not (Test-Path -LiteralPath $end.Target)) { Fail "$label left nothing at $($end.Target)." }
     elseif ((Get-FileHash -Algorithm SHA256 -LiteralPath $end.Target).Hash -ne (Get-FileHash -Algorithm SHA256 -LiteralPath $end.BuildExe).Hash) {
       Fail "$label left a file at $($end.Target) that is not the build's exe."
@@ -1242,7 +1244,7 @@ function Test-ReplaceEnd($end) {
   foreach ($stray in @(Get-ChildItem -LiteralPath $end.TargetFolder -Force | Where-Object Name -notin $allowed)) {
     Fail "$label left $($stray.FullName) in the folder it was put in."
   }
-  if ($end.Mode -eq 'replaced' -and (Test-Path -LiteralPath $end.Target)) {
+  if ($putInPlace -and (Test-Path -LiteralPath $end.Target)) {
     $staging = $end.StagingAccess
     $folder = Get-AccessSddl $end.TargetFolder
     Write-Host "  staging folder's access list: $staging"
@@ -1277,6 +1279,12 @@ function Test-ReplaceEnd($end) {
 # Each run's end is judged by Test-ReplaceEnd once every process has ended, except
 # with -LoadAlone, for a run with a library the apphost reads planted alone, which can
 # stop the build starting and is judged on what it loads.
+# A build whose Replace is 'command' is started with /s /noupdate beside the three
+# switches, working in a folder of its own outside both the staging folder and the
+# target's, as a scheduled task can start the older copy. It runs the scan standing for
+# the copy at the path, so the stand-in for that copy is left running until it has ended,
+# and the replace it then starts, detached and from the staging folder, is waited for
+# until the stand-in has ended and the replace with it.
 function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]$LoadAlone, [switch]$JudgeCopy) {
   $staging = New-StagingFolder
   # Read now: a window started at the path deletes the staged exe as it starts, and the
@@ -1298,22 +1306,41 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
   $signal = New-StartedEvent
   $event = $signal.Handle
   $contract = 'src/InstallerClean.Core/Helpers/HandOverContract.cs'
-  $arguments = @(
+  $command = $build.Replace -eq 'command'
+  $arguments = @(if ($command) { '/s', '/noupdate' }) + @(
     "`"$(Read-SourceString $contract 'ReplaceCopySwitch')$target`"",
     "$(Read-SourceString $contract 'AfterProcessSwitch')$($standIn.Id)",
     $signal.Argument)
+  $workingFolder = $staging
+  if ($command) {
+    $workingFolder = Get-RunFolder $pass "$label working folder"
+    New-Item -ItemType Directory -Force -Path $workingFolder | Out-Null
+    Write-Host "  ${label}: working in $workingFolder"
+  }
   $begun = Get-Date
-  $replacer = Start-Process -FilePath (Join-Path $staging $stagedName) -ArgumentList $arguments -WorkingDirectory $staging -PassThru
+  $replacer = Start-Process -FilePath (Join-Path $staging $stagedName) -ArgumentList $arguments -WorkingDirectory $workingFolder -PassThru
   $null = $replacer.Handle
   $eventSet = $event.WaitOne([TimeSpan]::FromSeconds(60))
   $event.Dispose()
   if ($build.Replace -eq 'nothing') { Rename-Item -LiteralPath $target -NewName "$exeName.aside" }
-  Stop-Process -Id $standIn.Id -Force -ErrorAction SilentlyContinue
-  $standIn.WaitForExit()
+  if (-not $command) {
+    Stop-Process -Id $standIn.Id -Force -ErrorAction SilentlyContinue
+    $standIn.WaitForExit()
+  }
   if (-not $replacer.WaitForExit($build.Wait * 1000)) {
     if (-not $LoadAlone) { Fail "$label was still running $($build.Wait) s after it was started." }
     Stop-Process -Id $replacer.Id -Force -ErrorAction SilentlyContinue
     $replacer.WaitForExit()
+  }
+  if ($command) {
+    # The replace the run started waits for the copy it stood for, which is ended now.
+    $replaces = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith("$staging", 'OrdinalIgnoreCase') })
+    Write-Host "  ${label}: $($replaces.Count) replace process(es) running from the staging folder as the run ended: $(($replaces | ForEach-Object Id) -join ', ')"
+    Stop-Process -Id $standIn.Id -Force -ErrorAction SilentlyContinue
+    $standIn.WaitForExit()
+    foreach ($replace in $replaces) {
+      if (-not $replace.WaitForExit(120000)) { Fail "$label's replace, process $($replace.Id), was still running 120 s after the copy it stood for ended." }
+    }
   }
   $ended = Get-Date
   Write-Host "  ${label}: process $($replacer.Id), ended with $($replacer.ExitCode)"
@@ -1388,7 +1415,7 @@ function Test-ReplaceControls {
     function New-End($folder, $mode, $read, [string]$stagingFolder = $staging) {
       [pscustomobject]@{
         Label = "control $(Split-Path $folder -Leaf)"; Mode = $mode; BuildExe = $build; Target = (Join-Path $folder 'InstallerClean.exe'); TargetFolder = $folder
-        StagingAccess = (Get-AccessSddl $stagingFolder); EventSet = $true; ExitCode = $(if ($mode -eq 'replaced') { 0 } else { 1 }); Started = (Get-Date); Ended = (Get-Date); ReadEntries = $read; StillRunning = $null
+        StagingAccess = (Get-AccessSddl $stagingFolder); EventSet = $true; ExitCode = $(if ($mode -in 'replaced', 'command') { 0 } else { 1 }); Started = (Get-Date); Ended = (Get-Date); ReadEntries = $read; StillRunning = $null
       }
     }
 
@@ -1429,7 +1456,11 @@ function Test-ReplaceControls {
     $nothingNone = New-End (New-Target 'nothing-none' $null) 'nothing' $none
     $nothingTwo = New-End (New-Target 'nothing-two' $null) 'nothing' { param($since, $until) [pscustomobject]@{ Entries = @(1, 2 | ForEach-Object { [pscustomobject]@{ Id = $id; Message = "downloaded again from $releases." } }); Unread = @() } }
 
-    $result = Invoke-Caught { foreach ($end in $good, $goodNothing, $faulted, $sameAcl, $ownAcl, $nothingLeft, $unread, $goneStaging, $nothingNone, $nothingTwo) { Test-ReplaceEnd $end } }
+    $goodCommand = New-End (New-Target 'good-command' 'the build') 'command' $none
+    $commandFaulted = New-End (New-Target 'command-faulted' 'another build') 'command' $none
+    $commandFaulted.ExitCode = 2
+
+    $result = Invoke-Caught { foreach ($end in $good, $goodNothing, $faulted, $sameAcl, $ownAcl, $nothingLeft, $unread, $goneStaging, $nothingNone, $nothingTwo, $goodCommand, $commandFaulted) { Test-ReplaceEnd $end } }
   }
   finally { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue }
   Assert-Caught $result.Caught @(
@@ -1447,7 +1478,9 @@ function Test-ReplaceControls {
     "control nothing-left's entry saying the update was not installed does not name",
     'control unread: the Application log could not be read, so what it wrote there was not judged: the control cannot read it',
     'control nothing-none, with nothing left at the path, wrote 0 entries',
-    'control nothing-two, with nothing left at the path, wrote 2 entries') 'how a replace ended'
+    'control nothing-two, with nothing left at the path, wrote 2 entries',
+    'control command-faulted ended with exit code 2, where it should end with 0',
+    'control command-faulted left a file at') 'how a replace ended'
 
   Write-Host "== Control: the first act of a replace's own code"
   $target = 'C:\Control\target\InstallerClean.exe'

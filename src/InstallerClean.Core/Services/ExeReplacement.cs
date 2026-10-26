@@ -126,21 +126,12 @@ internal static class ExeReplacement
         var exePath = request.ExePath;
         var replacing = exePath + ReplacingSuffix;
 
-        using var oldCopy = Kernel32.OpenProcess(
-            Ntdll.SYNCHRONIZE | Kernel32.PROCESS_QUERY_LIMITED_INFORMATION, bInheritHandle: false, (uint)request.ProcessId);
-        if (oldCopy.IsInvalid)
-            return Fail(ReplaceOutcome.NotHandedOver,
-                $"The copy to be replaced, process {request.ProcessId}, could not be opened: error {Marshal.GetLastPInvokeError()}.");
-        if (!TryReadAttributes(exePath, out var attributes, out var readFailure))
-            return Fail(ReplaceOutcome.NotHandedOver, "The file to be replaced could not be read.", readFailure);
-        // A link at the path would pass the check below as the file it leads to, and the move
-        // replaces a link rather than following it, so the file it leads to would keep the
-        // older version.
-        if ((attributes & FileAttributes.ReparsePoint) != 0)
-            return Fail(ReplaceOutcome.NotHandedOver, "The file to be replaced is a link.");
-        if (!IsImageOf(oldCopy, exePath))
-            return Fail(ReplaceOutcome.NotHandedOver,
-                $"The file to be replaced is not the one process {request.ProcessId} runs from.");
+        using var oldCopy = OpenCopy(request, out var refused);
+        if (oldCopy is null)
+        {
+            CrashLog.TryWrite(refused!);
+            return ReplaceOutcome.NotHandedOver;
+        }
 
         using var held = TryHold(exePath, seams.HoldRetryBound ?? HoldRetryBound, out var holdFailure);
         if (held is null)
@@ -161,6 +152,50 @@ internal static class ExeReplacement
             CrashLog.TryWrite(ex);
             return AfterAThrow(exePath, state);
         }
+    }
+
+    /// <summary>
+    /// Opens the process <paramref name="request"/> names, for waiting on it and reading its
+    /// image, and answers its handle where the file at the request's path is a plain file
+    /// that process runs from. Otherwise answers null, with what was found in
+    /// <paramref name="refused"/> for crash.log, and nothing opened is left open.
+    /// </summary>
+    internal static SafeProcessHandle? OpenCopy(ReplaceRequest request, out UpdateFailedException? refused)
+    {
+        var exePath = request.ExePath;
+        var process = Kernel32.OpenProcess(
+            Ntdll.SYNCHRONIZE | Kernel32.PROCESS_QUERY_LIMITED_INFORMATION, bInheritHandle: false, (uint)request.ProcessId);
+        if (process.IsInvalid)
+        {
+            var error = Marshal.GetLastPInvokeError();
+            process.Dispose();
+            refused = Refusal($"The copy to be replaced, process {request.ProcessId}, could not be opened: error {error}.");
+            return null;
+        }
+        try
+        {
+            refused = !TryReadAttributes(exePath, out var attributes, out var readFailure)
+                ? Refusal("The file to be replaced could not be read.", readFailure)
+                // A link at the path would pass the check below as the file it leads to, and the
+                // move replaces a link rather than following it, so the file it leads to would keep
+                // the older version.
+                : (attributes & FileAttributes.ReparsePoint) != 0
+                    ? Refusal("The file to be replaced is a link.")
+                    : !IsImageOf(process, exePath)
+                        ? Refusal($"The file to be replaced is not the one process {request.ProcessId} runs from.")
+                        : null;
+        }
+        catch
+        {
+            process.Dispose();
+            throw;
+        }
+        if (refused is null) return process;
+        process.Dispose();
+        return null;
+
+        static UpdateFailedException Refusal(string message, Exception? inner = null) =>
+            new(UpdateFailureStage.Install, message, inner);
     }
 
     /// <summary>
@@ -599,7 +634,7 @@ internal static class ExeReplacement
     /// true once it has ended, and false where Windows refused the wait, with its error code
     /// in <paramref name="error"/>.
     /// </summary>
-    private static bool WaitForEnd(SafeProcessHandle process, TimeSpan notice, out int error)
+    internal static bool WaitForEnd(SafeProcessHandle process, TimeSpan notice, out int error)
     {
         var milliseconds = (uint)Math.Clamp(notice.TotalMilliseconds, 0, uint.MaxValue - 1);
         var result = HandleWait.One(process, milliseconds, out error);

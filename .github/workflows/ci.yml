@@ -810,6 +810,16 @@ jobs:
               }
             }
           }
+          # The command line started as an older copy's update starts it: running /s from the
+          # staging folder standing for the copy at the path, in a working folder of its own
+          # outside both, and then putting itself in place once that copy has ended
+          # (Invoke-Replace's 'command'). Its first act seen is the look at the copy's file.
+          $cli = $builds | Where-Object Label -eq 'command line'
+          $builds += [pscustomobject]@{
+            Label = 'command line, running /s from staging in a working folder of its own'
+            Exe = $cli.Exe; Source = $cli.Source; Wait = 120; Marker = 'replaced copy'
+            Replace = 'command'; StartsAtPath = $false; AtPath = $cli
+          }
 
           . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
           '@

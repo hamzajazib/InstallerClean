@@ -80,7 +80,13 @@ internal static class FileVersionResource
         && carried.Major == expected.Major && carried.Minor == expected.Minor
         && Math.Max(carried.Build, 0) == Math.Max(expected.Build, 0);
 
-    private static Version? Read(FileStream file)
+    /// <summary>
+    /// The file version the open <paramref name="file"/> carries, or null where it is not a
+    /// program or library or carries no version resource, read through that handle, so the
+    /// answer is about the file the caller holds. Throws <see cref="IOException"/> where a
+    /// read fails.
+    /// </summary>
+    internal static Version? Read(FileStream file)
     {
         byte[]? At(long offset, int count)
         {

@@ -744,6 +744,88 @@ internal static partial class Kernel32
         ref uint lpdwSize);
 
     /// <summary>
+    /// Starts the program <paramref name="lpApplicationName"/> names, with
+    /// <paramref name="lpCommandLine"/> as its whole command line, its first argument being
+    /// the program's own name. Windows may write into <paramref name="lpCommandLine"/>, so it
+    /// is a buffer ending in a null. Answers the new process's and its first thread's handles
+    /// in <paramref name="lpProcessInformation"/>, both of which the caller closes.
+    /// <paramref name="lpVariables"/> is the block of variables the program starts with, and
+    /// zero gives it the caller's own.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "CreateProcessW", SetLastError = true,
+                   StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool CreateProcess(
+        string lpApplicationName,
+        [In, Out] char[] lpCommandLine,
+        IntPtr lpProcessAttributes,
+        IntPtr lpThreadAttributes,
+        [MarshalAs(UnmanagedType.Bool)] bool bInheritHandles,
+        uint dwCreationFlags,
+        IntPtr lpVariables,
+        string lpCurrentDirectory,
+        in STARTUPINFO lpStartupInfo,
+        out PROCESS_INFORMATION lpProcessInformation);
+
+    /// <summary>
+    /// What <see cref="CreateProcess"/> starts the process's window and standard handles
+    /// with. All zero but <see cref="cb"/> asks for nothing: no window settings and no
+    /// standard handles of the caller's choosing.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct STARTUPINFO
+    {
+        public uint cb;
+        public IntPtr lpReserved;
+        public IntPtr lpDesktop;
+        public IntPtr lpTitle;
+        public uint dwX;
+        public uint dwY;
+        public uint dwXSize;
+        public uint dwYSize;
+        public uint dwXCountChars;
+        public uint dwYCountChars;
+        public uint dwFillAttribute;
+        public uint dwFlags;
+        public ushort wShowWindow;
+        public ushort cbReserved2;
+        public IntPtr lpReserved2;
+        public IntPtr hStdInput;
+        public IntPtr hStdOutput;
+        public IntPtr hStdError;
+    }
+
+    /// <summary>The process and the thread <see cref="CreateProcess"/> started, and their IDs.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PROCESS_INFORMATION
+    {
+        public IntPtr hProcess;
+        public IntPtr hThread;
+        public uint dwProcessId;
+        public uint dwThreadId;
+    }
+
+    /// <summary>The new process has no console, and the console's Ctrl+C and close never reach it.</summary>
+    public const uint DETACHED_PROCESS = 0x00000008;
+
+    /// <summary>
+    /// The new process is started outside the job the caller is in, so ending that job does
+    /// not end it. Windows refuses the start with access denied where the job does not allow it.
+    /// </summary>
+    public const uint CREATE_BREAKAWAY_FROM_JOB = 0x01000000;
+
+    /// <summary>
+    /// Reads the exit code of the process <paramref name="hProcess"/> stands for into
+    /// <paramref name="lpExitCode"/>, which is <see cref="STILL_ACTIVE"/> while it runs.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetExitCodeProcess", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetExitCodeProcess(SafeProcessHandle hProcess, out uint lpExitCode);
+
+    /// <summary>What <see cref="GetExitCodeProcess"/> reads for a process still running.</summary>
+    public const uint STILL_ACTIVE = 259;
+
+    /// <summary>
     /// Sets the folders Windows searches, for the whole process, for a library asked for by
     /// its name alone and for the libraries a loaded library depends on, to those
     /// <paramref name="directoryFlags"/> names (LOAD_LIBRARY_SEARCH_*). A library loaded by

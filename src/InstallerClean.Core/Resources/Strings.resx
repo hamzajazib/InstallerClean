@@ -2556,6 +2556,24 @@ Run InstallerClean again as administrator.</value></data>
   <!-- 0 = the version that was not installed, 1 = the newest release's page. Event ID 3007, written
        by that version, the copy being updated having closed and left nothing at its path. -->
   <data name="Cli.EventLogUpdateNothingAtPath" xml:space="preserve"><value>An update to InstallerClean {0} was not installed: once the copy being updated had closed, nothing was left at its path. InstallerClean can be downloaded again from {1}.</value></data>
+  <!-- 0 = the version that was not installed. Event ID 3007, written by that version where the
+       command line's copy at the path was not replaced and is as it was. -->
+  <data name="Cli.EventLogUpdateNotInstalled" xml:space="preserve"><value>An update to InstallerClean {0} was not installed, and the copy it was to replace was left as it was. The command-line tool tries again the next time it is run, unless it is run with /noupdate or "Check for updates automatically" is turned off in InstallerClean. crash.log says what stopped it.</value></data>
+  <!-- 0 = the version being installed. Event ID 3007, written by that version where its replace
+       of the command line's copy stopped after the move over that copy had begun. -->
+  <data name="Cli.EventLogUpdateStoppedPartWay" xml:space="preserve"><value>An update to InstallerClean {0} stopped after it had begun to replace the copy at its path. crash.log says what happened.</value></data>
+  <!-- 0 = the version the setup was downloaded as. Event ID 3007, written by the command line of
+       that version where the setup beside it carries another version, so it was not run. -->
+  <data name="Cli.EventLogUpdateSetupNotThisVersion" xml:space="preserve"><value>The setup downloaded to update InstallerClean to {0} is not version {0}, so it was not run. The command-line tool tries again the next time it is run, unless it is run with /noupdate or "Check for updates automatically" is turned off in InstallerClean.</value></data>
+  <!-- 0 = the version that was not installed. Event ID 3007, written by that version where
+       InstallerClean was still in use after the setup's wait for it, so the setup was not run. -->
+  <data name="Cli.EventLogUpdateInUseAfterWait" xml:space="preserve"><value>An update to InstallerClean {0} was not installed because InstallerClean was in use. The command-line tool tries again the next time it is run, unless it is run with /noupdate or "Check for updates automatically" is turned off in InstallerClean.</value></data>
+  <!-- 0 = the setup's version, 1 = its exit code. Event ID 3007, written by the command line of
+       that version where the setup it ran ended with an exit code other than 0. -->
+  <data name="Cli.EventLogUpdateSetupExitCode" xml:space="preserve"><value>The InstallerClean {0} setup ended with exit code {1}. The command-line tool tries again the next time it is run, unless it is run with /noupdate or "Check for updates automatically" is turned off in InstallerClean.</value></data>
+  <!-- 0 = the setup's version. Event ID 3007, written by the command line of that version where
+       the setup ended with exit code 0 and the command line at the path does not carry it. -->
+  <data name="Cli.EventLogUpdateSetupNotInPlace" xml:space="preserve"><value>The InstallerClean {0} setup finished without putting version {0} of the command line in place. The command-line tool tries again the next time it is run, unless it is run with /noupdate or "Check for updates automatically" is turned off in InstallerClean.</value></data>
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
        before it started, so nothing ran. -->

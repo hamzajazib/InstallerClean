@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
+using Microsoft.Win32.SafeHandles;
 
 namespace InstallerClean.Services;
 
@@ -47,7 +48,7 @@ internal static class NewerVersionProcess
     /// Starts <paramref name="file"/> with the arguments <paramref name="argumentsFor"/> gives
     /// for a new started event's id, working in the folder the file is in, and waits up to
     /// <paramref name="bound"/> for it to set that event. One that does not is ended and
-    /// waited for (<see cref="EndNewerVersion"/>). Answers
+    /// waited for (<see cref="EndNewerVersion(SafeProcessHandle)"/>). Answers
     /// <see cref="NewerVersionAnswer.Started"/>; <see cref="NewerVersionAnswer.NotStarted"/>
     /// where it could not be started, did not set the event and has been ended, or no event
     /// could be made to see it by; or <see cref="NewerVersionAnswer.StillRunning"/> where it
@@ -80,19 +81,58 @@ internal static class NewerVersionProcess
                 CrashLog.TryWrite(ex);
                 return NewerVersionAnswer.NotStarted;
             }
-            using (newer)
-            {
-                var answer = AwaitStart(newer, started, bound, cancel: null, out var waitError);
-                if (answer == NewerVersionStart.Started) return NewerVersionAnswer.Started;
-                CrashLog.TryWrite(NotStartedFailure(answer, waitError, newer, bound));
-                return EndNewerVersion(newer) ? NewerVersionAnswer.NotStarted : NewerVersionAnswer.StillRunning;
-            }
+            using (newer) return Await(newer.SafeHandle, started, bound, out _);
         }
         catch (Exception ex)
         {
             CrashLog.TryWrite(ex);
             return NewerVersionAnswer.NotStarted;
         }
+    }
+
+    /// <summary>
+    /// Starts <paramref name="file"/> as <see cref="DetachedProcess"/> starts a program,
+    /// working in <paramref name="workingDirectory"/>, with the arguments
+    /// <paramref name="argumentsFor"/> gives for a new started event's id, and waits up to
+    /// <paramref name="bound"/> for it to set that event. Answers as
+    /// <see cref="StartAndAwait"/> does, and writes to crash.log what it does, with
+    /// <paramref name="endedByItself"/> set where it was started and ended before it set the
+    /// event, having run its own code. Never throws.
+    /// </summary>
+    internal static NewerVersionAnswer StartDetachedAndAwait(
+        string file, Func<Guid, IReadOnlyList<string>> argumentsFor, string workingDirectory, TimeSpan bound,
+        out bool endedByItself)
+    {
+        endedByItself = false;
+        try
+        {
+            var id = Guids.NewGuid();
+            using var started = HandOverContract.CreateStartedEvent(id);
+            if (started is null) return NewerVersionAnswer.NotStarted;
+            using var newer = DetachedProcess.Start(file, argumentsFor(id), workingDirectory);
+            return newer is null ? NewerVersionAnswer.NotStarted : Await(newer, started, bound, out endedByItself);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return NewerVersionAnswer.NotStarted;
+        }
+    }
+
+    /// <summary>
+    /// Waits up to <paramref name="bound"/> for <paramref name="newer"/> to set
+    /// <paramref name="started"/>, and ends one that does not (<see cref="EndNewerVersion(SafeProcessHandle)"/>),
+    /// writing why to crash.log. Answers <see cref="NewerVersionAnswer.Started"/>,
+    /// <see cref="NewerVersionAnswer.NotStarted"/> or <see cref="NewerVersionAnswer.StillRunning"/>,
+    /// with <paramref name="endedByItself"/> set where it ended before it set the event.
+    /// </summary>
+    private static NewerVersionAnswer Await(SafeProcessHandle newer, WaitHandle started, TimeSpan bound, out bool endedByItself)
+    {
+        var answer = AwaitStart(newer, started, bound, cancel: null, out var waitError);
+        endedByItself = answer == NewerVersionStart.Ended;
+        if (answer == NewerVersionStart.Started) return NewerVersionAnswer.Started;
+        CrashLog.TryWrite(NotStartedFailure(answer, waitError, newer, bound));
+        return EndNewerVersion(newer) ? NewerVersionAnswer.NotStarted : NewerVersionAnswer.StillRunning;
     }
 
     /// <summary>
@@ -108,16 +148,21 @@ internal static class NewerVersionProcess
     /// where the wait was not. A look Windows refuses after the bound or
     /// <paramref name="cancel"/> is written to crash.log and the answer stands; after a
     /// refused wait it is not, the refusal being the answer already. Nothing else is
-    /// written: the caller writes <see cref="NotStartedFailure"/>. The wait dispatches
+    /// written: the caller writes <see cref="NotStartedFailure(NewerVersionStart, int, SafeProcessHandle, TimeSpan)"/>. The wait dispatches
     /// nothing, so on a window's thread no window code runs during it. Never throws.
     /// </summary>
     internal static NewerVersionStart AwaitStart(
-        Process newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel, out int waitError)
+        Process newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel, out int waitError) =>
+        AwaitStart(newer.SafeHandle, started, bound, cancel, out waitError);
+
+    /// <summary><see cref="AwaitStart(Process, WaitHandle, TimeSpan, WaitHandle?, out int)"/> for a process's handle.</summary>
+    internal static NewerVersionStart AwaitStart(
+        SafeProcessHandle newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel, out int waitError)
     {
         // In the order of StartedIndex, EndedIndex and CancelIndex.
         List<SafeHandle> handles = cancel is null
-            ? [started.SafeWaitHandle, newer.SafeHandle]
-            : [started.SafeWaitHandle, newer.SafeHandle, cancel.SafeWaitHandle];
+            ? [started.SafeWaitHandle, newer]
+            : [started.SafeWaitHandle, newer, cancel.SafeWaitHandle];
         var answer = Wait(handles, bound, out waitError) switch
         {
             StartedIndex => NewerVersionStart.Started,
@@ -141,13 +186,13 @@ internal static class NewerVersionProcess
         }
     }
 
-    /// <summary>Where <see cref="AwaitStart"/> puts the started event in the handles it waits on.</summary>
+    /// <summary>Where <see cref="AwaitStart(SafeProcessHandle, WaitHandle, TimeSpan, WaitHandle?, out int)"/> puts the started event in the handles it waits on.</summary>
     private const int StartedIndex = 0;
 
-    /// <summary>Where <see cref="AwaitStart"/> puts the newer version's process.</summary>
+    /// <summary>Where <see cref="AwaitStart(SafeProcessHandle, WaitHandle, TimeSpan, WaitHandle?, out int)"/> puts the newer version's process.</summary>
     private const int EndedIndex = 1;
 
-    /// <summary>Where <see cref="AwaitStart"/> puts the Ctrl+C handle, where there is one.</summary>
+    /// <summary>Where <see cref="AwaitStart(SafeProcessHandle, WaitHandle, TimeSpan, WaitHandle?, out int)"/> puts the Ctrl+C handle, where there is one.</summary>
     private const int CancelIndex = 2;
 
     /// <summary>
@@ -181,11 +226,13 @@ internal static class NewerVersionProcess
     /// code; the newer version still running after the bound; or the wait for it refused,
     /// with its error code. Never throws.
     /// </summary>
-    internal static bool EndNewerVersion(Process newer)
+    internal static bool EndNewerVersion(Process newer) => EndNewerVersion(newer.SafeHandle);
+
+    /// <summary><see cref="EndNewerVersion(Process)"/> for a process's handle.</summary>
+    internal static bool EndNewerVersion(SafeProcessHandle handle)
     {
         try
         {
-            var handle = newer.SafeHandle;
             // A look Windows refuses goes on to the request to end it, as for a newer
             // version still running.
             if (LookAt(handle, out _) == HandleLook.Signalled) return true;
@@ -218,10 +265,10 @@ internal static class NewerVersionProcess
         }
     }
 
-    /// <summary>How long <see cref="EndNewerVersion"/> waits for the newer version to have ended.</summary>
+    /// <summary>How long <see cref="EndNewerVersion(SafeProcessHandle)"/> waits for the newer version to have ended.</summary>
     private static readonly TimeSpan EndBound = TimeSpan.FromSeconds(5);
 
-    /// <summary>The exit code <see cref="EndNewerVersion"/> ends the newer version with.</summary>
+    /// <summary>The exit code <see cref="EndNewerVersion(SafeProcessHandle)"/> ends the newer version with.</summary>
     private const uint NotStartedExitCode = 1;
 
     /// <summary>
@@ -231,25 +278,23 @@ internal static class NewerVersionProcess
     /// wait with. Never throws.
     /// </summary>
     internal static UpdateFailedException NotStartedFailure(
-        NewerVersionStart answer, int waitError, Process newer, TimeSpan bound)
+        NewerVersionStart answer, int waitError, Process newer, TimeSpan bound) =>
+        NotStartedFailure(answer, waitError, newer.SafeHandle, bound);
+
+    /// <summary><see cref="NotStartedFailure(NewerVersionStart, int, Process, TimeSpan)"/> for a process's handle.</summary>
+    internal static UpdateFailedException NotStartedFailure(
+        NewerVersionStart answer, int waitError, SafeProcessHandle newer, TimeSpan bound)
     {
-        string message;
-        try
+        var message = answer switch
         {
-            message = answer switch
-            {
-                NewerVersionStart.Ended =>
-                    $"The newer version ended with exit code {newer.ExitCode} before it said it had started.",
-                NewerVersionStart.Cancelled => "Ctrl+C came before the newer version said it had started.",
-                NewerVersionStart.WaitFailed =>
-                    $"Waiting for the newer version to say it had started failed with error {waitError}.",
-                _ => $"The newer version did not say it had started within {bound.TotalSeconds:0} seconds.",
-            };
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            message = "The newer version ended before it said it had started.";
-        }
+            NewerVersionStart.Ended => Kernel32.GetExitCodeProcess(newer, out var exitCode)
+                ? $"The newer version ended with exit code {(int)exitCode} before it said it had started."
+                : "The newer version ended before it said it had started.",
+            NewerVersionStart.Cancelled => "Ctrl+C came before the newer version said it had started.",
+            NewerVersionStart.WaitFailed =>
+                $"Waiting for the newer version to say it had started failed with error {waitError}.",
+            _ => $"The newer version did not say it had started within {bound.TotalSeconds:0} seconds.",
+        };
         return new UpdateFailedException(UpdateFailureStage.Install, message);
     }
 
@@ -293,7 +338,7 @@ internal static class NewerVersionProcess
     }
 }
 
-/// <summary>What came first while a copy waited for the newer version it started (<see cref="NewerVersionProcess.AwaitStart"/>).</summary>
+/// <summary>What came first while a copy waited for the newer version it started (<see cref="NewerVersionProcess.AwaitStart(SafeProcessHandle, WaitHandle, TimeSpan, WaitHandle?, out int)"/>).</summary>
 internal enum NewerVersionStart
 {
     /// <summary>The newer version set the event: its own code is running.</summary>

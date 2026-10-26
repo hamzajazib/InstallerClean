@@ -534,7 +534,7 @@ public static class SelfReplacement
     /// waits for it to say its own code is running, and ends this process without running
     /// any more of its code.
     /// Answers false where the newer version could not be put in place, could not be
-    /// started, or did not say so (<see cref="NewerVersionProcess.AwaitStart"/>), with this exe back at its
+    /// started, or did not say so (<see cref="NewerVersionProcess.AwaitStart(SafeProcessHandle, WaitHandle, TimeSpan, WaitHandle?, out int)"/>), with this exe back at its
     /// own path and the newer version back under its waiting name. Where Windows would not
     /// end a newer version that did not say so, this exe cannot be put back, or another
     /// process runs from the file now at the path, the newer version stays there and this

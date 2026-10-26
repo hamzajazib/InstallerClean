@@ -461,19 +461,23 @@ public class CliConsoleGuardTests
     }
 
     [Fact]
-    public void A_replace_request_carrying_a_command_runs_nothing_sets_no_event_and_says_so_in_crash_log()
+    public void A_request_to_run_a_command_for_a_copy_its_process_does_not_run_from_runs_nothing_and_sets_no_event()
     {
         var id = Guid.NewGuid();
         using var started = HandOverContract.CreateStartedEvent(id)!;
         var console = new StringWriter();
         var original = Console.Out;
         using var crashLog = TestCrashLog.OwnFolder();
+        var replaces = 0;
+        var startReplace = Program.StartReplace;
         try
         {
             Console.SetOut(console);
             EventLogRecorder.Clear();
+            Program.StartReplace = _ => replaces++;
 
-            // A scan beside the three, which changes nothing were the refusal ever to fail.
+            // A path this process does not run from. A scan beside the three, which changes
+            // nothing were the refusal ever to fail.
             string[] args = [.. HandOverContract.ReplaceArguments(@"C:\x.exe", Environment.ProcessId, id), "/s"];
             var exitCode = Program.Main(args);
 
@@ -481,10 +485,49 @@ public class CliConsoleGuardTests
             Assert.Equal("", console.ToString());
             Assert.Empty(EventLogRecorder.Entries);
             Assert.False(started.WaitOne(0));
-            Assert.Contains(HandOverContract.ReplaceWithCommandRefusal, TestCrashLog.Text());
+            Assert.Equal(0, replaces);
+            Assert.Contains(HandOverContract.NotTheCopyRefusal, TestCrashLog.Text());
         }
         finally
         {
+            Program.StartReplace = startReplace;
+            Console.SetOut(original);
+        }
+    }
+
+    [Theory]
+    [InlineData("--version", CliExitCode.Ok)]
+    [InlineData("/nosuchswitch", CliExitCode.Error)]
+    public void A_command_run_for_the_copy_this_process_runs_from_sets_the_event_ends_with_its_own_code_and_then_starts_the_replace(
+        string command, int expected)
+    {
+        var id = Guid.NewGuid();
+        using var started = HandOverContract.CreateStartedEvent(id)!;
+        var console = new StringWriter();
+        var original = Console.Out;
+        using var crashLog = TestCrashLog.OwnFolder();
+        List<(ReplaceRequest Request, bool EventSet)> replaces = [];
+        var startReplace = Program.StartReplace;
+        try
+        {
+            Console.SetOut(console);
+            EventLogRecorder.Clear();
+            Program.StartReplace = request => replaces.Add((request, started.WaitOne(0)));
+
+            string[] args = [command, .. HandOverContract.ReplaceArguments(Environment.ProcessPath!, Environment.ProcessId, id)];
+            var exitCode = Program.Main(args);
+
+            Assert.Equal(expected, exitCode);
+            Assert.NotEqual("", console.ToString());
+            var replace = Assert.Single(replaces);
+            Assert.True(replace.EventSet);
+            Assert.Equal(Environment.ProcessPath, replace.Request.ExePath);
+            Assert.Equal(Environment.ProcessId, replace.Request.ProcessId);
+            Assert.Equal([command], replace.Request.Command);
+        }
+        finally
+        {
+            Program.StartReplace = startReplace;
             Console.SetOut(original);
         }
     }
