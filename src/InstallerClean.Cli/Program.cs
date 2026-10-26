@@ -32,6 +32,22 @@ internal static class Program
 
     public static int Main(string[] args)
     {
+        // A newer version a copy downloaded, started to put itself at that copy's path once
+        // the copy has ended, does that and nothing else, printing nothing: it runs with no
+        // console of its own. Exit code 0 where the newer version is in place, 1 otherwise,
+        // with what failed in crash.log. A request carrying a command, or one not well
+        // formed, runs nothing and sets no event.
+        switch (HandOverContract.ReadReplaceRequest(args, out var replaceRequest))
+        {
+            case ReplaceRead.Asked when replaceRequest!.Command.Count == 0:
+                StorageHelpers.TurnOffCriticalErrorBoxForTheProcess();
+                return ExeReplacement.Run(replaceRequest, startAtPath: false) == ReplaceOutcome.Replaced
+                    ? ExitOk
+                    : ExitError;
+            case ReplaceRead.Asked or ReplaceRead.Refused:
+                return ExitError;
+        }
+
         CancelKey.Process.Hook();
 
         // A version that updated itself passes the one it starts an event it sets on Ctrl+C,
@@ -279,10 +295,13 @@ internal static class Program
         }
 
         // What an earlier update left beside this exe: the copy it renamed aside, which
-        // could not be deleted while it was still running, and a newer version written
-        // beside it that never took its place.
+        // could not be deleted while it was still running, a newer version written beside
+        // it that never took its place, and what a replace left beside it.
         if (Environment.ProcessPath is { Length: > 0 } ownPath)
+        {
             SelfReplacement.TryRemoveOldCopy(ownPath);
+            ExeReplacement.TryRemoveLeftovers(ownPath);
+        }
 
         if (!cts.IsCancellationRequested
             && RunUpdate(arg, args, invocation, updateHost, cts.Token) is int updateExitCode)

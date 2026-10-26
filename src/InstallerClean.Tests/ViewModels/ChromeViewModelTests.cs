@@ -555,6 +555,21 @@ public class ChromeViewModelTests
     }
 
     [Fact]
+    public async Task A_start_after_an_update_that_was_not_installed_says_so_where_the_check_finds_the_version()
+    {
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var vm = CreateViewModel();
+
+        vm.ShowUpdateFailedAtStart();
+        vm.StartAutomaticUpdateCheck();
+        await vm.AutomaticCheck;
+
+        Assert.True(vm.HasNewerVersion);
+        Assert.True(vm.HasUpdateFailure);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, vm.UpdateFailureText);
+    }
+
+    [Fact]
     public async Task The_automatic_check_s_task_completes_with_the_check_switched_off()
     {
         var vm = CreateViewModel(autoUpdateCheck: false);

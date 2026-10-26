@@ -72,6 +72,27 @@ public partial class App : Application
         // own. A person closing the splash is the exception, handled where it is made.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        // A newer version a copy downloaded, started to put itself at that copy's path,
+        // does that and nothing else: no window, no scan, no setting read. Before the
+        // language preference is applied, so the Application-log entry it can write is
+        // built in English (MachineCulture). A request carrying a command, or one not
+        // well formed, ends at once with nothing shown and no event set.
+        switch (HandOverContract.ReadReplaceRequest(e.Args, out var replaceRequest))
+        {
+            case ReplaceRead.Asked when replaceRequest!.Command.Count == 0:
+                ReplaceAndEnd(replaceRequest);
+                return;
+            case ReplaceRead.Asked or ReplaceRead.Refused:
+                Shutdown(1);
+                return;
+        }
+
+        // The started event a copy updating itself passes, and the switch a replace that
+        // left the older version in place starts it with. Both starts follow a copy that
+        // has just closed, so both wait for the single-instance mutex below.
+        var args = HandOverContract.TakeStartedEvent(e.Args, out var startedEvent);
+        HandOverContract.TakeUpdateFailed(args, out var updateFailed);
+
         // Apply the saved UI-language preference before anything reads a
         // resx string: the "already running" message below, the splash, and
         // every window. SettingsService has a no-dependency constructor, so
@@ -218,7 +239,7 @@ public partial class App : Application
         try
         {
             _instanceLock = new InstanceLock();
-            tookInstanceLock = _instanceLock.TryTake();
+            tookInstanceLock = TakeInstanceLock(_instanceLock, wait: startedEvent is not null || updateFailed);
         }
         catch (Exception ex)
         {
@@ -228,6 +249,10 @@ public partial class App : Application
         }
         if (!tookInstanceLock)
         {
+            // The start is decided, so the copy that started this one is told: the dialog
+            // below waits for a click, and that copy cannot wait for one.
+            HandOverContract.SignalStarted(startedEvent);
+
             // Another instance holds the mutex. If it is the GUI, bring its
             // window to the front, which is what clicking the icon of a running
             // app is supposed to do, and say nothing: telling the user it is
@@ -399,16 +424,17 @@ public partial class App : Application
             // resources and the services this build needs have all loaded. Nothing before
             // this point waits on anything slow. Where the event cannot be set, the app
             // closes before it starts anything, and that copy puts itself back.
-            HandOverContract.TakeStartedEvent(e.Args, out var startedEvent);
             if (!HandOverContract.SignalStarted(startedEvent))
             {
                 EndFailedStart(splash);
                 return;
             }
 
-            // What an update left behind, in the background: the copy it renamed aside, and
-            // the folder a newer setup ran from. After the signal, so the copy renamed aside
-            // is ending as the tries to delete it begin.
+            // What an update left behind, in the background: the copy it renamed aside, what
+            // a replace left beside this exe, and the folder a newer setup ran from. After the
+            // signal, so the copy renamed aside is ending as the tries to delete it begin, and
+            // only once this version's own code is running, so a newer version that never
+            // starts never deletes the older one kept beside it.
             _ = Task.Run(RemoveUpdateLeftoversAsync);
 
             // Started before the startup scan, so it runs beside it and has usually
@@ -419,6 +445,7 @@ public partial class App : Application
             // the AutoUpdateCheck setting is read inside it, so an opted-out install
             // opens no socket.
             viewModel.HoldResultsForUpdateCheck();
+            if (updateFailed) viewModel.Chrome.ShowUpdateFailedAtStart();
             var sinceCheckStart = Stopwatch.StartNew();
             viewModel.Chrome.StartAutomaticUpdateCheck();
 
@@ -511,6 +538,18 @@ public partial class App : Application
             ShutdownMode = ShutdownMode.OnLastWindowClose;
             _splashClosedByApp = true;
             splash.Close();
+
+            // Where the check has not found the newer version, so no card or notice carries
+            // the line saying the update couldn't be installed, a dialog says it, once the
+            // check has answered or its time is up.
+            if (updateFailed)
+            {
+                var left = UpdateCheckService.RequestTimeout + UpdateCheckGrace - sinceCheckStart.Elapsed;
+                if (left > TimeSpan.Zero)
+                    await Task.WhenAny(viewModel.Chrome.AutomaticCheck, Task.Delay(left));
+                if (!viewModel.Chrome.HasNewerVersion)
+                    MessageDialog.Show(Strings.UpdateNotice_InstallFailed, Strings.Window_Main_Title, MessageKind.Warning);
+            }
         }
         // Both arms show the dialog before EndFailedStart, and the order is
         // load-bearing: see EndFailedStart. Anything the composition build, the
@@ -530,6 +569,56 @@ public partial class App : Application
             ShowFailedToStart(ex);
             EndFailedStart(splash);
         }
+    }
+
+    /// <summary>
+    /// Puts this version at the path <paramref name="request"/> names once the copy there has
+    /// ended, starts it there and waits for it to say it is running
+    /// (<see cref="ExeReplacement.Run(ReplaceRequest, bool)"/>), and ends. Where the copy's
+    /// own file is at the path afterwards, put back or never replaced, that copy is started
+    /// with <see cref="HandOverContract.UpdateFailedSwitch"/>, so it opens saying the update
+    /// couldn't be installed. Where the newer version is at the path, or nothing is, or the
+    /// copy carries on, nothing is started. The exit code is 0 where the newer version is in
+    /// place and started, 1 otherwise. Its own catch writes to crash.log, the app's handlers
+    /// not being hooked this early.
+    /// </summary>
+    private void ReplaceAndEnd(ReplaceRequest request)
+    {
+        try
+        {
+            var outcome = ExeReplacement.Run(request, startAtPath: true);
+            if (outcome is ReplaceOutcome.Refused or ReplaceOutcome.RolledBack or ReplaceOutcome.OldCopyNotSeenToEnd)
+                ExeReplacement.StartWithUpdateFailed(request.ExePath);
+            Shutdown(outcome == ReplaceOutcome.Replaced ? 0 : 1);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            Shutdown(1);
+        }
+    }
+
+    /// <summary>How long a start following a copy that has just closed waits for the single-instance mutex.</summary>
+    private static readonly TimeSpan InstanceLockWait = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// Takes <paramref name="instanceLock"/> without waiting, or where <paramref name="wait"/>,
+    /// tries again every tenth of a second for up to <see cref="InstanceLockWait"/>: a copy
+    /// that has just told this one to start, or put it back, may still be closing and holding
+    /// the mutex. Answers whether it is taken. Runs on the dispatcher thread, which releases
+    /// it in <see cref="OnExit"/>.
+    /// </summary>
+    private static bool TakeInstanceLock(InstanceLock instanceLock, bool wait)
+    {
+        if (instanceLock.TryTake()) return true;
+        if (!wait) return false;
+        var waited = Stopwatch.StartNew();
+        while (waited.Elapsed < InstanceLockWait)
+        {
+            Thread.Sleep(100);
+            if (instanceLock.TryTake()) return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -878,8 +967,9 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Deletes the copy an update renamed aside and the newer version an update left beside
-    /// this exe, and removes the folders earlier updates downloaded into. It tries for ten
+    /// Deletes the copy an update renamed aside, the newer version an update left beside
+    /// this exe and what a replace left beside it (<see cref="ExeReplacement.TryRemoveLeftovers"/>),
+    /// and removes the folders earlier updates downloaded into. It tries for ten
     /// seconds, because what put each there may still be closing as this copy starts: the
     /// copy that renamed itself, or the setup, which opens the app before it exits.
     /// Whatever will not go by then is tried again at the next start. While an update of
@@ -906,7 +996,8 @@ public partial class App : Application
                 var ran = UpdateLeftoverGate.ForThisProcess.TryRunPass(() =>
                 {
                     foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
-                    oldCopyGone = oldCopyGone || SelfReplacement.TryRemoveOldCopy(exePath!);
+                    oldCopyGone = oldCopyGone
+                        || (SelfReplacement.TryRemoveOldCopy(exePath!) & ExeReplacement.TryRemoveLeftovers(exePath!));
                 });
                 if (!ran)
                 {

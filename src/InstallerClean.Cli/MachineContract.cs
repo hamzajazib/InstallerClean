@@ -37,31 +37,12 @@ namespace InstallerClean.Cli;
 /// </remarks>
 internal static class MachineContract
 {
-    private static readonly CultureInfo MachineCulture = CultureInfo.GetCultureInfo("en-GB");
-
     /// <summary>
     /// Runs <paramref name="build"/> with the thread UI and format cultures
-    /// forced to en-GB and restores both before returning. The restore is in a
-    /// finally so a throw mid-build cannot leak en-GB onto the thread; every
-    /// caller builds synchronously on one thread, so the swap never spans an
-    /// await.
+    /// forced to en-GB and restores both before returning
+    /// (<see cref="MachineCulture.English"/>).
     /// </summary>
-    internal static string English(Func<string> build)
-    {
-        var ui = CultureInfo.CurrentUICulture;
-        var format = CultureInfo.CurrentCulture;
-        CultureInfo.CurrentUICulture = MachineCulture;
-        CultureInfo.CurrentCulture = MachineCulture;
-        try
-        {
-            return build();
-        }
-        finally
-        {
-            CultureInfo.CurrentUICulture = ui;
-            CultureInfo.CurrentCulture = format;
-        }
-    }
+    internal static string English(Func<string> build) => MachineCulture.English(build);
 
     /// <summary>
     /// Writes one Application-channel entry, built in English via

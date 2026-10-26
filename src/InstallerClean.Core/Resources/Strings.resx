@@ -2553,6 +2553,9 @@ Run InstallerClean again as administrator.</value></data>
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->
   <data name="Cli.EventLogUpdateNotStarted" xml:space="preserve"><value>{0} mode: InstallerClean updated itself from {1} to {2} but could not start it, so nothing ran.</value></data>
+  <!-- 0 = the version that was not installed, 1 = the newest release's page. Event ID 3007, written
+       by that version, the copy being updated having closed and left nothing at its path. -->
+  <data name="Cli.EventLogUpdateNothingAtPath" xml:space="preserve"><value>An update to InstallerClean {0} was not installed: once the copy being updated had closed, nothing was left at its path. InstallerClean can be downloaded again from {1}.</value></data>
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
        before it started, so nothing ran. -->

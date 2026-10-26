@@ -227,6 +227,7 @@ public static class Strings
     public static string Cli_EventLogUpdateInstallFailedThenCancelled => Get("Cli.EventLogUpdateInstallFailedThenCancelled");
     public static string Cli_EventLogUpdateInUse => Get("Cli.EventLogUpdateInUse");
     public static string Cli_EventLogUpdateInUseThenCancelled => Get("Cli.EventLogUpdateInUseThenCancelled");
+    public static string Cli_EventLogUpdateNothingAtPath => Get("Cli.EventLogUpdateNothingAtPath");
     public static string Cli_EventLogUpdateNotStarted => Get("Cli.EventLogUpdateNotStarted");
     public static string Cli_EventLogValidationFailed => Get("Cli.EventLogValidationFailed");
     public static string Cli_EventLogWindowsError => Get("Cli.EventLogWindowsError");

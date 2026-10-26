@@ -74,6 +74,19 @@ public sealed class HandOverContractTests : IDisposable
     }
 
     [Theory]
+    [InlineData("/d", "/replacecopy:x", "/replacecopy:x")]
+    [InlineData("/m", "/afterprocess:12", "/afterprocess:12")]
+    [InlineData("/m", "/REPLACECOPY:C:\\x.exe", "/REPLACECOPY:C:\\x.exe")]
+    public void A_replace_switch_that_reaches_the_command_is_refused_as_an_argument_the_command_does_not_know(
+        string first, string second, string offending)
+    {
+        var invocation = CliContract.ParseArguments([first, second]);
+
+        Assert.Equal(CliCommand.UnknownArgument, invocation.Command);
+        Assert.Equal(offending, invocation.OffendingArgument);
+    }
+
+    [Theory]
     [InlineData("3.5.0", true)]
     [InlineData("3.5.1", true)]
     [InlineData("9.9.9", true)]

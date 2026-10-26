@@ -418,6 +418,14 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     public void StartAutomaticUpdateCheck() => AutomaticCheck = RunAutomaticUpdateCheckAsync();
 
     /// <summary>
+    /// Sets the line saying the update couldn't be installed, on a start that follows an
+    /// update which left this version in place. Called before
+    /// <see cref="StartAutomaticUpdateCheck"/>, so the card and the notice carry the line
+    /// where the check finds the newer version.
+    /// </summary>
+    public void ShowUpdateFailedAtStart() => UpdateFailureText = Strings.UpdateNotice_InstallFailed;
+
+    /// <summary>
     /// The automatic check, completing once it has answered, given up, found the check
     /// switched off or been cancelled. It never faults. Completed before
     /// <see cref="StartAutomaticUpdateCheck"/> is called.

@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
+using InstallerClean.Resources;
 using Microsoft.Win32.SafeHandles;
 
 namespace InstallerClean.Services;
@@ -84,18 +86,42 @@ internal static class ExeReplacement
     public static ReplaceOutcome Run(ReplaceRequest request, bool startAtPath) =>
         Run(request, startAtPath, new ReplaceSeams());
 
-    /// <summary>Test seam: <see cref="Run(ReplaceRequest, bool)"/>, with <paramref name="seams"/> in place of the real parts.</summary>
+    /// <summary>
+    /// Test seam: <see cref="Run(ReplaceRequest, bool)"/>, with <paramref name="seams"/> in
+    /// place of the real parts. Where the answer is <see cref="ReplaceOutcome.NothingAtPath"/>,
+    /// the Application log says so too, after crash.log.
+    /// </summary>
     internal static ReplaceOutcome Run(ReplaceRequest request, bool startAtPath, ReplaceSeams seams)
     {
+        ReplaceOutcome outcome;
         try
         {
-            return RunSteps(request, startAtPath, seams);
+            outcome = RunSteps(request, startAtPath, seams);
         }
         catch (Exception ex)
         {
+            // Only the steps before the hold throw past RunSteps, and none of them sets the
+            // started event, so the copy carries on.
             CrashLog.TryWrite(ex);
-            return ReplaceOutcome.Failed;
+            outcome = ReplaceOutcome.NotHandedOver;
         }
+        if (outcome == ReplaceOutcome.NothingAtPath) WriteNothingAtPathNotice();
+        return outcome;
+    }
+
+    /// <summary>
+    /// Writes the Application-log notice that this version was not installed because nothing
+    /// was at the path once the copy had ended, in English whatever the display language.
+    /// </summary>
+    private static void WriteNothingAtPathNotice()
+    {
+        var version = typeof(ExeReplacement).Assembly.GetName().Version ?? new Version(0, 0, 0);
+        EventLogWriter.Write(CliEventClass.UpdateNotInstalledNotice, () => MachineCulture.English(() =>
+        {
+            var named = $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}";
+            return string.Format(CultureInfo.InvariantCulture, Strings.Cli_EventLogUpdateNothingAtPath,
+                named, UpdateCheckService.ReleasesPageUrl);
+        }));
     }
 
     private static ReplaceOutcome RunSteps(ReplaceRequest request, bool startAtPath, ReplaceSeams seams)
@@ -125,29 +151,60 @@ internal static class ExeReplacement
                 $"The file ending {LockSuffix}, which a replace or a clean-up of this exe holds while it runs, could not be held.",
                 holdFailure);
 
-        if (!TryWriteNew(replacing, seams.ThisExe ?? Environment.ProcessPath, out var writeFailure))
-            return Fail(ReplaceOutcome.NotHandedOver, "The newer version could not be written beside the exe.", writeFailure);
-
         var state = new ReplaceState();
         try
         {
+            if (!TryWriteNew(replacing, seams.ThisExe ?? Environment.ProcessPath, out var writeFailure))
+                return Fail(ReplaceOutcome.NotHandedOver, "The newer version could not be written beside the exe.", writeFailure);
             return HandOverAndReplace(request, oldCopy, startAtPath, seams, state);
         }
-        catch when (!state.Moved)
+        catch (Exception ex)
         {
-            TakeBackBeforeTheMove(exePath, state.ReadOnlyTakenOff, out _);
-            throw;
+            // Inside the hold, so what is taken back here is this replace's own.
+            CrashLog.TryWrite(ex);
+            return AfterAThrow(exePath, state);
         }
-        catch when (state.ReadOnlyTakenOff)
+    }
+
+    /// <summary>
+    /// Takes back what a replace that threw had done, by how far it had gone, and answers
+    /// what that leaves: before the started event, <see cref="ReplaceOutcome.NotHandedOver"/>;
+    /// before the copy was seen to end, <see cref="ReplaceOutcome.OldCopyNotSeenToEnd"/>;
+    /// before the move, what <see cref="TakeBackBeforeTheMove"/> finds; after it, or where
+    /// taking back throws too, <see cref="ReplaceOutcome.Failed"/>. Never throws.
+    /// </summary>
+    private static ReplaceOutcome AfterAThrow(string exePath, ReplaceState state)
+    {
+        try
         {
-            PutReadOnlyBack(exePath);
-            throw;
+            if (!state.Signalled || !state.OldCopyEnded)
+            {
+                DeleteOrSayWhy(exePath + ReplacingSuffix);
+                return state.Signalled ? ReplaceOutcome.OldCopyNotSeenToEnd : ReplaceOutcome.NotHandedOver;
+            }
+            if (!state.Moved)
+                return TakeBackBeforeTheMove(exePath, state.ReadOnlyTakenOff, out var gone)
+                    ? Fail(ReplaceOutcome.NothingAtPath, NothingAtPathMessage, gone)
+                    : ReplaceOutcome.Refused;
+            if (state.ReadOnlyTakenOff) PutReadOnlyBack(exePath);
+            return ReplaceOutcome.Failed;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return ReplaceOutcome.Failed;
         }
     }
 
     /// <summary>How far a replace has gone, for what is taken back where a step throws.</summary>
     private sealed class ReplaceState
     {
+        /// <summary>The started event has been set, so the copy is closing.</summary>
+        public bool Signalled;
+
+        /// <summary>The copy has been seen to end.</summary>
+        public bool OldCopyEnded;
+
         /// <summary>The exe's read-only attribute has been taken off for the replace.</summary>
         public bool ReadOnlyTakenOff;
 
@@ -173,15 +230,17 @@ internal static class ExeReplacement
             DeleteOrSayWhy(replacing);
             return ReplaceOutcome.NotHandedOver;
         }
+        state.Signalled = true;
 
         // The copy has been told to close and closes whatever this process does next, so the
         // wait has no bound: a copy that takes long to close is still replaced once it has.
-        if (!WaitForEnd(oldCopy, seams.OldCopyNotice ?? OldCopyNotice, out var waitError))
+        if (!(seams.WaitForEnd ?? WaitForEnd)(oldCopy, seams.OldCopyNotice ?? OldCopyNotice, out var waitError))
         {
             DeleteOrSayWhy(replacing);
             return Fail(ReplaceOutcome.OldCopyNotSeenToEnd,
                 $"Waiting for the copy to be replaced to end failed with error {waitError}; nothing was replaced.");
         }
+        state.OldCopyEnded = true;
 
         if (!TryReadAttributes(exePath, out var attributes, out var readFailure))
             return NotMoved("The exe could not be read once its copy had ended.", readFailure, aboutTheExe: true);
@@ -777,7 +836,11 @@ internal enum ReplaceOutcome
     /// </summary>
     NotRolledBack,
 
-    /// <summary>Something the steps did not expect threw. It is in crash.log.</summary>
+    /// <summary>
+    /// Something the steps did not expect threw where what is at the path is not
+    /// established: once the newer version had been moved over the exe, or while what
+    /// the replace had done was being taken back. It is in crash.log.
+    /// </summary>
     Failed,
 }
 
@@ -804,10 +867,18 @@ internal enum NewerAtPath
 /// <param name="HoldRetryBound">In place of <see cref="ExeReplacement.HoldRetryBound"/>.</param>
 /// <param name="HardLink">Makes the second name, answering 0, or the error it was refused with.</param>
 /// <param name="StartAndAwait">Starts the exe at the path and answers what it did.</param>
+/// <param name="WaitForEnd">
+/// Waits for the copy to end, as the real wait does: true once it has, false with the
+/// error where the wait was refused.
+/// </param>
 internal sealed record ReplaceSeams(
     string? ThisExe = null,
     TimeSpan? OldCopyNotice = null,
     TimeSpan? MoveRetryBound = null,
     TimeSpan? HoldRetryBound = null,
     Func<string, string, int>? HardLink = null,
-    Func<string, NewerAtPath>? StartAndAwait = null);
+    Func<string, NewerAtPath>? StartAndAwait = null,
+    WaitForEndSeam? WaitForEnd = null);
+
+/// <summary>The shape of <see cref="ReplaceSeams.WaitForEnd"/>.</summary>
+internal delegate bool WaitForEndSeam(SafeProcessHandle process, TimeSpan notice, out int error);

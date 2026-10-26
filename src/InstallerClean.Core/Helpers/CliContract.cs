@@ -280,6 +280,15 @@ internal enum CliEventClass
     /// its job with a version older than the one it set out to use, or did not do it.
     /// </summary>
     UpdateFailedNotice,
+
+    /// <summary>
+    /// Notice: a newer version a copy had downloaded did not put itself at that copy's
+    /// path, because once the copy had closed nothing was left there. The newer version
+    /// writes it, from the window's update as from the command line's. It is not a run,
+    /// and is the only entry of the process writing it. WARNING, on the rule at
+    /// <see cref="CliContract.EntryTypeFor"/>: the update fell short, and the copy is gone.
+    /// </summary>
+    UpdateNotInstalledNotice,
 }
 
 /// <summary>The exit code and Event-log class chosen for a finished file operation.</summary>
@@ -351,12 +360,16 @@ internal static class CliContract
     /// their original case. A <see cref="CancelEventSwitch"/> or
     /// <see cref="HandOverContract.StartedEventSwitch"/> still here, carrying no event's
     /// id, is refused as an argument the command does not know, wherever it stands, so it
-    /// is never read as a Move's destination.
+    /// is never read as a Move's destination, and so is a
+    /// <see cref="HandOverContract.ReplaceCopySwitch"/> or
+    /// <see cref="HandOverContract.AfterProcessSwitch"/>.
     /// </summary>
     internal static CliInvocation ParseArguments(string[] args)
     {
         if (args.FirstOrDefault(a => a.StartsWith(CancelEventSwitch, StringComparison.OrdinalIgnoreCase)
-                || a.StartsWith(HandOverContract.StartedEventSwitch, StringComparison.OrdinalIgnoreCase)) is { } stray)
+                || a.StartsWith(HandOverContract.StartedEventSwitch, StringComparison.OrdinalIgnoreCase)
+                || a.StartsWith(HandOverContract.ReplaceCopySwitch, StringComparison.OrdinalIgnoreCase)
+                || a.StartsWith(HandOverContract.AfterProcessSwitch, StringComparison.OrdinalIgnoreCase)) is { } stray)
             return new CliInvocation(CliCommand.UnknownArgument, stray, null);
         var rest = args.Where(a => !a.Equals(NoUpdateSwitch, StringComparison.OrdinalIgnoreCase)).ToArray();
         return ParseCommand(rest) with { SkipUpdate = rest.Length != args.Length };
@@ -446,7 +459,8 @@ internal static class CliContract
     /// hard failure, so an RMM filter can select an outcome by number without
     /// reading the English message. The 3000 band is the notices, which are not
     /// outcomes and are not counted as runs, except the 3005 or 3006 that is the only
-    /// entry of a run whose update ended it with nothing run.
+    /// entry of a run whose update ended it with nothing run. A 3007 is not a run either:
+    /// the newer version writes it alone, having run no command.
     /// </summary>
     internal static int EventIdFor(CliEventClass outcome) => outcome switch
     {
@@ -461,6 +475,7 @@ internal static class CliContract
         CliEventClass.SourcesGivenUpNotice => 3004,
         CliEventClass.UpdatedNotice or CliEventClass.UpdatedThenCancelledNotice => 3005,
         CliEventClass.UpdateFailedNotice => 3006,
+        CliEventClass.UpdateNotInstalledNotice => 3007,
         _ => 0,
     };
 

@@ -4,6 +4,7 @@ using System.Security.Principal;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 
 namespace InstallerClean.Tests.Services.Integration;
 
@@ -373,6 +374,7 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.True(linked);
         Assert.Equal(ReplaceOutcome.Refused, outcome);
         Assert.True(File.Exists(Backup));
+        Assert.True(File.Exists(Replacing));
         Assert.Equal(NewerBytes, File.ReadAllBytes(Replacing));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
         // The hold on the move's source is what refuses the move, and the holds on the two
@@ -703,7 +705,115 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.False(File.Exists(Exe));
         Assert.False(File.Exists(Replacing));
         Assert.False(File.Exists(Backup));
-        Assert.Contains("Nothing was at the exe's path once its copy had ended", TestCrashLog.Text());
+        var log = TestCrashLog.Text();
+        Assert.Contains("Nothing was at the exe's path once its copy had ended", log);
+        // The failure in hand named the copy's own file, read through the second name's
+        // copy, so the reading of the exe that found the path empty goes beside it.
+        Assert.Contains(nameof(AggregateException), log);
+    }
+
+    [Fact]
+    public async Task A_path_left_empty_is_written_to_the_application_log_with_where_to_download_again()
+    {
+        EventLogRecorder.Clear();
+        var oldCopy = StartOldCopy();
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = Task.Run(() =>
+        {
+            if (!started.WaitOne(TimeSpan.FromSeconds(60))) return;
+            File.Move(Exe, Exe + ".aside");
+            oldCopy.Kill();
+            oldCopy.WaitForExit();
+        });
+
+        var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(ThisExe: NewerFile()));
+        await ending;
+
+        Assert.Equal(ReplaceOutcome.NothingAtPath, outcome);
+        var entry = Assert.Single(EventLogRecorder.Entries);
+        Assert.Equal(CliEventClass.UpdateNotInstalledNotice, entry.Class);
+        Assert.Equal(3007, CliContract.EventIdFor(entry.Class));
+        Assert.StartsWith("An update to InstallerClean ", entry.Text);
+        Assert.EndsWith($"can be downloaded again from {UpdateCheckService.ReleasesPageUrl}.", entry.Text);
+    }
+
+    [Fact]
+    public async Task A_replace_refused_with_the_exe_still_there_writes_nothing_to_the_application_log()
+    {
+        EventLogRecorder.Clear();
+        var oldCopy = StartOldCopy();
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        Hold(Exe);
+        var ending = EndOnceSet(oldCopy, started);
+
+        var outcome = ExeReplacement.Run(request, startAtPath: false,
+            new ReplaceSeams(ThisExe: NewerFile(), MoveRetryBound: TimeSpan.FromSeconds(1)));
+        await ending;
+
+        Assert.Equal(ReplaceOutcome.Refused, outcome);
+        Assert.Empty(EventLogRecorder.Entries);
+    }
+
+    [Fact]
+    public void A_step_that_throws_before_the_event_leaves_the_copy_carrying_on_with_nothing_beside_it()
+    {
+        var oldCopy = StartOldCopy();
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+
+        // An empty path is refused by the copy's own open with an exception none of the
+        // write's catches take.
+        var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(ThisExe: string.Empty));
+
+        Assert.Equal(ReplaceOutcome.NotHandedOver, outcome);
+        Assert.False(started.WaitOne(0));
+        Assert.False(File.Exists(Replacing));
+        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
+    }
+
+    [Fact]
+    public void A_step_that_throws_before_the_copy_is_seen_to_end_answers_that_with_nothing_beside_the_exe()
+    {
+        var oldCopy = StartOldCopy();
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+
+        var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(
+            ThisExe: NewerFile(),
+            WaitForEnd: (_, _, out _) => throw new InvalidOperationException("thrown by the wait")));
+
+        Assert.Equal(ReplaceOutcome.OldCopyNotSeenToEnd, outcome);
+        Assert.True(started.WaitOne(0));
+        Assert.False(File.Exists(Replacing));
+        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
+        Assert.Contains("thrown by the wait", TestCrashLog.Text());
+    }
+
+    [Fact]
+    public void A_wait_refused_with_the_newer_version_held_says_in_crash_log_that_it_is_left_beside_the_exe()
+    {
+        var oldCopy = StartOldCopy();
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+
+        var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(
+            ThisExe: NewerFile(),
+            WaitForEnd: (_, _, out error) =>
+            {
+                Hold(Replacing);
+                error = Kernel32.ERROR_INVALID_PARAMETER;
+                return false;
+            }));
+
+        Assert.Equal(ReplaceOutcome.OldCopyNotSeenToEnd, outcome);
+        Assert.True(File.Exists(Replacing));
+        var log = TestCrashLog.Text();
+        Assert.Contains(
+            $"The name ending {ExeReplacement.ReplacingSuffix} beside the exe could not be deleted, "
+            + $"with error {Kernel32.ERROR_SHARING_VIOLATION}, and is left there.", log);
+        Assert.Contains($"Waiting for the copy to be replaced to end failed with error {Kernel32.ERROR_INVALID_PARAMETER}", log);
     }
 
     [Fact]
