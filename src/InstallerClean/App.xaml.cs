@@ -967,8 +967,11 @@ public partial class App : Application
     /// this exe and what a replace left beside it (<see cref="ExeReplacement.TryRemoveLeftovers(string)"/>),
     /// and removes the folders earlier updates downloaded into. It tries for ten
     /// seconds, because what put each there may still be closing as this copy starts: the
-    /// newer version that put this copy at its path, running from the staging folder until
-    /// this copy has said it started, or the setup, which opens the app before it exits.
+    /// newer version that put this copy at its path, which runs from the staging folder
+    /// until this copy has said it started and then deletes the older version's second
+    /// name, holding off the pass beside the exe until it ends
+    /// (<see cref="ExeReplacement.LockSuffix"/>); or the setup, which opens the app before
+    /// it exits.
     /// Whatever will not go by then is tried again at the next start. While an update of
     /// this copy's own holds the gate, its files carrying the same names
     /// (<see cref="UpdateLeftoverGate"/>), no pass runs and the ten seconds wait until it

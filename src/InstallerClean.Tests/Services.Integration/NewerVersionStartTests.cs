@@ -235,15 +235,19 @@ public sealed class NewerVersionStartTests : IDisposable
 
     /// <summary>
     /// A PowerShell script standing in for a staged newer version: it writes the arguments
-    /// it was given to <paramref name="argumentsFile"/>, one to a line, then runs
-    /// <paramref name="then"/>, where <c>$set</c> sets the started event it was handed.
+    /// it was given to <paramref name="argumentsFile"/>, one to a line, where that is not
+    /// null, then runs <paramref name="then"/>, where <c>$set</c> sets the started event it
+    /// was handed.
     /// </summary>
-    private string StagedStandIn(string argumentsFile, string then)
+    private string StagedStandIn(string? argumentsFile, string then)
     {
         var prefix = HandOverContract.StartedEventName(Guid.Empty)[..^32];
         var script = Path.Combine(_root, Guid.NewGuid().ToString("N") + ".ps1");
+        var writeArguments = argumentsFile is null
+            ? string.Empty
+            : $"$args | Set-Content -LiteralPath '{argumentsFile}'";
         File.WriteAllText(script, $$"""
-            $args | Set-Content -LiteralPath '{{argumentsFile}}'
+            {{writeArguments}}
             $id = ($args | Where-Object { $_ -like '{{HandOverContract.StartedEventSwitch}}*' }).Substring({{HandOverContract.StartedEventSwitch.Length}})
             $set = { [System.Threading.EventWaitHandle]::OpenExisting('{{prefix}}' + $id).Set() | Out-Null }
             {{then}}
@@ -296,12 +300,14 @@ public sealed class NewerVersionStartTests : IDisposable
     [Fact]
     public void A_staged_newer_version_that_does_not_set_the_event_in_time_is_ended_before_the_answer()
     {
-        var script = StagedStandIn(Path.Combine(_root, "arguments.txt"), "Start-Sleep -Seconds 120");
+        var script = StagedStandIn(argumentsFile: null, "Start-Sleep -Seconds 60");
 
         var answer = NewerVersionProcess.StartToReplace(
             PowerShell, Path.Combine(_root, "InstallerClean.exe"), RunningScript(script), TimeSpan.FromSeconds(5));
 
-        // NotStarted rather than StillRunning is the answer that says it was ended.
+        // The answer and crash.log's one entry together say it was seen to end: one still
+        // running a few seconds after Windows accepted the request to end it is answered
+        // NotStarted as well, with a second entry saying so.
         Assert.Equal(NewerVersionAnswer.NotStarted, answer);
         Assert.Contains("within 5 seconds", TestCrashLog.OnlyEntry());
     }

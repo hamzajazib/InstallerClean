@@ -19,10 +19,10 @@ internal static class NewerVersionProcess
     /// <see cref="HandOverContract.StartBound"/> for it to say it will. Answers as
     /// <see cref="StartAndAwait"/> does. A newer version answered as
     /// <see cref="NewerVersionAnswer.StillRunning"/> sets the event before it moves anything
-    /// onto the path, and the event is gone once this returns, so it puts nothing at the path unless
-    /// it had already opened the event; crash.log says so. The waits
-    /// between tries at the start, and every other wait here, dispatch nothing, so on a
-    /// window's thread no window code runs during them. Never throws.
+    /// onto the path, and the event is gone once this returns, so it puts nothing at the
+    /// path unless it had already opened the event; crash.log says so. The waits between
+    /// tries at the start, and every other wait here, dispatch nothing, so on a window's
+    /// thread no window code runs during them. Never throws.
     /// </summary>
     public static NewerVersionAnswer StartToReplace(string stagedExe, string exePath) =>
         StartToReplace(stagedExe, exePath, [], HandOverContract.StartBound);
@@ -108,8 +108,8 @@ internal static class NewerVersionProcess
     /// where the wait was not. A look Windows refuses after the bound or
     /// <paramref name="cancel"/> is written to crash.log and the answer stands; after a
     /// refused wait it is not, the refusal being the answer already. Nothing else is
-    /// written: the caller writes <see cref="NotStartedFailure"/>. The wait dispatches nothing, so on a window's
-    /// thread no window code runs during it. Never throws.
+    /// written: the caller writes <see cref="NotStartedFailure"/>. The wait dispatches
+    /// nothing, so on a window's thread no window code runs during it. Never throws.
     /// </summary>
     internal static NewerVersionStart AwaitStart(
         Process newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel, out int waitError)

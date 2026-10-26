@@ -890,10 +890,10 @@ public partial class CompletionViewModel : ObservableObject
     /// no longer than <see cref="ExitWaitBound"/> for every send and save still running.
     /// </summary>
     /// <remarks>
-    /// Runs on the window's thread as the app closes, an update's hand-over included. The wait dispatches nothing (<see cref="HandleWait"/>), so no message
-    /// sent to the thread is handled while it waits. Work still running at the bound is
-    /// written to crash.log each time the wait runs out. Where Windows refuses the wait,
-    /// that is written instead and nothing is waited for.
+    /// Runs on the window's thread as the app closes, an update's hand-over included. The
+    /// wait dispatches nothing (<see cref="HandleWait"/>), so no message sent to the thread
+    /// is handled while it waits. Work still running at the bound is written to crash.log.
+    /// Where Windows refuses the wait, that is written instead and nothing is waited for.
     /// </remarks>
     public void SettleReportOnExit()
     {
@@ -905,7 +905,7 @@ public partial class CompletionViewModel : ObservableObject
         {
             if (HandleWait.One(((IAsyncResult)work).AsyncWaitHandle.SafeWaitHandle, ExitWaitBound) == HandleWaitResult.TimedOut)
                 CrashLog.TryWrite(new TimeoutException(
-                    $"A send or save of the report was still running {ExitWaitBound.TotalSeconds:0} seconds after the app began to close or hand over to a newer version, and was left."));
+                    $"A send or save of the report was still running {ExitWaitBound.TotalSeconds:0} seconds after the app began to close, and was left."));
         }
         catch (Exception ex) { CrashLog.TryWrite(ex); }
     }
