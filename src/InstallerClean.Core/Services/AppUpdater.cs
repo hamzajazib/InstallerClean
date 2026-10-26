@@ -99,7 +99,8 @@ public sealed class PreparedUpdate
     /// <summary>
     /// Takes away what getting it ready left: the download, or the newer version written
     /// beside the running exe, which stays where nothing is at the exe's path. Runs once,
-    /// however often it is called. Never throws.
+    /// however often it is called, including a call that keeps the newer version: a caller
+    /// that may need a later try at removing it does not call this until then. Never throws.
     /// </summary>
     public void Undo()
     {

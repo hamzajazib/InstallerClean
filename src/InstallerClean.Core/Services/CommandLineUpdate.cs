@@ -618,7 +618,8 @@ internal sealed class CommandLineUpdate
                 {
                     leftEmpty = ex;
                     // The setup's copy runs no setup now, so its download goes. A swap's newer
-                    // version stays beside the empty path for Stop to put there.
+                    // version stays beside the empty path for Stop to put there; its Undo is not
+                    // called, since Undo runs once and would be spent without removing anything.
                     if (isSetup) prepared.Undo();
                 }
                 else
