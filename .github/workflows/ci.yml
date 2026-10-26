@@ -813,7 +813,9 @@ jobs:
           # The command line started as an older copy's update starts it: running /s from the
           # staging folder standing for the copy at the path, in a working folder of its own
           # outside both, and then putting itself in place once that copy has ended
-          # (Invoke-Replace's 'command'). Its first act seen is the look at the copy's file.
+          # (Invoke-Replace's 'command'). Its looks in the working folder are judged like those
+          # beside it, and the replace it starts is judged as a run of its own. The first act
+          # seen of each is the look at the copy's file.
           $cli = $builds | Where-Object Label -eq 'command line'
           $builds += [pscustomobject]@{
             Label = 'command line, running /s from staging in a working folder of its own'
@@ -1009,10 +1011,10 @@ jobs:
           Exit-IfFailed
 
       # First the plants are worked out over records made up for the purpose, and the job
-      # fails unless each look for a file to load beside a build is planted for, each for
-      # data is not, a load of a planted file fails, and a look recorded under a short name
-      # is read in full or fails (Test-ImageNameControls and Test-ShortNameControls in
-      # native-libraries.ps1). The checks on how a build in replace mode ended are run the
+      # fails unless each look for a file to load beside a build or in a working folder of
+      # its own is planted for, each for data is not, a load of a planted file fails, and a
+      # look recorded under a short name is read in full or fails (Test-ImageNameControls,
+      # Test-WorkingFolderControls and Test-ShortNameControls in native-libraries.ps1). The checks on how a build in replace mode ended are run the
       # same way over ends made up with a fault planted in each, and must fail at each
       # (Test-ReplaceControls), and so is the check on the slim's loads before its Main
       # (Test-WhereInstalledControls).
@@ -1034,6 +1036,7 @@ jobs:
         run: |
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
           Test-ImageNameControls
+          Test-WorkingFolderControls
           Test-ShortNameControls
           Test-ReplaceControls
           Test-WhereInstalledControls
@@ -1105,8 +1108,9 @@ jobs:
                 Fail "$($run.Label) looked for $name in the folder it was run from, row $($beside[0].Index), $who."
               }
             }
-            foreach ($load in ($read.Loads | Where-Object Place -eq 'own')) {
-              Fail "$($run.Label) loaded $($load.Path) from its own folder, row $($load.Index), $(Get-When $load $read.Marker)."
+            foreach ($load in ($read.Loads | Where-Object Place -in 'own', 'working')) {
+              $where = if ($load.Place -eq 'own') { 'its own folder' } else { 'its working folder' }
+              Fail "$($run.Label) loaded $($load.Path) from $where, row $($load.Index), $(Get-When $load $read.Marker)."
             }
 
             # What the bundle extracted is every file in the folders its libraries were
@@ -1135,14 +1139,24 @@ jobs:
             $plants = @(Get-RunPlants $run $read $notPlanted $listedSeen $extractionFolders)
 
             $alone = @($plants | Where-Object { $_.Place -eq 'beside' -and (Split-Path $_.Path -Leaf) -in $plantedAlone })
-            $planned.Add([pscustomobject]@{
-              Label = $run.Label; BuildLabel = $run.Label; JudgeOnLoadAlone = $false; BundleFiles = $bundleFiles
-              Plants = @($plants | Where-Object { $_ -notin $alone })
-            })
+            # The replace a run starts is started again by that run in the second pass, so
+            # its plants go with the run's, in the same staging folder, and are judged
+            # against the replace.
+            if ($run.StartedReplace) {
+              $parent = @($planned | Where-Object { $_.BuildLabel -eq $run.Build.Label -and -not $_.JudgeOnLoadAlone })
+              if ($parent.Count -ne 1) { Fail "$($run.Label) has $($parent.Count) runs planned to start it, where it has one." }
+              else { $parent[0].ReplacePlants = @($plants | Where-Object { $_ -notin $alone }) }
+            }
+            else {
+              $planned.Add([pscustomobject]@{
+                Label = $run.Label; BuildLabel = $run.Label; JudgeOnLoadAlone = $false; BundleFiles = $bundleFiles
+                Plants = @($plants | Where-Object { $_ -notin $alone }); ReplacePlants = @()
+              })
+            }
             foreach ($plant in $alone) {
               $planned.Add([pscustomobject]@{
-                Label = "$($run.Label) with $(Split-Path $plant.Path -Leaf) alone"; BuildLabel = $run.Label; JudgeOnLoadAlone = $true
-                BundleFiles = $bundleFiles; Plants = @($plant)
+                Label = "$($run.Label) with $(Split-Path $plant.Path -Leaf) alone"; BuildLabel = $run.Build.Label; JudgeOnLoadAlone = $true
+                BundleFiles = $bundleFiles; Plants = @(if (-not $run.StartedReplace) { $plant }); ReplacePlants = @(if ($run.StartedReplace) { $plant })
               })
             }
           }
@@ -1153,6 +1167,7 @@ jobs:
           foreach ($p in $planned) {
             "  $($p.Label):"
             foreach ($plant in $p.Plants) { "    $($plant.Place) $($plant.Path): $($plant.Kind), $($plant.Source)" }
+            foreach ($plant in $p.ReplacePlants) { "    for the replace it starts, $($plant.Place) $($plant.Path): $($plant.Kind), $($plant.Source)" }
           }
           ConvertTo-Json -InputObject @($planned) -Depth 5 | Set-Content (Join-Path $env:RUNNER_TEMP 'plants.json')
 
@@ -1187,7 +1202,7 @@ jobs:
             $build = $builds | Where-Object Label -eq $p.BuildLabel
             if ($build.Replace) {
               # The copy a replace started at the path is ended at once and not judged here.
-              foreach ($run in @(Invoke-Replace $build $p.Label 'second' $p.Plants -LoadAlone:$p.JudgeOnLoadAlone)) {
+              foreach ($run in @(Invoke-Replace $build $p.Label 'second' $p.Plants -LoadAlone:$p.JudgeOnLoadAlone -replacePlants $p.ReplacePlants)) {
                 $run | Add-Member -NotePropertyMembers @{ BundleFiles = @($p.BundleFiles | Where-Object { $_ }); JudgeOnLoadAlone = $p.JudgeOnLoadAlone } -PassThru
               }
               continue

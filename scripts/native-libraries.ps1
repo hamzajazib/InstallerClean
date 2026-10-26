@@ -179,33 +179,39 @@ $dataExtensions = [System.Collections.Generic.HashSet[string]]::new([string[]]@(
     '.en', '.enu', '.en-US'
   ), [StringComparer]::OrdinalIgnoreCase)
 
-# Every look for a file in a run's own folder or under %TEMP%\.net, where a single-file
-# build extracts its own libraries, and every image it loaded from anywhere but its own
-# exe. A look is left out where it is for data, by $dataExtensions; where it is for the
-# run's own exe, the exe's .old or .new copy beside it, or a name a replace leaves beside
-# it (Get-ReplaceSuffixes), which a start of the command line or the window clears, the
-# exclusion going by name whatever the run; and where it is at a path the
-# run opens as a folder or has rows under, as the folders a bundle extracts into.
-function Get-Libraries($rows, [string]$folder, [string]$exe) {
+# Every look for a file in a run's own folder, in $workingFolder where the run was started
+# in a folder of its own, or under %TEMP%\.net, where a single-file build extracts its own
+# libraries, and every image it loaded from anywhere but its own exe. A look is left out
+# where it is for data, by $dataExtensions; where it is for the run's own exe, the exe's
+# .old or .new copy beside it, or a name a replace leaves beside it (Get-ReplaceSuffixes),
+# which a start of the command line or the window clears, the exclusion going by name
+# whatever the run; and where it is at a path the run opens as a folder or has rows under,
+# as the folders a bundle extracts into. The working folder itself, which Windows opens for
+# the run as it starts, is a folder and so left out too.
+function Get-Libraries($rows, [string]$folder, [string]$exe, [string]$workingFolder = '') {
   $own = $folder.TrimEnd('\') + '\'
+  $working = if ($workingFolder) { $workingFolder.TrimEnd('\') + '\' }
   $self = $own + $exe
   $neighbours = @($self, "$self.old", "$self.new") + @(Get-ReplaceSuffixes | ForEach-Object { "$self$_" })
   # A path the run opens as a directory, or one another of its rows lies under.
   $folders = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
   foreach ($row in $rows) {
     if ($row.Operation -eq 'CreateFile' -and $row.Detail -match '(Options: |, )Directory(,| File|$)') { $null = $folders.Add($row.Path) }
-    if (-not ($row.Path.StartsWith($own, 'OrdinalIgnoreCase') -or $row.Path -match '\\\.net\\')) { continue }
+    if (-not ($row.Path.StartsWith($own, 'OrdinalIgnoreCase') -or ($working -and $row.Path.StartsWith($working, 'OrdinalIgnoreCase')) -or
+      $row.Path -match '\\\.net\\')) { continue }
     for ($at = $row.Path.LastIndexOf('\'); $at -gt 0 -and $folders.Add($row.Path.Substring(0, $at)); $at = $row.Path.LastIndexOf('\', $at - 1)) { }
   }
   for ($i = 0; $i -lt $rows.Count; $i++) {
     $row = $rows[$i]
-    $place = if ($row.Path.StartsWith($own, 'OrdinalIgnoreCase')) { 'own' } elseif ($row.Path -match '\\\.net\\') { 'extraction' } else { 'elsewhere' }
+    $place = if ($row.Path.StartsWith($own, 'OrdinalIgnoreCase')) { 'own' }
+      elseif ($working -and $row.Path.StartsWith($working, 'OrdinalIgnoreCase')) { 'working' }
+      elseif ($row.Path -match '\\\.net\\') { 'extraction' } else { 'elsewhere' }
     if ($row.Operation -eq 'Load Image') { if ($row.Path -eq $self) { continue } }
     elseif ($place -eq 'elsewhere' -or $folders.Contains($row.Path) -or $dataExtensions.Contains([IO.Path]::GetExtension($row.Path)) -or
       ($place -eq 'own' -and $row.Path -in $neighbours)) { continue }
     [pscustomobject]@{
       Index = $i + 1; Place = $place; Operation = $row.Operation; Result = $row.Result
-      Relative = $(if ($place -eq 'own') { $row.Path.Substring($own.Length) })
+      Relative = $(if ($place -eq 'own') { $row.Path.Substring($own.Length) } elseif ($place -eq 'working') { $row.Path.Substring($working.Length) })
       Path = $row.Path; Name = (Split-Path $row.Path -Leaf).ToLowerInvariant(); Time = $row.'Time of Day'
     }
   }
@@ -254,7 +260,7 @@ function Show-Libraries($libraries, $marker, $mainMarker, [string]$firstTime) {
   if ($marker) { Write-Host "  first act of its own code seen: row $($marker.Index), $($marker.Kind), $($marker.What)" }
   else { Write-Host "  no act of its own code seen" }
   if ($mainMarker -and $mainMarker.Index -ne $marker.Index) { Write-Host "  first act seen of its code in Main or later: row $($mainMarker.Index), $($mainMarker.Kind), $($mainMarker.What)" }
-  Write-Host "  every look in its own folder and under %TEMP%\.net (row, time, operation, result, times seen, path):"
+  Write-Host "  every look in its own folder, in a working folder of its own and under %TEMP%\.net (row, time, operation, result, times seen, path):"
   $libraries | Where-Object { $_.Place -ne 'elsewhere' -and $_.Operation -ne 'Load Image' } |
     Group-Object Path, Operation, Result | Sort-Object { $_.Group[0].Index } | ForEach-Object {
       $first = $_.Group[0]
@@ -295,7 +301,7 @@ function Read-Run($run, $byProcess) {
   $rows = $byProcess[[string]$run.Id]
   if (-not $rows) { Fail "$($run.Label): Process Monitor recorded nothing for process $($run.Id)."; return }
   Write-Host "  $($rows.Count) operations"
-  $libraries = @(Get-Libraries $rows $run.Folder $run.Exe)
+  $libraries = @(Get-Libraries $rows $run.Folder $run.Exe $run.WorkingFolder)
   if ($run.Build.Source) {
     $markers = Get-Marker $rows $run
     Show-Libraries $libraries $markers.First $markers.Main $rows[0].'Time of Day'
@@ -532,10 +538,23 @@ function Get-Procmon([string]$folder) {
 # ('before' any code of the build's own runs, or 'after'), and the names, each
 # spelled as the assembly spells it. A look one of these covers is not planted in
 # those runs where it passes the first pass's check.
+# The label of the replace a run of $label starts once its command has ended
+# (Invoke-Replace's 'command'), which is judged as a run of its own.
+function Get-StartedReplaceLabel([string]$label) { "$label, the replace it started" }
+
+# The labels of the runs a build makes: its own, and for a build whose Replace is
+# 'command', the replace that run starts.
+function Get-RunLabels($build) {
+  $build.Label
+  if ($build.Replace -eq 'command') { Get-StartedReplaceLabel $build.Label }
+}
+
 function Get-NotPlanted {
   $cli = 'publish/cli/installerclean-cli.exe'
   $portable = 'publish/self-contained/InstallerClean.exe'
-  $everyCli = @('command line', 'command line, checking for updates', 'command line, putting itself in place', 'command line, with nothing left at the path')
+  $fromStaging = 'command line, running /s from staging in a working folder of its own'
+  $everyCli = @('command line', 'command line, checking for updates', 'command line, putting itself in place', 'command line, with nothing left at the path',
+    $fromStaging, (Get-StartedReplaceLabel $fromStaging))
   $allPortable = @('portable', 'portable, putting itself in place', 'portable, with nothing left at the path')
   @(
     # CoreLib imports called during the runtime's start-up in coreclr_initialize:
@@ -571,7 +590,7 @@ function Get-NotPlanted {
 # from the list, so the looks it would cover are planted in the second pass. The step
 # stops where NuGet's cache, a runtime pack or an assembly's metadata cannot be read.
 #
-# An entry has to name an exe and runs among $builds. With -OnlyWhatThisRuns, an entry
+# An entry has to name an exe and runs among $builds (Get-RunLabels). With -OnlyWhatThisRuns, an entry
 # naming no run in $builds is left out and printed, and one naming some runs not there
 # keeps only those that are, for a workflow that runs some of the builds the list is
 # kept for.
@@ -581,7 +600,7 @@ function Select-NotPlanted($notPlanted, $builds, [switch]$OnlyWhatThisRuns) {
   $assemblyPaths = @{}
   $assemblyNames = @{}
   @(foreach ($entry in $notPlanted) {
-    $runsOfExe = @($builds | Where-Object Exe -eq $entry.Exe | ForEach-Object Label)
+    $runsOfExe = @($builds | Where-Object Exe -eq $entry.Exe | ForEach-Object { Get-RunLabels $_ })
     if ($OnlyWhatThisRuns) {
       $here = @($entry.Runs | Where-Object { $_ -in $runsOfExe })
       if (-not $here) { Write-Host "  not judged here: $($entry.Names -join ', ') listed for $($entry.Exe) in the runs '$($entry.Runs -join "', '")'"; continue }
@@ -635,6 +654,12 @@ function Get-RunPlants($run, $read, $notPlanted, $listedSeen, $extractionFolders
   foreach ($relative in ($looks | Where-Object Place -eq 'own' | ForEach-Object { $_.Relative.ToLowerInvariant() } | Sort-Object -Unique)) {
     $plant = Get-Plant (Split-Path $relative -Leaf) $read.Loads
     $plants.Add([pscustomobject]@{ Place = 'beside'; Path = $relative; Source = $plant.Source; Kind = $plant.Kind })
+  }
+  # A look in a working folder of the run's own is planted whatever its name: no library
+  # is listed as not planted there.
+  foreach ($relative in ($looks | Where-Object Place -eq 'working' | ForEach-Object { $_.Relative.ToLowerInvariant() } | Sort-Object -Unique)) {
+    $plant = Get-Plant (Split-Path $relative -Leaf) $read.Loads
+    $plants.Add([pscustomobject]@{ Place = 'working'; Path = $relative; Source = $plant.Source; Kind = $plant.Kind })
   }
   foreach ($path in ($looks | Where-Object Place -eq 'extraction' | ForEach-Object { $_.Path.ToLowerInvariant() } | Sort-Object -Unique)) {
     if (Test-Path -LiteralPath $path) { continue }
@@ -693,15 +718,20 @@ function Test-ListedSeen($notPlanted, $listedSeen) {
   }
 }
 
-# Puts each of $plants in place for a run started from $folder, and answers each path
-# with its hash.
-function Add-Plants([string]$folder, $plants) {
+# Puts each of $plants in place for a run started from $folder, working in
+# $workingFolder, and answers each path with its hash and the plant's place and path as
+# its key.
+function Add-Plants([string]$folder, $plants, [string]$workingFolder = '') {
   $placed = [System.Collections.Generic.List[object]]::new()
   foreach ($plant in @($plants | Where-Object { $_ })) {
-    $path = if ($plant.Place -eq 'beside') { Join-Path $folder $plant.Path } else { $plant.Path }
+    $path = switch ($plant.Place) {
+      'beside' { Join-Path $folder $plant.Path }
+      'working' { if (-not $workingFolder) { throw "A plant in the working folder, $($plant.Path), was given no working folder." }; Join-Path $workingFolder $plant.Path }
+      default { $plant.Path }
+    }
     New-Item -ItemType Directory -Force -Path (Split-Path $path) | Out-Null
     Copy-Item -LiteralPath $plant.Source -Destination $path
-    $placed.Add([pscustomobject]@{ Path = $path; Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash })
+    $placed.Add([pscustomobject]@{ Path = $path; Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash; Key = "$($plant.Place)|$($plant.Path)" })
   }
   $placed
 }
@@ -727,7 +757,7 @@ function Test-PlantedRun($run, $read) {
     if ($placedPaths -contains $load.Path) {
       Fail "$($run.Label) loaded the planted $($load.Path), row $($load.Index)$(Get-WhenSuffix $run $load $read.Marker)."
     }
-    elseif ($run.Build.Source -and ($load.Place -eq 'own' -or ($load.Place -eq 'extraction' -and $run.BundleFiles -notcontains $load.Path))) {
+    elseif ($run.Build.Source -and ($load.Place -in 'own', 'working' -or ($load.Place -eq 'extraction' -and $run.BundleFiles -notcontains $load.Path))) {
       Fail "$($run.Label) loaded $($load.Path), which neither its bundle nor the first pass put there, row $($load.Index)$(Get-WhenSuffix $run $load $read.Marker)."
     }
   }
@@ -1043,6 +1073,62 @@ function Test-ImageNameControls {
     "image control loaded $(Join-Path $run.Folder 'unlooked.weird'), which neither its bundle nor the first pass put there") 'the looks beside a build'
 }
 
+# Runs Get-Libraries, Get-RunPlants and Test-PlantedRun over records made up for a run
+# started in a working folder of its own. The first pass looks there for a .dll, which
+# must be planted there although the not-planted list names it beside the exe, and for
+# a data name, which may not be; it opens the working folder itself, which may not be
+# planted for, and looks beside the exe for a .dll, which must be planted there. The
+# second pass must fail where it loads the .dll planted in the working folder and where it
+# loads a file from the working folder that the first pass did not look for.
+function Test-WorkingFolderControls {
+  Write-Host "== Control: the looks in a working folder of a build's own"
+  $folder = Join-Path ([IO.Path]::GetTempPath()) ('working-controls-' + [guid]::NewGuid().ToString('N'))
+  $first = Join-Path $folder 'first'
+  $firstWork = Join-Path $folder 'first-work'
+  $second = Join-Path $folder 'second'
+  $secondWork = Join-Path $folder 'second-work'
+  $source = Join-Path $folder 'genuine.bin'
+  function Get-ControlRow([string]$operation, [string]$path, [string]$detail = '', [string]$result = 'NAME NOT FOUND') {
+    [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; Operation = $operation; Result = $result; Path = $path; Detail = $detail }
+  }
+  $build = [pscustomobject]@{ Exe = 'control.exe'; Source = 'control.cs' }
+  $listed = [pscustomobject]@{ Exe = 'control.exe'; Runs = @('working control'); Places = @('beside'); Assembly = 'Control'; Call = 'import'; When = 'after'; Names = @('control.dll') }
+  try {
+    New-Item -ItemType Directory -Force -Path $first, $firstWork, $second, $secondWork | Out-Null
+    Set-Content -Path $source -Value 'control'
+    $rows = @(
+      Get-ControlRow 'CreateFile' $firstWork 'Desired Access: Execute/Traverse, Synchronize, Disposition: Open, Options: Directory, Synchronous IO Non-Alert' 'SUCCESS'
+      Get-ControlRow 'QueryOpen' (Join-Path $firstWork 'control.dll')
+      Get-ControlRow 'QueryOpen' (Join-Path $firstWork 'control.runtimeconfig.json')
+      Get-ControlRow 'QueryOpen' (Join-Path $first 'helper.dll'))
+    $run = [pscustomobject]@{ Label = 'working control'; Build = $build; Folder = $first; Exe = 'control.exe'; WorkingFolder = $firstWork }
+    $firstPass = Invoke-Caught {
+      @(Get-RunPlants $run ([pscustomobject]@{ Libraries = @(Get-Libraries $rows $first 'control.exe' $firstWork); Loads = @(); Marker = $null }) @($listed) @{} @())
+    }
+    $plants = @($firstPass.Output | Where-Object { $_ -is [pscustomobject] -and $_.PSObject.Properties['Place'] })
+    $names = @($plants | ForEach-Object { "$($_.Place) $($_.Path)" } | Sort-Object) -join ', '
+    if ($firstPass.Caught.Count -or $names -ne 'beside helper.dll, working control.dll') {
+      foreach ($message in $firstPass.Caught) { Fail "The control on the looks in a working folder failed where it must pass: $message" }
+      Fail "The control on the looks in a working folder planted '$names', where it should plant beside helper.dll, working control.dll."
+      return
+    }
+    Write-Host "  planted for the second pass: $names"
+
+    foreach ($plant in $plants) { $plant.Source = $source }
+    $placed = @(Add-Plants $second $plants $secondWork)
+    $rows = @($placed | ForEach-Object { Get-ControlRow 'QueryOpen' $_.Path '' 'SUCCESS' }) +
+      @((Join-Path $secondWork 'control.dll'), (Join-Path $secondWork 'unlooked.dll'), (Join-Path $second 'control.exe') | ForEach-Object { Get-ControlRow 'Load Image' $_ '' 'SUCCESS' })
+    $libraries = @(Get-Libraries $rows $second 'control.exe' $secondWork)
+    $read = [pscustomobject]@{ Libraries = $libraries; Loads = @($libraries | Where-Object Operation -eq 'Load Image'); Marker = $null }
+    $run = [pscustomobject]@{ Label = 'working control'; Build = $build; Folder = $second; Exe = 'control.exe'; WorkingFolder = $secondWork; Placed = $placed; BundleFiles = @() }
+    $secondPass = Invoke-Caught { Test-PlantedRun $run $read }
+  }
+  finally { Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction SilentlyContinue }
+  Assert-Caught $secondPass.Caught @(
+    "working control loaded the planted $(Join-Path $secondWork 'control.dll'), row ",
+    "working control loaded $(Join-Path $secondWork 'unlooked.dll'), which neither its bundle nor the first pass put there") 'the looks in a working folder'
+}
+
 # Runs Read-Record, Get-Libraries and Get-RunPlants over a record made up for the
 # purpose. A look beside the exe spelled under the short name Windows gives the temp
 # folder must be read in full and planted for, and a look under a short part that does
@@ -1281,11 +1367,13 @@ function Test-ReplaceEnd($end) {
 # stop the build starting and is judged on what it loads.
 # A build whose Replace is 'command' is started with /s /noupdate beside the three
 # switches, working in a folder of its own outside both the staging folder and the
-# target's, as a scheduled task can start the older copy. It runs the scan standing for
-# the copy at the path, so the stand-in for that copy is left running until it has ended,
-# and the replace it then starts, detached and from the staging folder, is waited for
-# until the stand-in has ended and the replace with it.
-function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]$LoadAlone, [switch]$JudgeCopy) {
+# target's, as a scheduled task can start the older copy, and its run carries that folder
+# as WorkingFolder. It runs the scan standing for the copy at the path, so the stand-in for
+# that copy is left running until it has ended, and the replace it then starts, detached
+# and from the staging folder, is waited for until the stand-in has ended and the replace
+# with it. That replace is answered as a run of its own (Get-StartedReplaceLabel), judged
+# against $replacePlants, which are put in the staging folder beside $plants.
+function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]$LoadAlone, [switch]$JudgeCopy, $replacePlants = @()) {
   $staging = New-StagingFolder
   # Read now: a window started at the path deletes the staged exe as it starts, and the
   # folder with it where nothing else is in it.
@@ -1293,7 +1381,21 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
   $exeName = Split-Path $build.Exe -Leaf
   $stagedName = Get-StagedName $build.AtPath.Label
   Copy-Item $build.Exe (Join-Path $staging $stagedName)
-  $placed = @(Add-Plants $staging $plants)
+  $command = $build.Replace -eq 'command'
+  $workingFolder = $staging
+  if ($command) {
+    $workingFolder = Get-RunFolder $pass "$label working folder"
+    if (Test-Path -LiteralPath $workingFolder) { Remove-Item -LiteralPath $workingFolder -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path $workingFolder | Out-Null
+    Write-Host "  ${label}: working in $workingFolder"
+  }
+  # A path both runs look at is planted once, as the run's, so neither copy is written
+  # over the other while either runs.
+  $runKeys = @($plants | Where-Object { $_ } | ForEach-Object { "$($_.Place)|$($_.Path)" })
+  $replaceKeys = @($replacePlants | Where-Object { $_ } | ForEach-Object { "$($_.Place)|$($_.Path)" })
+  $placedAll = @(Add-Plants $staging (@($plants) + @($replacePlants | Where-Object { $_ -and "$($_.Place)|$($_.Path)" -notin $runKeys })) $workingFolder)
+  $placed = @($placedAll | Where-Object Key -in $runKeys)
+  $replacePlaced = @($placedAll | Where-Object Key -in $replaceKeys)
   $targetFolder = Get-RunFolder $pass "$label target"
   if (Test-Path -LiteralPath $targetFolder) { Remove-Item -LiteralPath $targetFolder -Recurse -Force }
   New-Item -ItemType Directory -Force -Path $targetFolder | Out-Null
@@ -1306,17 +1408,10 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
   $signal = New-StartedEvent
   $event = $signal.Handle
   $contract = 'src/InstallerClean.Core/Helpers/HandOverContract.cs'
-  $command = $build.Replace -eq 'command'
   $arguments = @(if ($command) { '/s', '/noupdate' }) + @(
     "`"$(Read-SourceString $contract 'ReplaceCopySwitch')$target`"",
     "$(Read-SourceString $contract 'AfterProcessSwitch')$($standIn.Id)",
     $signal.Argument)
-  $workingFolder = $staging
-  if ($command) {
-    $workingFolder = Get-RunFolder $pass "$label working folder"
-    New-Item -ItemType Directory -Force -Path $workingFolder | Out-Null
-    Write-Host "  ${label}: working in $workingFolder"
-  }
   $begun = Get-Date
   $replacer = Start-Process -FilePath (Join-Path $staging $stagedName) -ArgumentList $arguments -WorkingDirectory $workingFolder -PassThru
   $null = $replacer.Handle
@@ -1332,10 +1427,12 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
     Stop-Process -Id $replacer.Id -Force -ErrorAction SilentlyContinue
     $replacer.WaitForExit()
   }
+  $replaces = @()
   if ($command) {
     # The replace the run started waits for the copy it stood for, which is ended now.
     $replaces = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith("$staging", 'OrdinalIgnoreCase') })
     Write-Host "  ${label}: $($replaces.Count) replace process(es) running from the staging folder as the run ended: $(($replaces | ForEach-Object Id) -join ', ')"
+    if ($replaces.Count -ne 1 -and -not $LoadAlone) { Fail "$label left $($replaces.Count) replace processes running from the staging folder, where it starts one." }
     Stop-Process -Id $standIn.Id -Force -ErrorAction SilentlyContinue
     $standIn.WaitForExit()
     foreach ($replace in $replaces) {
@@ -1347,8 +1444,15 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
 
   $runs = @([pscustomobject]@{
     Label = $label; Build = $build; Folder = $staging; Exe = $stagedName; Id = $replacer.Id; Started = $begun; Ended = $ended
-    Placed = $placed; Target = $target
+    Placed = $placed; Target = $target; WorkingFolder = $(if ($command) { $workingFolder } else { '' })
   })
+  # The replace works in the staging folder, its own (StagedRun.StartReplace).
+  foreach ($replace in $replaces) {
+    $runs += [pscustomobject]@{
+      Label = (Get-StartedReplaceLabel $label); Build = $build; Folder = $staging; Exe = $stagedName; Id = $replace.Id; Started = $begun; Ended = $ended
+      Placed = $replacePlaced; Target = $target; WorkingFolder = ''; StartedReplace = $true
+    }
+  }
   $copies = @(Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exeName)) -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $target })
   if ($build.Replace -eq 'replaced' -and $build.StartsAtPath) {
     if ($copies.Count -ne 1) { Fail "$label put itself in place and $($copies.Count) copies were running from $target, where it starts one." }
