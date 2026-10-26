@@ -844,9 +844,14 @@ public partial class CompletionViewModel : ObservableObject
 
         // Settled on a thread-pool thread rather than on the dispatcher, so a send
         // waiting on it while the app closes is not held behind a dispatcher that has
-        // stopped.
+        // stopped. A write that faulted is written to crash.log here, where it ends, and
+        // counts as not written.
         Track(write.ContinueWith(
-            t => written.SetResult(t.Status == TaskStatus.RanToCompletion && t.Result),
+            t =>
+            {
+                if (t.Exception is { } fault) CrashLog.TryWrite(fault);
+                written.SetResult(t.Status == TaskStatus.RanToCompletion && t.Result);
+            },
             TaskScheduler.Default));
 
         if (await written.Task) return;
@@ -884,12 +889,25 @@ public partial class CompletionViewModel : ObservableObject
     /// Settles a card still up as the app closes, as closing the card would, then waits
     /// no longer than <see cref="ExitWaitBound"/> for every send and save still running.
     /// </summary>
+    /// <remarks>
+    /// Runs on the window's thread as the app closes and before an update hands over to the
+    /// newer version. The wait dispatches nothing (<see cref="HandleWait"/>), so no message
+    /// sent to the thread is handled while it waits. Work still running at the bound is
+    /// written to crash.log each time the wait runs out. Where Windows refuses the wait,
+    /// that is written instead and nothing is waited for.
+    /// </remarks>
     public void SettleReportOnExit()
     {
         SettleReport();
         Task work;
         lock (_reportWorkGate) work = _reportWork;
-        try { work.Wait(ExitWaitBound); }
+        if (work.IsCompleted) return;
+        try
+        {
+            if (HandleWait.One(((IAsyncResult)work).AsyncWaitHandle.SafeWaitHandle, ExitWaitBound) == HandleWaitResult.TimedOut)
+                CrashLog.TryWrite(new TimeoutException(
+                    $"A send or save of the report was still running {ExitWaitBound.TotalSeconds:0} seconds after the app began to close or hand over to a newer version, and was left."));
+        }
         catch (Exception ex) { CrashLog.TryWrite(ex); }
     }
 
