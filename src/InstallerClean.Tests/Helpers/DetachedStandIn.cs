@@ -84,9 +84,10 @@ internal static class DetachedStandIn
         };
         foreach (var argument in new[]
         {
-            // -Command takes the rest of the line as the command, so the paths go inside it.
+            // -Command takes the rest of the line as the command, so the paths go inside it,
+            // each in single quotes with any quote in it doubled.
             "-NoProfile", "-NonInteractive", "-Command",
-            $"$ErrorActionPreference = 'Stop'; Add-Type -OutputType ConsoleApplication -OutputAssembly '{exe}' -TypeDefinition ([IO.File]::ReadAllText('{source}'))",
+            $"$ErrorActionPreference = 'Stop'; Add-Type -OutputType ConsoleApplication -OutputAssembly {Quoted(exe)} -TypeDefinition ([IO.File]::ReadAllText({Quoted(source)}))",
         })
             info.ArgumentList.Add(argument);
         using var compiler = Process.Start(info)!;
@@ -101,6 +102,14 @@ internal static class DetachedStandIn
             throw new InvalidOperationException($"Compiling the stand-in ended with {compiler.ExitCode}: {output.Result.Trim()} {error.Result.Trim()}");
         return exe;
     });
+
+    /// <summary>
+    /// <paramref name="text"/> as a PowerShell string that takes it literally: in single
+    /// quotes, with each character PowerShell reads as a single quote doubled, the curly
+    /// ones included.
+    /// </summary>
+    private static string Quoted(string text) =>
+        "'" + System.Text.RegularExpressions.Regex.Replace(text, "['\u2018\u2019\u201A\u201B]", "$0$0") + "'";
 
     /// <summary>The stand-in's exe, compiled on first use.</summary>
     public static string Exe => Compiled.Value;

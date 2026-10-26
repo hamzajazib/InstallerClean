@@ -27,7 +27,8 @@ public sealed class StagedRunTests : IDisposable
         {
             foreach (var process in _owned)
             {
-                try { if (!process.HasExited) process.Kill(); } catch { }
+                // Waited for, so the stand-in's exe is free to delete once the test run ends.
+                try { if (!process.HasExited) { process.Kill(); process.WaitForExit(10_000); } } catch { }
                 process.Dispose();
             }
             TestCrashLog.TryDelete(_root);
@@ -53,6 +54,7 @@ public sealed class StagedRunTests : IDisposable
         var pid = Path.Combine(_root, "pid.txt");
         var clock = Stopwatch.StartNew();
         while (!File.Exists(pid) && clock.Elapsed < TimeSpan.FromSeconds(30)) Thread.Sleep(100);
+        Assert.True(File.Exists(pid), "The stand-in wrote no process ID within 30 seconds, so it never ran its own code.");
         var process = Process.GetProcessById(
             int.Parse(File.ReadAllText(pid).Trim(), System.Globalization.CultureInfo.InvariantCulture));
         _owned.Add(process);
@@ -68,10 +70,11 @@ public sealed class StagedRunTests : IDisposable
         EventLogRecorder.Clear();
 
         var answer = StagedRun.StartReplace(request, DetachedStandIn.Exe, DetachedStandIn.Before(_root, "set"), TimeSpan.FromSeconds(60));
+        var standIn = Owned();
 
         Assert.Equal(NewerVersionAnswer.Started, answer);
         Assert.Empty(EventLogRecorder.Entries);
-        Assert.False(Owned().HasExited);
+        Assert.False(standIn.HasExited);
         Assert.Equal(ReplaceRead.Asked, HandOverContract.ReadReplaceRequest(File.ReadAllLines(Path.Combine(_root, "arguments.txt")), out var passed));
         Assert.Equal(request.ExePath, passed!.ExePath);
         Assert.Equal(4, passed.ProcessId);
@@ -102,6 +105,8 @@ public sealed class StagedRunTests : IDisposable
 
         Assert.Equal(NewerVersionAnswer.NotStarted, answer);
         Assert.Empty(EventLogRecorder.Entries);
+        // The stand-in writes what it was given before it exits, so the end was its own.
+        Assert.Equal(ReplaceRead.Asked, HandOverContract.ReadReplaceRequest(File.ReadAllLines(Path.Combine(_root, "arguments.txt")), out _));
     }
 
     [Fact]
@@ -121,10 +126,13 @@ public sealed class StagedRunTests : IDisposable
     [Fact]
     public async Task A_detached_program_holds_no_handle_of_the_starting_process()
     {
+        // Compiled first where no test has yet: the compile starts programs that inherit
+        // handles, and the pipe below is not to be among them.
+        var standIn = DetachedStandIn.Exe;
         // An inheritable pipe: a program that inherited the write end would hold it open, and
         // the read below would wait for it to end.
         using var pipe = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
-        using var started = DetachedProcess.Start(DetachedStandIn.Exe, DetachedStandIn.Before(_root, "wait"), _root);
+        using var started = DetachedProcess.Start(standIn, DetachedStandIn.Before(_root, "wait"), _root);
         Assert.NotNull(started);
         var child = Owned();
 
