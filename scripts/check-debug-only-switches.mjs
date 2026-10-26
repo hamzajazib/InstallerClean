@@ -9,7 +9,8 @@
 // out, and one answers with a release tag it is given without asking GitHub. In the
 // update itself, one has the app take itself for another kind of copy, one runs a
 // setup already on disk in place of downloading one, and one copies a newer file
-// already on disk in place of downloading it. Code between #if DEBUG and its #endif is compiled
+// already on disk in place of downloading it, and one holds that copy part way until a
+// gate file appears. Code between #if DEBUG and its #endif is compiled
 // only where DEBUG is defined, so a switch's name and its read sit there, and nothing
 // that builds a Release defines DEBUG. This checks both.
 //
@@ -97,6 +98,11 @@ const SWITCHES = [
   {
     name: 'INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD',
     constant: 'LocalDownloadVariable',
+    home: 'src/InstallerClean.Core/',
+  },
+  {
+    name: 'INSTALLERCLEAN_DEBUG_DOWNLOAD_GATE',
+    constant: 'DownloadGateVariable',
     home: 'src/InstallerClean.Core/',
   },
   {

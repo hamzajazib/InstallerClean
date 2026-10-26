@@ -345,7 +345,7 @@ public sealed class AppUpdater : IAppUpdater
             {
 #if DEBUG
                 if (LocalFile() is { } local)
-                    await new UpdateDownloadService(new LocalFileAnswer(local), null)
+                    await new UpdateDownloadService(new LocalFileAnswer(local, DownloadGate()), null)
                         .DownloadAsync(address, staged, progress, cancellationToken).ConfigureAwait(false);
                 else
 #endif
@@ -464,6 +464,32 @@ public sealed class AppUpdater : IAppUpdater
     /// </summary>
     internal const string LocalManifestVariable = "INSTALLERCLEAN_DEBUG_LOCAL_MANIFEST";
 
+    /// <summary>
+    /// Set to the full path of a gate file, a Debug build's download of the file
+    /// <see cref="LocalDownloadVariable"/> or <see cref="LocalSetupVariable"/> names passes its
+    /// first <see cref="GateAfterBytes"/> bytes, writes a file named as the gate with
+    /// <see cref="GateReachedSuffix"/> on the end, and waits until the gate file exists before
+    /// passing the rest, so Cancel and Ctrl+C can be pressed while a partial download is on disk.
+    /// The wait is a read of the download, so it ends where the download's own token does: on
+    /// Cancel, on Ctrl+C, and on the download's stall timeout, which fails a download held
+    /// at the gate longer than that timeout as one that stopped arriving. Held inside
+    /// <c>#if DEBUG</c> the same way.
+    /// </summary>
+    internal const string DownloadGateVariable = "INSTALLERCLEAN_DEBUG_DOWNLOAD_GATE";
+
+    /// <summary>How much of the file a download held at the gate has passed when it stops.</summary>
+    internal const int GateAfterBytes = 8 * 1024 * 1024;
+
+    /// <summary>Put on the end of the gate's path to name the file written as the download reaches the gate.</summary>
+    internal const string GateReachedSuffix = ".reached";
+
+    /// <summary>What <see cref="DownloadGateVariable"/> says, or null where it is unset.</summary>
+    private static string? DownloadGate()
+    {
+        var path = Environment.GetEnvironmentVariable(DownloadGateVariable);
+        return path is { Length: > 0 } ? path : null;
+    }
+
     /// <summary>What <see cref="LocalManifestVariable"/> says, or null where it is unset.</summary>
     private static (bool Absent, string Path)? LocalManifest()
     {
@@ -506,10 +532,12 @@ public sealed class AppUpdater : IAppUpdater
 
     /// <summary>
     /// Answers every request with the file at <paramref name="path"/>, so the file goes
-    /// through every check, write and clean-up a download does. A path that is not a full
-    /// path, or a file that cannot be opened, fails as a download that could not be made.
+    /// through every check, write and clean-up a download does, held at
+    /// <paramref name="gate"/> where there is one (<see cref="DownloadGateVariable"/>). A
+    /// path that is not a full path, or a file that cannot be opened, fails as a download
+    /// that could not be made.
     /// </summary>
-    private sealed class LocalFileAnswer(string path) : HttpMessageHandler
+    internal sealed class LocalFileAnswer(string path, string? gate) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
@@ -525,9 +553,59 @@ public sealed class AppUpdater : IAppUpdater
             {
                 throw new HttpRequestException($"The local file {path} could not be opened.", ex);
             }
-            var content = new StreamContent(file);
+            var content = new StreamContent(gate is null ? file : new GatedStream(file, gate));
             content.Headers.ContentLength = file.Length;
             return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = content });
+        }
+    }
+
+    /// <summary>
+    /// Reads <paramref name="inner"/>, stopping after <see cref="GateAfterBytes"/> bytes until
+    /// the file at <paramref name="gate"/> exists (<see cref="DownloadGateVariable"/>). The
+    /// read that reaches the gate writes the file named with <see cref="GateReachedSuffix"/>
+    /// and waits on the token it is given.
+    /// </summary>
+    private sealed class GatedStream(Stream inner, string gate) : Stream
+    {
+        private long _passed;
+        private bool _open;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => inner.Length;
+        public override long Position { get => _passed; set => throw new NotSupportedException(); }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!_open && _passed >= GateAfterBytes)
+            {
+                using (StorageHelpers.OpenAtomic(gate + GateReachedSuffix, FileAccess.Write, StorageHelpers.AtomicOpenMode.CreateAlways)) { }
+                while (!File.Exists(gate))
+                    await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+                _open = true;
+            }
+            var room = _open ? buffer.Length : (int)Math.Min(buffer.Length, GateAfterBytes - _passed);
+            var read = await inner.ReadAsync(buffer[..room], cancellationToken).ConfigureAwait(false);
+            _passed += read;
+            return read;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            ReadAsync(buffer, offset, count, CancellationToken.None).GetAwaiter().GetResult();
+
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) inner.Dispose();
+            base.Dispose(disposing);
         }
     }
 #endif
