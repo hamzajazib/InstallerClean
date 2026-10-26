@@ -745,24 +745,66 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Empty(TestCrashLog.Entries());
     }
 
-    [Fact]
-    public void A_console_that_refuses_every_line_after_the_setup_still_runs_the_scan_a_delete_answered_yes_to()
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public void A_refused_installed_line_after_the_setup_still_says_the_newer_version_only_lists(string command)
     {
         _host.Answers.Enqueue("y");
         SetupInstalls();
         _host.NewerVersionExitCode = 0;
         _host.OnWriteLine = line =>
         {
+            if (line == string.Format(Strings.Cli_UpdateInstalled, Latest)) throw new IOException("the console refused it");
+        };
+
+        var result = Run(Setup(), canAsk: true, command: command, arguments: [command, "D:\\Backup"]);
+
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
+        Assert.Contains(
+            command == "/d" ? Strings.Cli_UpdateListsOnlyAfterDelete : Strings.Cli_UpdateListsOnlyAfterMove,
+            _host.Output);
+        Assert.Equal(new[] { "/s" }, _host.NewerVersionRun!.Value.Arguments);
+        Assert.Empty(TestCrashLog.Entries());
+    }
+
+    [Fact]
+    public void A_console_that_refuses_every_line_after_the_setup_still_runs_the_scan_a_delete_answered_yes_to()
+    {
+        _host.Answers.Enqueue("y");
+        SetupInstalls();
+        _host.NewerVersionExitCode = 0;
+        var refused = new List<string>();
+        _host.OnWriteLine = line =>
+        {
             if (line == string.Format(Strings.Cli_UpdateInstalled, Latest)
                 || line == Strings.Cli_UpdateListsOnlyAfterDelete)
+            {
+                refused.Add(line);
                 throw new IOException("the console refused it");
+            }
         };
 
         var result = Run(Setup(), canAsk: true, command: "/d", arguments: ["/d", "D:\\Backup"]);
 
         Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
+        Assert.Equal(new[] { string.Format(Strings.Cli_UpdateInstalled, Latest), Strings.Cli_UpdateListsOnlyAfterDelete }, refused);
         Assert.Equal(new[] { "/s" }, _host.NewerVersionRun!.Value.Arguments);
         Assert.Empty(TestCrashLog.Entries());
+    }
+
+    [Fact]
+    public void A_setups_newer_version_whose_start_throws_is_left_in_place_and_the_run_ends_not_started()
+    {
+        SetupInstalls();
+        _host.OnNewerVersion = () => throw new InvalidOperationException("thrown before the start");
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
+        Assert.Contains("thrown before the start", TestCrashLog.OnlyEntry());
     }
 
     [Fact]

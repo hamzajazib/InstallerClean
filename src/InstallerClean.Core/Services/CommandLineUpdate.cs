@@ -696,9 +696,8 @@ internal sealed class CommandLineUpdate
 
         // The setup has installed the newer version whether or not it starts, so its copy
         // says so now. On a swap it is said once the newer version has started, since until
-        // then a failed start or Ctrl+C puts this exe back wherever it can. A line that fails
-        // here changes nothing about the run, which goes on to start the newer version.
-        if (isSetup) SayGuarded(SayInstalledAndWhatRuns);
+        // then a failed start or Ctrl+C puts this exe back wherever it can.
+        if (isSetup) SayInstalledAndWhatRuns();
 
         IReadOnlyList<string> run = canAsk ? ["/s"] : arguments;
         int? exitCode;
@@ -726,13 +725,15 @@ internal sealed class CommandLineUpdate
             isSetup, prepared, exePath, current, latest, putBack, token);
 
         // Says the newer version is installed and, where a person answered yes to a Delete
-        // or a Move, that it runs a scan, unless Ctrl+C has come.
+        // or a Move, that it runs a scan, unless Ctrl+C has come. Each line is written on its
+        // own (SayGuarded), so one that fails takes neither the other line nor the run with
+        // it, and the newer version is started either way.
         void SayInstalledAndWhatRuns()
         {
-            SayInstalled(latest);
+            SayGuarded(() => SayInstalled(latest));
             if (token.IsCancellationRequested) return;
-            if (canAsk && command == "/d") _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterDelete);
-            if (canAsk && command == "/m") _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterMove);
+            if (canAsk && command == "/d") SayGuarded(() => _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterDelete));
+            if (canAsk && command == "/m") SayGuarded(() => _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterMove));
         }
     }
 
