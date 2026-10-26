@@ -344,7 +344,7 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
-    public async Task A_linked_second_name_that_cannot_be_deleted_leaves_the_exe_without_read_only_so_it_goes_later()
+    public async Task A_linked_second_name_that_cannot_be_deleted_goes_later_and_the_exe_stays_read_only()
     {
         var oldCopy = StartOldCopy();
         File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
@@ -353,31 +353,41 @@ public sealed class ExeReplacementTests : IDisposable
         var ending = EndOnceSet(oldCopy, started);
         var linked = false;
 
-        // The second name is linked and then held, and the newer version is held, so the move
-        // is refused and the second name cannot be deleted.
+        // The second name is linked and then held, which refuses both the move over the exe,
+        // one file with it, and the second name's delete.
         var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(
             ThisExe: NewerFile(),
             MoveRetryBound: TimeSpan.FromSeconds(1),
             HardLink: (link, existing) =>
             {
                 linked = Kernel32.CreateHardLink(link, existing, IntPtr.Zero);
-                if (linked)
-                {
-                    Hold(link);
-                    Hold(Replacing);
-                }
+                if (linked) Hold(link);
                 return linked ? 0 : Kernel32.ERROR_INVALID_FUNCTION;
             }));
         await ending;
 
         Assert.True(linked);
         Assert.Equal(ReplaceOutcome.Refused, outcome);
-        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
-        Assert.False(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
-        Assert.Contains("so the exe was left without its read-only attribute", TestCrashLog.Text());
+        Assert.True(File.Exists(Backup));
+        Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
         foreach (var held in _held) held.Dispose();
         Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
         Assert.False(File.Exists(Backup));
+        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
+        Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+    }
+
+    [Fact]
+    public void A_read_only_second_name_left_beside_the_exe_goes()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Exe)!);
+        File.WriteAllText(Exe, "exe");
+        File.WriteAllText(Backup, "backup");
+        File.SetAttributes(Backup, FileAttributes.ReadOnly);
+
+        Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
+        Assert.False(File.Exists(Backup));
+        Assert.False(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
     }
 
     [Fact]
