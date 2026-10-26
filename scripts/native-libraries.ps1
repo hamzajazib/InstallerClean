@@ -183,7 +183,8 @@ $dataExtensions = [System.Collections.Generic.HashSet[string]]::new([string[]]@(
 # build extracts its own libraries, and every image it loaded from anywhere but its own
 # exe. A look is left out where it is for data, by $dataExtensions; where it is for the
 # run's own exe, the exe's .old or .new copy beside it, or a name a replace leaves beside
-# it (Get-ReplaceSuffixes), which every start clears; and where it is at a path the
+# it (Get-ReplaceSuffixes), which a start of the command line or the window clears, the
+# exclusion going by name whatever the run; and where it is at a path the
 # run opens as a folder or has rows under, as the folders a bundle extracts into.
 function Get-Libraries($rows, [string]$folder, [string]$exe) {
   $own = $folder.TrimEnd('\') + '\'
@@ -989,12 +990,12 @@ function Test-SetupControls {
 }
 
 # Runs Get-Libraries, Get-RunPlants and Test-PlantedRun over records made up for the
-# purpose. The first pass looks beside the exe for a .dll, an upper-case .OCX, a .drv,
-# an .exe and a dotted name with no extension Windows knows, each of which must be
-# planted for, and for each data name $dataExtensions holds, the exe itself, its .old and
-# .new, the names a replace leaves beside it, and a folder it creates, none of which may be. The second pass must
-# fail where it loads the planted .drv and where it loads a file from beside itself
-# that the first pass did not look for, and pass the load of its own exe.
+# purpose. The first pass looks beside the exe for a .dll, an upper-case .OCX, a .drv, an
+# .exe and a dotted name with no extension Windows knows, each of which must be planted
+# for, and for each data name $dataExtensions holds, the exe itself, its .old and .new,
+# the names a replace leaves beside it, and a folder it creates, none of which may be. The
+# second pass must fail where it loads the planted .drv and where it loads a file from
+# beside itself that the first pass did not look for, and pass the load of its own exe.
 function Test-ImageNameControls {
   Write-Host "== Control: the looks for a file to load beside a build"
   $folder = Join-Path ([IO.Path]::GetTempPath()) ('image-controls-' + [guid]::NewGuid().ToString('N'))
@@ -1205,20 +1206,20 @@ function Read-NothingAtPathEntries([datetime]$since, [datetime]$until) {
 }
 
 # Judges how a replace run ended, from $end: the run's label and mode ('replaced' or
-# 'nothing'), the build's exe, the target path, the target and staging folders, whether
-# the started event was set, the replacer's exit code, whether a process is still
-# running from the target path or the staging folder, the times it began and ended, and
-# $readEntries, which takes those two times and answers the nothing-at-path entries
-# written around the run (Entries) and why the log could not be read where it could not
-# (Unread). Fails where: the Application log could not be read; the event was not set;
-# the exit code is not 0 for a replace and 1 for nothing at the path; the file at the path
-# is not the build's exe, or is there at all where nothing was left at the path; a name a
-# replace leaves beside the exe is there, or the target folder holds anything but the
-# exe, the control file and the stand-in's exe set aside; for a replace, the staging and
-# target folders' access lists are the same, so the next check could not tell them
-# apart, or the exe's is not the control file's; the entry saying the update was not
-# installed is missing, more than one, or without the releases page where nothing was
-# left, or there at all after a replace; or a process is still running.
+# 'nothing'), the build's exe, the target path and folder, the staging folder's access
+# list as the folder was made, whether the started event was set, the replacer's exit
+# code, whether a process is still running from the target path or the staging folder, the
+# times it began and ended, and $readEntries, which takes those two times and answers the
+# nothing-at-path entries written around the run (Entries) and why the log could not be
+# read where it could not (Unread). Fails where: the Application log could not be read;
+# the event was not set; the exit code is not 0 for a replace and 1 for nothing at the
+# path; the file at the path is not the build's exe, or is there at all where nothing was
+# left at the path; a name a replace leaves beside the exe is there, or the target folder
+# holds anything but the exe, the control file and the stand-in's exe set aside; for a
+# replace, the staging and target folders' access lists are the same, so the next check
+# could not tell them apart, or the exe's is not the control file's; the entry saying the
+# update was not installed is missing, more than one, or without the releases page where
+# nothing was left, or there at all after a replace; or a process is still running.
 function Test-ReplaceEnd($end) {
   $label = $end.Label
   if (-not $end.EventSet) { Fail "$label did not set the started event within 60 s." }
@@ -1242,7 +1243,7 @@ function Test-ReplaceEnd($end) {
     Fail "$label left $($stray.FullName) in the folder it was put in."
   }
   if ($end.Mode -eq 'replaced' -and (Test-Path -LiteralPath $end.Target)) {
-    $staging = Get-AccessSddl $end.Staging
+    $staging = $end.StagingAccess
     $folder = Get-AccessSddl $end.TargetFolder
     Write-Host "  staging folder's access list: $staging"
     Write-Host "  target folder's access list: $folder"
@@ -1278,6 +1279,9 @@ function Test-ReplaceEnd($end) {
 # stop the build starting and is judged on what it loads.
 function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]$LoadAlone, [switch]$JudgeCopy) {
   $staging = New-StagingFolder
+  # Read now: a window started at the path deletes the staged exe as it starts, and the
+  # folder with it where nothing else is in it.
+  $stagingAccess = Get-AccessSddl $staging
   $exeName = Split-Path $build.Exe -Leaf
   $stagedName = Get-StagedName $build.AtPath.Label
   Copy-Item $build.Exe (Join-Path $staging $stagedName)
@@ -1347,7 +1351,7 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
     return $runs
   }
   Test-ReplaceEnd ([pscustomobject]@{
-    Label = $label; Mode = $build.Replace; BuildExe = $build.Exe; Target = $target; TargetFolder = $targetFolder; Staging = $staging
+    Label = $label; Mode = $build.Replace; BuildExe = $build.Exe; Target = $target; TargetFolder = $targetFolder; StagingAccess = $stagingAccess
     EventSet = $eventSet; ExitCode = $replacer.ExitCode; Started = $begun; Ended = $ended; ReadEntries = ${function:Read-NothingAtPathEntries}
     StillRunning = $(if ($left) { $left[0].Path })
   })
@@ -1384,7 +1388,7 @@ function Test-ReplaceControls {
     function New-End($folder, $mode, $read, [string]$stagingFolder = $staging) {
       [pscustomobject]@{
         Label = "control $(Split-Path $folder -Leaf)"; Mode = $mode; BuildExe = $build; Target = (Join-Path $folder 'InstallerClean.exe'); TargetFolder = $folder
-        Staging = $stagingFolder; EventSet = $true; ExitCode = $(if ($mode -eq 'replaced') { 0 } else { 1 }); Started = (Get-Date); Ended = (Get-Date); ReadEntries = $read; StillRunning = $null
+        StagingAccess = (Get-AccessSddl $stagingFolder); EventSet = $true; ExitCode = $(if ($mode -eq 'replaced') { 0 } else { 1 }); Started = (Get-Date); Ended = (Get-Date); ReadEntries = $read; StillRunning = $null
       }
     }
 
@@ -1415,10 +1419,17 @@ function Test-ReplaceControls {
 
     $unread = New-End (New-Target 'unread' 'the build') 'replaced' $unreadable
 
+    # A staging folder gone by the time the run is judged, as a window started at the
+    # path leaves it, passes on the access list read as it was made.
+    $stagingGone = Join-Path $root 'staging-gone'
+    $null = New-FolderWithDescriptor $stagingGone $sddl
+    $goneStaging = New-End (New-Target 'gone-staging' 'the build') 'replaced' $none -stagingFolder $stagingGone
+    Remove-Item -LiteralPath $stagingGone -Recurse -Force
+
     $nothingNone = New-End (New-Target 'nothing-none' $null) 'nothing' $none
     $nothingTwo = New-End (New-Target 'nothing-two' $null) 'nothing' { param($since, $until) [pscustomobject]@{ Entries = @(1, 2 | ForEach-Object { [pscustomobject]@{ Id = $id; Message = "downloaded again from $releases." } }); Unread = @() } }
 
-    $result = Invoke-Caught { foreach ($end in $good, $goodNothing, $faulted, $sameAcl, $ownAcl, $nothingLeft, $unread, $nothingNone, $nothingTwo) { Test-ReplaceEnd $end } }
+    $result = Invoke-Caught { foreach ($end in $good, $goodNothing, $faulted, $sameAcl, $ownAcl, $nothingLeft, $unread, $goneStaging, $nothingNone, $nothingTwo) { Test-ReplaceEnd $end } }
   }
   finally { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue }
   Assert-Caught $result.Caught @(
