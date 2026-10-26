@@ -300,6 +300,13 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
+    /// Test seam: renames the setup's copy aside (<see cref="SelfReplacement.MoveAside"/>),
+    /// so a test can reach a rename that fails with nothing left at the path, which no file a
+    /// test makes can bring about.
+    /// </summary>
+    internal Func<string, CancellationToken, Func<bool>> MoveAside { get; init; } = SelfReplacement.MoveAside;
+
+    /// <summary>
     /// What the command line starts the newer setup with. /SP- leaves out the page asking
     /// whether to install, /NORESTART keeps Setup from restarting Windows, and
     /// /SUPPRESSMSGBOXES answers any box Setup would show with its default, so it never
@@ -594,7 +601,7 @@ internal sealed class CommandLineUpdate
             _host.ReleaseOwnFile();
             try
             {
-                putBack = isSetup ? SelfReplacement.MoveAside(exePath, token) : SelfReplacement.SwapIn(exePath, token);
+                putBack = isSetup ? MoveAside(exePath, token) : SelfReplacement.SwapIn(exePath, token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -610,6 +617,9 @@ internal sealed class CommandLineUpdate
                 if (!File.Exists(exePath) && !RefillThisExe(exePath))
                 {
                     leftEmpty = ex;
+                    // The setup's copy runs no setup now, so its download goes. A swap's newer
+                    // version stays beside the empty path for Stop to put there.
+                    if (isSetup) prepared.Undo();
                 }
                 else
                 {
@@ -969,15 +979,16 @@ internal sealed class CommandLineUpdate
     /// Where nothing is at <paramref name="exePath"/>, renames a file there so a later run
     /// finds one. On a swap it is the newer version beside it
     /// (<see cref="SelfReplacement.TryPutNewerVersionAtPath"/>): this exe has had its own
-    /// try at going back in the run's put-back (<see cref="RefillThisExe"/>), whose success
-    /// carries the run on or cancels it. On the setup's copy it is this exe
+    /// try at going back (<see cref="RefillThisExe"/>), in the run's put-back or straight
+    /// after a rename aside that failed, and that try did not put it there. On the setup's copy it is this exe
     /// (<see cref="RefillThisExe"/>), and the run still ends, since the setup's copy may
     /// already have said the newer version is installed; a file beside it under the newer
     /// version's name is one the setup wrote and this run refused, and is never renamed.
     /// </summary>
     private void RefillIfEmpty(string exePath)
     {
-        if (!File.Exists(exePath)) PathChanged();
+        if (File.Exists(exePath)) return;
+        PathChanged();
         if (_updater.Kind == AppCopyKind.Setup) RefillThisExe(exePath);
         else SelfReplacement.TryPutNewerVersionAtPath(exePath);
     }

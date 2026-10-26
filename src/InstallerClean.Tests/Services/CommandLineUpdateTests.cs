@@ -49,9 +49,12 @@ public sealed class CommandLineUpdateTests : IDisposable
         FakeUpdater updater, bool canAsk, string command = "/s", string[]? arguments = null,
         Func<CancellationToken, Task<UpdateCheckResult>>? check = null, CancellationToken token = default,
         TimeSpan? controlCBound = null, TimeSpan? readHoldWait = null, TimeSpan? readHoldNotice = null,
-        TimeSpan? readHoldWaitAfterCancel = null) =>
+        TimeSpan? readHoldWaitAfterCancel = null, Func<string, CancellationToken, Func<bool>>? moveAside = null) =>
         new CommandLineUpdate(check ?? NewerOut, updater, _host, WatchedBound,
                 controlCBound ?? TimeSpan.FromMilliseconds(20), readHoldWait, readHoldNotice, readHoldWaitAfterCancel)
+            {
+                MoveAside = moveAside ?? SelfReplacement.MoveAside,
+            }
             .Run(canAsk, command, arguments ?? [command], _exe, token);
 
     /// <summary>The separate download: the updater has written the newer file beside the exe.</summary>
@@ -1814,6 +1817,37 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal("new", File.ReadAllText(_exe));
         Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
         Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void A_setup_copy_whose_rename_aside_fails_with_nothing_left_at_the_path_removes_its_download_and_tries_again_as_it_ends()
+    {
+        // The rename aside fails after this exe has gone from its path, and the copy aside is
+        // held so it cannot go back: the try straight after the failure and the one as the run
+        // ends each wait out the hold and are written to crash.log.
+        FileStream? held = null;
+        var updater = Setup();
+        try
+        {
+            var result = Run(updater, canAsk: false, moveAside: (path, _) =>
+            {
+                File.Move(path, path + SelfReplacement.OldSuffix);
+                held = new FileStream(path + SelfReplacement.OldSuffix, FileMode.Open, FileAccess.Read, FileShare.None);
+                throw new IOException("the rename aside failed");
+            });
+
+            Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+            Assert.True(updater.Undone);
+            Assert.Null(_host.NewerVersionRun);
+            Assert.False(File.Exists(_exe));
+            Assert.True(File.Exists(_exe + SelfReplacement.OldSuffix));
+            Assert.Contains(TestCrashLog.Entries(), entry => entry.Contains("The running copy was left renamed aside."));
+            Assert.Equal(2, TestCrashLog.Entries().Count(entry => entry.Contains(nameof(FileHeldOpenException))));
+        }
+        finally
+        {
+            held?.Dispose();
+        }
     }
 
     [Fact]
