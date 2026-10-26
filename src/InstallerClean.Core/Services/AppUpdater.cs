@@ -466,19 +466,25 @@ public sealed class AppUpdater : IAppUpdater
 
     /// <summary>
     /// Set to the full path of a gate file, a Debug build's download of the file
-    /// <see cref="LocalDownloadVariable"/> or <see cref="LocalSetupVariable"/> names passes its
-    /// first <see cref="GateAfterBytes"/> bytes, writes a file named as the gate with
+    /// <see cref="LocalDownloadVariable"/> or <see cref="LocalSetupVariable"/> names passes the
+    /// first part of it (<see cref="GatePoint"/>), writes a file named as the gate with
     /// <see cref="GateReachedSuffix"/> on the end, and waits until the gate file exists before
     /// passing the rest, so Cancel and Ctrl+C can be pressed while a partial download is on disk.
-    /// The wait is a read of the download, so it ends where the download's own token does: on
-    /// Cancel, on Ctrl+C, and on the download's stall timeout, which fails a download held
-    /// at the gate longer than that timeout as one that stopped arriving. Held inside
-    /// <c>#if DEBUG</c> the same way.
+    /// A gate file and a reached file left by an earlier download are deleted as the download
+    /// starts. The wait is a read of the download, so it ends where the download's own token
+    /// does: on Cancel, on Ctrl+C, and on the download's stall timeout, which fails a download
+    /// held at the gate longer than that timeout as one that stopped arriving. A download from
+    /// GitHub is never held. A gate that is not a full path, or a reached file that cannot be
+    /// written, fails the download. Held inside <c>#if DEBUG</c> the same way.
     /// </summary>
     internal const string DownloadGateVariable = "INSTALLERCLEAN_DEBUG_DOWNLOAD_GATE";
 
-    /// <summary>How much of the file a download held at the gate has passed when it stops.</summary>
-    internal const int GateAfterBytes = 8 * 1024 * 1024;
+    /// <summary>
+    /// How much of a file of <paramref name="length"/> bytes a download held at the gate has
+    /// passed when it stops: 8 MB, or half the file where that is less, so every kind of copy
+    /// stops with part of it on disk.
+    /// </summary>
+    internal static long GatePoint(long length) => Math.Min(8 * 1024 * 1024, length / 2);
 
     /// <summary>Put on the end of the gate's path to name the file written as the download reaches the gate.</summary>
     internal const string GateReachedSuffix = ".reached";
@@ -553,6 +559,20 @@ public sealed class AppUpdater : IAppUpdater
             {
                 throw new HttpRequestException($"The local file {path} could not be opened.", ex);
             }
+            if (gate is not null)
+            {
+                try
+                {
+                    if (!Path.IsPathFullyQualified(gate)) throw new IOException($"The gate {gate} is not a full path.");
+                    File.Delete(gate);
+                    File.Delete(gate + GateReachedSuffix);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    file.Dispose();
+                    throw new HttpRequestException($"The gate {gate} could not be made ready.", ex);
+                }
+            }
             var content = new StreamContent(gate is null ? file : new GatedStream(file, gate));
             content.Headers.ContentLength = file.Length;
             return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = content });
@@ -560,32 +580,34 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     /// <summary>
-    /// Reads <paramref name="inner"/>, stopping after <see cref="GateAfterBytes"/> bytes until
+    /// Reads <paramref name="inner"/>, stopping at <see cref="GatePoint"/> until
     /// the file at <paramref name="gate"/> exists (<see cref="DownloadGateVariable"/>). The
     /// read that reaches the gate writes the file named with <see cref="GateReachedSuffix"/>
     /// and waits on the token it is given.
     /// </summary>
     private sealed class GatedStream(Stream inner, string gate) : Stream
     {
+        private readonly long _gateAt = GatePoint(inner.Length);
         private long _passed;
         private bool _open;
 
         public override bool CanRead => true;
         public override bool CanSeek => false;
         public override bool CanWrite => false;
-        public override long Length => inner.Length;
+        public override long Length => throw new NotSupportedException();
         public override long Position { get => _passed; set => throw new NotSupportedException(); }
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            if (!_open && _passed >= GateAfterBytes)
+            if (!_open && _passed >= _gateAt)
             {
-                using (StorageHelpers.OpenAtomic(gate + GateReachedSuffix, FileAccess.Write, StorageHelpers.AtomicOpenMode.CreateAlways)) { }
+                using (StorageHelpers.OpenAtomic(gate + GateReachedSuffix, FileAccess.Write, StorageHelpers.AtomicOpenMode.CreateAlways)
+                    ?? throw new IOException($"The file {gate}{GateReachedSuffix} could not be written.")) { }
                 while (!File.Exists(gate))
                     await Task.Delay(100, cancellationToken).ConfigureAwait(false);
                 _open = true;
             }
-            var room = _open ? buffer.Length : (int)Math.Min(buffer.Length, GateAfterBytes - _passed);
+            var room = _open ? buffer.Length : (int)Math.Min(buffer.Length, _gateAt - _passed);
             var read = await inner.ReadAsync(buffer[..room], cancellationToken).ConfigureAwait(false);
             _passed += read;
             return read;
@@ -594,8 +616,8 @@ public sealed class AppUpdater : IAppUpdater
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
             ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
 
-        public override int Read(byte[] buffer, int offset, int count) =>
-            ReadAsync(buffer, offset, count, CancellationToken.None).GetAwaiter().GetResult();
+        // A wait at the gate ends only on a token, which a read with none cannot give it.
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
         public override void Flush() { }
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();

@@ -253,10 +253,10 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     }
 
 #if DEBUG
-    /// <summary>A program one megabyte longer than the gate passes, on disk, with the gate's path beside it.</summary>
-    private (string File, string Gate, byte[] Bytes) GatedLocalFile()
+    /// <summary>A program of <paramref name="length"/> bytes on disk, with the gate's path beside it.</summary>
+    private (string File, string Gate, byte[] Bytes) GatedLocalFile(int length = 9 * 1024 * 1024)
     {
-        var bytes = Program(AppUpdater.GateAfterBytes + 1024 * 1024);
+        var bytes = Program(length);
         var file = Path.Combine(_folder, "local.exe");
         File.WriteAllBytes(file, bytes);
         return (file, Path.Combine(_folder, "gate"), bytes);
@@ -277,10 +277,13 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         return open.Length;
     }
 
-    [Fact]
-    public async Task A_download_held_at_the_gate_has_part_of_the_file_on_disk_and_cancelling_it_leaves_nothing()
+    [Theory]
+    [InlineData(9 * 1024 * 1024, 8 * 1024 * 1024)]
+    [InlineData(4 * 1024 * 1024, 2 * 1024 * 1024)]
+    public async Task A_download_held_at_the_gate_has_part_of_the_file_on_disk_and_cancelling_it_leaves_nothing(
+        int length, int heldAt)
     {
-        var (file, gate, _) = GatedLocalFile();
+        var (file, gate, _) = GatedLocalFile(length);
         var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, gate), TimeSpan.FromSeconds(30));
         using var cts = new CancellationTokenSource();
 
@@ -288,7 +291,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         await UntilReached(gate, download);
 
         Assert.False(download.IsCompleted);
-        Assert.Equal(AppUpdater.GateAfterBytes, WrittenSoFar());
+        Assert.Equal(heldAt, WrittenSoFar());
         cts.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => download);
         Assert.False(File.Exists(Destination));
@@ -298,11 +301,15 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     public async Task A_download_held_at_the_gate_finishes_whole_once_the_gate_file_exists()
     {
         var (file, gate, bytes) = GatedLocalFile();
+        // Left by an earlier run; a gate already there would not hold this one.
+        File.WriteAllText(gate, string.Empty);
+        File.WriteAllText(gate + AppUpdater.GateReachedSuffix, string.Empty);
         var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, gate), TimeSpan.FromSeconds(30));
         var reported = new List<double?>();
 
         var download = service.DownloadAsync(ReleaseAddress, Destination, new SyncProgress(reported.Add), CancellationToken.None);
         await UntilReached(gate, download);
+        Assert.False(download.IsCompleted);
         File.WriteAllText(gate, string.Empty);
         await download;
 
@@ -321,6 +328,18 @@ public sealed class UpdateDownloadServiceTests : IDisposable
 
         Assert.Equal(UpdateFailureStage.Download, failure.Stage);
         Assert.True(File.Exists(gate + AppUpdater.GateReachedSuffix));
+        Assert.False(File.Exists(Destination));
+    }
+    [Fact]
+    public async Task A_gate_that_is_not_a_full_path_fails_the_download()
+    {
+        var (file, _, _) = GatedLocalFile();
+        var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, "gate"), TimeSpan.FromSeconds(30));
+
+        var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+            () => service.DownloadAsync(ReleaseAddress, Destination, null, CancellationToken.None));
+
+        Assert.Equal(UpdateFailureStage.Download, failure.Stage);
         Assert.False(File.Exists(Destination));
     }
 #endif
