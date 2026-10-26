@@ -2507,6 +2507,18 @@ Führe InstallerClean erneut als Administrator aus.</value></data>
        start, so nothing ran. -->
   <!-- 0 = the version that was not installed, 1 = the newest release's page. Event ID 3007, written
        by that version, the copy being updated having closed and left nothing at its path. -->
+  <!-- 0 = the version that was not installed. Event ID 3007, written by that version where the
+       command line's copy at the path was not replaced and is as it was. -->
+  <!-- 0 = the version being installed. Event ID 3007, written by that version where its replace
+       of the command line's copy stopped after the move over that copy had begun. -->
+  <!-- 0 = the version the setup was downloaded as. Event ID 3007, written by the command line of
+       that version where the setup beside it carries another version, so it was not run. -->
+  <!-- 0 = the version that was not installed. Event ID 3007, written by that version where
+       InstallerClean was still in use after the setup's wait for it, so the setup was not run. -->
+  <!-- 0 = the setup's version, 1 = its exit code. Event ID 3007, written by the command line of
+       that version where the setup it ran ended with an exit code other than 0. -->
+  <!-- 0 = the setup's version. Event ID 3007, written by the command line of that version where
+       the setup ended with exit code 0 and the command line at the path does not carry it. -->
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
        before it started, so nothing ran. -->

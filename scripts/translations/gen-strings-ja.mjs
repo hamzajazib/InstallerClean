@@ -698,6 +698,13 @@ const STRIPPED = new Set([
   'Cli.EventLogUpdateInUseThenCancelled',
   // The machine Cli key for an update not installed because nothing was left at the path, by the same rule.
   'Cli.EventLogUpdateNothingAtPath',
+  // The machine Cli keys for the command line's replace and setup run not installing an update, by the same rule.
+  'Cli.EventLogUpdateNotInstalled',
+  'Cli.EventLogUpdateStoppedPartWay',
+  'Cli.EventLogUpdateSetupNotThisVersion',
+  'Cli.EventLogUpdateInUseAfterWait',
+  'Cli.EventLogUpdateSetupExitCode',
+  'Cli.EventLogUpdateSetupNotInPlace',
 ]);
 let stripped = 0;
 text = text.replace(/[^\S\n]*<data name="(Cli\.[^"]*)"[\s\S]*?<\/data>\n?/g,
