@@ -310,7 +310,7 @@ public sealed class ExeReplacementTests : IDisposable
             ThisExe: NewerFile(), HardLink: (_, _) => throw new InvalidOperationException("thrown by the link")));
         await ending;
 
-        Assert.Equal(ReplaceOutcome.Failed, outcome);
+        Assert.Equal(ReplaceOutcome.Refused, outcome);
         Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
         Assert.False(File.Exists(Replacing));
@@ -338,10 +338,12 @@ public sealed class ExeReplacementTests : IDisposable
         await ending;
 
         Assert.True(linked);
-        Assert.Equal(ReplaceOutcome.Failed, outcome);
+        Assert.Equal(ReplaceOutcome.Refused, outcome);
+        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
         Assert.False(File.Exists(Backup));
         Assert.False(File.Exists(Replacing));
+        Assert.Contains("thrown once linked", TestCrashLog.Text());
     }
 
     [Fact]

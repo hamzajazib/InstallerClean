@@ -30,7 +30,7 @@ namespace InstallerClean.Services;
 /// <para>
 /// For as long as it runs, the replace holds a file named for the exe with
 /// <see cref="LockSuffix"/> on the end, open and shared with nothing, and Windows deletes
-/// it as the handle closes, however the process ends. <see cref="TryRemoveLeftovers"/>
+/// it as the handle closes, however the process ends. <see cref="TryRemoveLeftovers(string)"/>
 /// holds the same file while it deletes, so the two never run at once.
 /// </para>
 /// <para>
@@ -64,7 +64,7 @@ internal static class ExeReplacement
 
     /// <summary>
     /// How long a replace tries again to hold the file named with <see cref="LockSuffix"/>
-    /// where it cannot. <see cref="TryRemoveLeftovers"/> holds that file for as long as its
+    /// where it cannot. <see cref="TryRemoveLeftovers(string)"/> holds that file for as long as its
     /// deletes take, and a replace starting meanwhile takes it once they are done.
     /// </summary>
     internal static readonly TimeSpan HoldRetryBound = TimeSpan.FromSeconds(2);

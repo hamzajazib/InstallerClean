@@ -977,7 +977,7 @@ public partial class App : Application
 
     /// <summary>
     /// Deletes the copy an update renamed aside, the newer version an update left beside
-    /// this exe and what a replace left beside it (<see cref="ExeReplacement.TryRemoveLeftovers"/>),
+    /// this exe and what a replace left beside it (<see cref="ExeReplacement.TryRemoveLeftovers(string)"/>),
     /// and removes the folders earlier updates downloaded into. It tries for ten
     /// seconds, because what put each there may still be closing as this copy starts: the
     /// copy that renamed itself, or the setup, which opens the app before it exits.
