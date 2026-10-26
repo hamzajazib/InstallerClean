@@ -26,18 +26,29 @@ public sealed class StagedRunTests : IDisposable
         try
         {
             // A stand-in the test did not take, an assertion having failed first, is ended
-            // too, where the process with the ID it wrote is still the stand-in.
+            // too, where the process with the ID it wrote still runs from the stand-in's
+            // file. Both paths are resolved to the file's final name, so a short name in
+            // either is not read as another file.
             if (_owned.Count == 0 && TryReadPid() is { } pid)
             {
+                Process? unowned = null;
                 try
                 {
-                    var unowned = Process.GetProcessById(pid);
-                    if (string.Equals(unowned.MainModule?.FileName, DetachedStandIn.Exe, StringComparison.OrdinalIgnoreCase))
+                    unowned = Process.GetProcessById(pid);
+                    if (unowned.MainModule?.FileName is { } image
+                        && InstallerCacheHelpers.TryResolveFinalPath(image, out var running)
+                        && InstallerCacheHelpers.TryResolveFinalPath(DetachedStandIn.Exe, out var standIn)
+                        && string.Equals(running, standIn, StringComparison.OrdinalIgnoreCase))
+                    {
                         _owned.Add(unowned);
-                    else
-                        unowned.Dispose();
+                        unowned = null;
+                    }
                 }
                 catch { }
+                finally
+                {
+                    unowned?.Dispose();
+                }
             }
             foreach (var process in _owned)
             {
@@ -64,7 +75,8 @@ public sealed class StagedRunTests : IDisposable
     {
         try
         {
-            return int.TryParse(File.ReadAllText(Path.Combine(_root, "pid.txt")).Trim(), out var pid) ? pid : null;
+            return int.TryParse(File.ReadAllText(Path.Combine(_root, "pid.txt")).Trim(),
+                System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var pid) ? pid : null;
         }
         catch (IOException)
         {
@@ -78,12 +90,11 @@ public sealed class StagedRunTests : IDisposable
     /// </summary>
     private Process Owned()
     {
-        var pid = Path.Combine(_root, "pid.txt");
         var clock = Stopwatch.StartNew();
-        while (!File.Exists(pid) && clock.Elapsed < TimeSpan.FromSeconds(30)) Thread.Sleep(100);
-        Assert.True(File.Exists(pid), "The stand-in wrote no process ID within 30 seconds, so it never ran its own code.");
-        var process = Process.GetProcessById(
-            int.Parse(File.ReadAllText(pid).Trim(), System.Globalization.CultureInfo.InvariantCulture));
+        int? pid;
+        while ((pid = TryReadPid()) is null && clock.Elapsed < TimeSpan.FromSeconds(30)) Thread.Sleep(100);
+        Assert.True(pid is not null, "The stand-in wrote no process ID within 30 seconds, so it never ran its own code.");
+        var process = Process.GetProcessById(pid.Value);
         _owned.Add(process);
         return process;
     }
