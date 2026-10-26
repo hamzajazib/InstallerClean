@@ -373,15 +373,17 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.True(linked);
         Assert.Equal(ReplaceOutcome.Refused, outcome);
         Assert.True(File.Exists(Backup));
-        Assert.True(File.Exists(Replacing));
+        Assert.Equal(NewerBytes, File.ReadAllBytes(Replacing));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+        // The hold on the move's source is what refuses the move, and the holds on the two
+        // names what refuse their deletes: each a sharing violation.
+        var violation = Kernel32.ERROR_SHARING_VIOLATION;
         var log = TestCrashLog.Text();
-        Assert.True(
-            log.Contains($"failed with error {Kernel32.ERROR_SHARING_VIOLATION}.")
-                || log.Contains($"failed with error {Kernel32.ERROR_ACCESS_DENIED}."),
-            log);
-        Assert.Contains($"The name ending {ExeReplacement.BackupSuffix} beside the exe could not be deleted", log);
-        Assert.Contains($"The name ending {ExeReplacement.ReplacingSuffix} beside the exe could not be deleted", log);
+        Assert.Contains($"The newer version could not be moved over the exe; the last try failed with error {violation}.", log);
+        Assert.Contains(
+            $"The name ending {ExeReplacement.BackupSuffix} beside the exe could not be deleted, with error {violation}, and is left there.", log);
+        Assert.Contains(
+            $"The name ending {ExeReplacement.ReplacingSuffix} beside the exe could not be deleted, with error {violation}, and is left there.", log);
         foreach (var held in _held) held.Dispose();
         Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
         Assert.False(File.Exists(Backup));
