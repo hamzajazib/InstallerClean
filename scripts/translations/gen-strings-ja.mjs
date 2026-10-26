@@ -9,7 +9,7 @@
 //
 // Structure: UNLIKE the other satellites, ja carries the machine-contract
 // Cli.EventLog* keys, which coolvitto translated along with everything else and
-// which the other fourteen omit. They are forced to English at the emit site at
+// which every other satellite omits. They are forced to English at the emit site at
 // runtime (MachineContract.cs), so a translated copy is inert rather than wrong,
 // and keeping coolvitto's work costs nothing. Japanese has no count plurals,
 // so there are no satellite-only overrides.
@@ -737,7 +737,7 @@ const parse = (xml, where) => {
 const neutral = parse(readFileSync(BASE, 'utf8'), BASE);
 const written = readFileSync(OUT, 'utf8');
 const output = parse(written, OUT);
-// ja ships every neutral key, machine Cli included, bar the one stripped above.
+// ja ships every neutral key, machine Cli included, bar those in STRIPPED.
 const neutralRequired = [...neutral.keys()].filter((k) => !STRIPPED.has(k));
 const strippedLeaked = [...STRIPPED].filter((k) => output.has(k));
 

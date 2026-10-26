@@ -602,7 +602,7 @@ const OVERRIDES = {
 // The generator removes every Cli.* key the neutral carries and writes back only
 // what this object holds, so a human-facing Cli.* key missing here is missing from
 // the Russian resx, and the self-check reports it as a human Cli key missing from
-// the CLI map. In the other fourteen languages an unmapped key arrives as the
+// the CLI map. In every other language an unmapped key arrives as the
 // neutral's English instead.
 //
 // Count lines (FoundOrphans/DeletedFiles/MovedFiles) use the impersonal verb-first

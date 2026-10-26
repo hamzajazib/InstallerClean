@@ -79,7 +79,7 @@ const IS_TEMPLATE = OUT === TEMPLATE_OUT;
 
 // The English starting point for the two keeps, and it is NOT what a finished
 // language looks like: THIS LIST IS THE ONE PLACE THE TEMPLATE DIFFERS FROM THE
-// FIFTEEN GENERATORS, and it differs on purpose. Only the first four are universal,
+// LANGUAGES' GENERATORS, and it differs on purpose. Only the first four are universal,
 // the brand names and the pure-placeholder announcement string, whose value is the
 // same in every language and whose still-English value is NOT a miss. Explicit by
 // KEY on purpose: a future brand key then defaults to "flag until someone adds it
