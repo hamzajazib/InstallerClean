@@ -353,28 +353,32 @@ public sealed class ExeReplacementTests : IDisposable
         var ending = EndOnceSet(oldCopy, started);
         var linked = false;
 
-        // The second name is linked and then held, which refuses both the move over the exe,
-        // one file with it, and the second name's delete.
+        // The second name is linked and then held, which refuses its delete, and the newer
+        // version is held, which refuses the move: a rename needs to delete its source's name.
         var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(
             ThisExe: NewerFile(),
             MoveRetryBound: TimeSpan.FromSeconds(1),
             HardLink: (link, existing) =>
             {
                 linked = Kernel32.CreateHardLink(link, existing, IntPtr.Zero);
-                if (linked) Hold(link);
+                if (linked)
+                {
+                    Hold(link);
+                    Hold(Replacing);
+                }
                 return linked ? 0 : Kernel32.ERROR_INVALID_FUNCTION;
             }));
         await ending;
 
         Assert.True(linked);
         Assert.Equal(ReplaceOutcome.Refused, outcome);
-        Assert.False(File.Exists(Replacing));
         Assert.True(File.Exists(Backup));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
         Assert.Contains($"The name ending {ExeReplacement.BackupSuffix} beside the exe could not be deleted", TestCrashLog.Text());
         foreach (var held in _held) held.Dispose();
         Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
         Assert.False(File.Exists(Backup));
+        Assert.False(File.Exists(Replacing));
         Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
     }
