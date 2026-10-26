@@ -368,13 +368,28 @@ public sealed class ExeReplacementTests : IDisposable
 
         Assert.True(linked);
         Assert.Equal(ReplaceOutcome.Refused, outcome);
+        Assert.False(File.Exists(Replacing));
         Assert.True(File.Exists(Backup));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+        Assert.Contains($"The name ending {ExeReplacement.BackupSuffix} beside the exe could not be deleted", TestCrashLog.Text());
         foreach (var held in _held) held.Dispose();
         Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
         Assert.False(File.Exists(Backup));
         Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
         Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+    }
+
+    [Fact]
+    public void A_folder_beside_the_exe_under_a_replace_name_is_not_a_leftover()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Exe)!);
+        File.WriteAllText(Exe, "exe");
+        Directory.CreateDirectory(Replacing);
+        File.WriteAllText(Backup, "backup");
+
+        Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
+        Assert.True(Directory.Exists(Replacing));
+        Assert.False(File.Exists(Backup));
     }
 
     [Fact]
