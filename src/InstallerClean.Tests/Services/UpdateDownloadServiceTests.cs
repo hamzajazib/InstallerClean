@@ -315,7 +315,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(9 * 1024 * 1024, 8 * 1024 * 1024)]
+    [InlineData(17 * 1024 * 1024, 8 * 1024 * 1024)]
     [InlineData(4 * 1024 * 1024, 2 * 1024 * 1024)]
     public async Task A_download_held_at_the_gate_has_part_of_the_file_on_disk_and_cancelling_it_leaves_nothing(
         int length, int heldAt)
