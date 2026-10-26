@@ -382,6 +382,37 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
+    public void A_swap_with_nothing_at_the_exe_path_fails_and_deletes_nothing()
+    {
+        // An earlier update in this process that did not hand over left this exe at the old
+        // name and nothing at the path.
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
+        File.WriteAllBytes(exe + SelfReplacement.NewSuffix, Program(2));
+
+        Assert.Throws<UpdateFailedException>(() => SelfReplacement.SwapIn(exe));
+
+        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+    }
+
+    [Fact]
+    public void A_swap_with_a_folder_at_the_exe_path_deletes_nothing()
+    {
+        // File.Exists does not see the folder, so the copy at the old name is kept.
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        Directory.CreateDirectory(exe);
+        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
+        File.WriteAllBytes(exe + SelfReplacement.NewSuffix, Program(2));
+
+        Assert.Throws<UpdateFailedException>(() => SelfReplacement.SwapIn(exe));
+
+        Assert.True(Directory.Exists(exe));
+        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+    }
+
+    [Fact]
     public async Task A_swap_whose_running_exe_will_not_go_back_puts_the_newer_version_at_the_exe_path()
     {
         // The newer version is held open past the first rename's wait and let go during the

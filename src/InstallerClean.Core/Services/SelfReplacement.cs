@@ -391,7 +391,9 @@ public static class SelfReplacement
     /// so the newer version can be written at its path, by <see cref="SwapIn"/> or by
     /// the setup, and answers with <see cref="PutBack"/> for it. Throws
     /// <see cref="UpdateFailedException"/> where the rename fails, having deleted at most
-    /// a copy an earlier update left under that name.
+    /// a copy an earlier update left under that name. That copy is deleted only while a
+    /// file is at the path: with nothing there, the file under that name can be the copy
+    /// the app runs from, and the rename fails with it left in place.
     /// <see cref="PrepareToMoveAside"/> comes first. Ctrl+C on <paramref name="token"/>
     /// while it waits for a file another process holds open (<see cref="WaitOutHold"/>)
     /// throws <see cref="OperationCanceledException"/>, with this exe at its path.
@@ -402,7 +404,8 @@ public static class SelfReplacement
         try
         {
             // One left by an earlier update whose newer version could not delete it.
-            if (File.Exists(oldPath)) WaitOutHold(oldPath, () => DeleteIfPlainFile(oldPath), token);
+            if (File.Exists(exePath) && File.Exists(oldPath))
+                WaitOutHold(oldPath, () => DeleteIfPlainFile(oldPath), token);
             WaitOutHold(exePath, () => File.Move(exePath, oldPath), token);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -528,8 +531,11 @@ public static class SelfReplacement
 
     /// <summary>
     /// The window's hand-over to the newer version a copy that replaces its own file has
-    /// written beside itself: renames it into place, starts it, waits for it to say its
-    /// own code is running, and ends this process without running any more of its code.
+    /// written beside itself: first renames this exe back to its own path where an earlier
+    /// hand-over left it under <see cref="OldSuffix"/> with nothing at the path
+    /// (<see cref="TryRefillPath"/>), then renames the newer version into place, starts it,
+    /// waits for it to say its own code is running, and ends this process without running
+    /// any more of its code.
     /// Answers false where the newer version could not be put in place, could not be
     /// started, or did not say so (<see cref="AwaitStart"/>), with this exe back at its
     /// own path and the newer version back under its waiting name. Where Windows would not
@@ -570,6 +576,10 @@ public static class SelfReplacement
         var takesSwitch = HandOverContract.TakesHandOverSwitches(toVersion);
         using var startedEvent = takesSwitch ? HandOverContract.CreateStartedEvent(startedId) : null;
         if (takesSwitch && startedEvent is null) return false;
+
+        // An earlier hand-over in this process that did not go through can have left this exe
+        // at the old name and nothing at the path; it goes back there before the swap.
+        TryRefillPath(exePath, orNewerVersion: false);
 
         Func<bool> putBack;
         try
