@@ -16,12 +16,13 @@
 // where the setup is writing.
 //
 // The C# is read with its comments blanked, through csharp-source.mjs, so a comment
-// naming the mutex is not counted as a spelling of it. A .iss comment line starts with
-// ';', or '//' in [Code], and is skipped the same way.
+// naming the mutex is not counted as a spelling of it. The setup is read with its
+// comments blanked the same way, through iss-source.mjs.
 //
 // Run from the repo root: node scripts/check-instance-lock-name.mjs
 import { readFileSync } from 'node:fs';
 import { readCSharp } from './csharp-source.mjs';
+import { readIss } from './iss-source.mjs';
 import { lineIndex, sourceFiles } from './source-files.mjs';
 
 const LOCK_FILE = 'src/InstallerClean.Core/Services/InstanceLock.cs';
@@ -48,10 +49,10 @@ if (declared.length !== 1) {
 }
 const name = declared[0];
 
-const setupLines = read(SETUP_FILE)
+const setupLines = readIss(read(SETUP_FILE))
   .split(/\r?\n/)
   .map((text, i) => ({ line: i + 1, text: text.trim() }))
-  .filter((l) => !l.text.startsWith(';') && !l.text.startsWith('//'));
+  .filter((l) => l.text !== '');
 const defines = setupLines.filter((l) => /^#define\s+AppMutexName\b/.test(l.text));
 const appMutex = setupLines.filter((l) => /^AppMutex\s*=/i.test(l.text));
 if (defines.length !== 1) {

@@ -1955,11 +1955,12 @@ public sealed class CommandLineUpdateTests : IDisposable
     [Theory]
     [InlineData(true, "/SILENT")]
     [InlineData(false, "/VERYSILENT")]
-    public void The_setup_never_opens_the_window_and_shows_progress_only_to_a_person(bool canAsk, string shown)
+    public void The_setup_waits_for_the_app_never_opens_the_window_and_shows_progress_only_to_a_person(bool canAsk, string shown)
     {
         var arguments = CommandLineUpdate.SetupArguments(canAsk).Split(' ');
 
         Assert.Equal(shown, arguments[0]);
+        Assert.Contains("/UPDATEFROMCLI", arguments);
         Assert.DoesNotContain("/UPDATEFROMAPP", arguments);
         Assert.Contains("/SUPPRESSMSGBOXES", arguments);
         Assert.Contains("/NOCLOSEAPPLICATIONS", arguments);

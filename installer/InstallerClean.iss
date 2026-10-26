@@ -52,8 +52,8 @@ AppVersion={#AppVersion}
 AppVerName=InstallerClean {#AppVersion}
 ; Setup pauses with a "close the running app" prompt while the mutex's name can
 ; be opened, which it can while InstallerClean.exe or installerclean-cli.exe has it
-; open, held or not. Started by the app's Update now, Setup first waits for the
-; app to close (InitializeSetup below).
+; open, held or not. Started by an update, from the window or the command line,
+; Setup first waits for the app to close (InitializeSetup below).
 AppMutex={#AppMutexName}
 ; %LOCALAPPDATA%\InstallerClean\ user data (settings.json,
 ; last-run.json, settings.json.bad on a corrupt-and-recovered run,
@@ -194,35 +194,53 @@ Filename: "{app}\InstallerClean.exe"; Description: "{cm:LaunchApp}"; Flags: nowa
 Filename: "{app}\InstallerClean.exe"; Flags: nowait shellexec; Check: UpdatingFromApp
 
 [Code]
-// Whether the setup was started by the app's Update now, which passes
-// /UPDATEFROMAPP. Setup takes no meaning from a switch it does not know and
-// hands it to this code through ParamStr.
-function UpdatingFromApp: Boolean;
+// Whether Setup's command line carries Switch. Setup takes no meaning from a switch
+// it does not know and hands it to this code through ParamStr.
+function HasSwitch(const Switch: String): Boolean;
 var
   I: Integer;
 begin
   Result := False;
   for I := 1 to ParamCount do
-    if CompareText(ParamStr(I), '/UPDATEFROMAPP') = 0 then
+    if CompareText(ParamStr(I), Switch) = 0 then
     begin
       Result := True;
       Exit;
     end;
 end;
 
-// Started by the app's Update now, Setup waits for the app to close before it
-// checks AppMutex, for up to 30 seconds: the app starts Setup and then closes, and
-// its handle to the mutex stays open until it closes it as it exits. Setup calls
-// InitializeSetup before its own AppMutex check, which then asks for InstallerClean
-// to be closed where the mutex is still open. Setup first creates the mutex it holds
-// while it runs, which the app opens to tell that a setup is running.
+// Whether the setup was started by the app's Update now, which passes
+// /UPDATEFROMAPP. Every version of the app passes it to every later
+// setup, so it keeps this meaning.
+function UpdatingFromApp: Boolean;
+begin
+  Result := HasSwitch('/UPDATEFROMAPP');
+end;
+
+// Whether the setup was started by an update of the command line, which passes
+// /UPDATEFROMCLI. The command line passes it to the setup of the version it updates
+// to, so it keeps this meaning. It opens nothing: nobody may be watching, and the
+// [Run] entry that opens the app checks UpdatingFromApp alone.
+function UpdatingFromCommandLine: Boolean;
+begin
+  Result := HasSwitch('/UPDATEFROMCLI');
+end;
+
+// Started by an update, Setup waits for every copy of the app to close before it
+// checks AppMutex, for up to 30 seconds: the copy that starts Setup, or the one it
+// stands for, may still be closing, and its handle to the mutex stays open until it
+// closes it as it exits. Setup calls InitializeSetup before its own AppMutex check,
+// which then asks for InstallerClean to be closed where the mutex is still open, and
+// fails the setup with nothing written where /SUPPRESSMSGBOXES answers that box.
+// Setup first creates the mutex it holds while it runs, which the app opens to tell
+// that a setup is running.
 function InitializeSetup: Boolean;
 var
   Waited: Integer;
 begin
   Result := True;
   CreateMutex('{#SetupMutexName}');
-  if not UpdatingFromApp then Exit;
+  if not (UpdatingFromApp or UpdatingFromCommandLine) then Exit;
   Waited := 0;
   while CheckForMutexes('{#AppMutexName}') and (Waited < 30000) do
   begin

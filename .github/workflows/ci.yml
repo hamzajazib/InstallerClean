@@ -106,6 +106,13 @@ jobs:
         if: success() || failure()
         run: node scripts/check-instance-lock-name.mjs
 
+      # The window and the command line each start the newer setup with a switch of their
+      # own, and Setup ignores a switch it does not know, so the spellings in C# and in the
+      # setup's [Code] are held together here.
+      - name: Check the setup reads each switch the app passes it
+        if: success() || failure()
+        run: node scripts/check-setup-switches.mjs
+
       # Two guards read built files, so neither can be picked up with the
       # check-*.mjs glob that runs before the build. Each is invoked by name
       # instead, the artefact guard in both workflows and the native-imports
@@ -1834,6 +1841,165 @@ jobs:
           path: ${{ runner.temp }}/kept
           if-no-files-found: warn
           retention-days: 7
+
+      # The command line's update starts the setup with /UPDATEFROMCLI among the switches
+      # CommandLineUpdate.SetupArguments builds, and this step reads them from there. The
+      # switch has Setup wait for every copy of the app to let the single-instance mutex go
+      # before its own AppMutex check, and open nothing afterwards. A second PowerShell holds the mutex,
+      # under the name the setup's AppMutexName define gives it, for a few seconds and
+      # writes the moment it lets go. The setup started with the switch while it is held
+      # must exit with 0 after that moment, with its log saying how long it waited, and
+      # leave no InstallerClean.exe running from the installed folder. The look for that
+      # process is shown able to see one: the setup started with the window's
+      # /UPDATEFROMAPP, with the mutex free, must leave the app running from there.
+      #
+      # The control is a start without either switch, against a hold that outlasts it: the
+      # setup must end while the mutex is still held, with neither a 0 exit nor the waited
+      # line, and must not write the installed InstallerClean.exe. Setup gives every file
+      # it writes the time stored in it, so the installed exe's time is set to one no
+      # build carries first, and a write would put the stored one back. A control that
+      # passed would mean the first run's wait is not the switch's doing.
+      #
+      # It runs after the Process Monitor rows and the crash logs are kept, since the
+      # window it opens on purpose writes to the app's own folders before it is ended.
+      - name: Run the setup with the command line's switch while the app's mutex is held
+        if: ${{ !cancelled() && env.PROCMON != '' && env.SETUP_VERSION != '' }}
+        shell: pwsh
+        run: |
+          $failed = [System.Collections.Generic.List[string]]::new()
+          function Fail([string]$message) { $failed.Add($message); Write-Host "::error::$message" }
+          $setup = (Resolve-Path "publish/InstallerClean-$env:SETUP_VERSION-setup.exe").Path
+          $define = Select-String -LiteralPath installer/InstallerClean.iss -Pattern '^#define\s+AppMutexName\s+"([^"]+)"\s*$'
+          if (@($define).Count -ne 1) { throw "installer/InstallerClean.iss has no single AppMutexName define." }
+          $mutexName = $define.Matches[0].Groups[1].Value
+          # The switches the command line starts the setup with, read from where it builds them.
+          $built = Select-String -LiteralPath src/InstallerClean.Core/Services/CommandLineUpdate.cs -Pattern '"/VERYSILENT"\) \+ "([^"]+)";'
+          if (@($built).Count -ne 1) { throw "CommandLineUpdate.SetupArguments' switches could not be read." }
+          $cli = @($built.Matches[0].Groups[1].Value.Trim() -split '\s+')
+          if ('/UPDATEFROMCLI' -notin $cli) { throw "CommandLineUpdate.SetupArguments does not pass /UPDATEFROMCLI: $($cli -join ' ')" }
+          $withoutSwitch = @($cli | Where-Object { $_ -ne '/UPDATEFROMCLI' })
+          Write-Host "  the command line's switches: /VERYSILENT $($cli -join ' ')"
+          $uninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\InstallerClean_is1'
+          $folder = (Get-ItemProperty $uninstallKey -ErrorAction SilentlyContinue).InstallLocation
+          if (-not $folder) { throw "No install location in the uninstall entry; the setup step before this one did not install." }
+          $installed = Join-Path $folder 'InstallerClean.exe'
+          Write-Host "  mutex $mutexName; installed copy $installed"
+
+          # Starts a PowerShell that holds the mutex for $seconds, writes the UTC moment it
+          # lets go to $released just before it closes its handle, and answers the process
+          # once the mutex is held.
+          function Start-Holder([string]$label, [int]$seconds) {
+            $ready = Join-Path $env:RUNNER_TEMP "holder-$label.ready"
+            $released = Join-Path $env:RUNNER_TEMP "holder-$label.released"
+            Remove-Item -LiteralPath $ready, $released -ErrorAction SilentlyContinue
+            $script = Join-Path $env:RUNNER_TEMP "holder-$label.ps1"
+            Set-Content -LiteralPath $script -Value @"
+          `$m = [System.Threading.Mutex]::new(`$false, '$mutexName')
+          `$null = `$m.WaitOne()
+          Set-Content -LiteralPath '$ready' -Value 'held'
+          Start-Sleep -Seconds $seconds
+          [DateTime]::UtcNow.ToString('o') | Set-Content -LiteralPath '$released'
+          `$m.ReleaseMutex()
+          `$m.Dispose()
+          "@
+            $p = Start-Process -FilePath pwsh -ArgumentList '-NoProfile', '-NonInteractive', '-File', $script -PassThru
+            $null = $p.Handle
+            $until = [DateTime]::UtcNow.AddSeconds(30)
+            while (-not (Test-Path -LiteralPath $ready) -and [DateTime]::UtcNow -lt $until) { Start-Sleep -Milliseconds 100 }
+            if (-not (Test-Path -LiteralPath $ready)) { $p.Kill(); throw "The $label holder did not hold the mutex within 30 s." }
+            [pscustomobject]@{ Process = $p; Released = $released }
+          }
+
+          # Runs the setup with /VERYSILENT and $extra and answers its exit code,
+          # the UTC moment it ended and its log.
+          function Invoke-Setup([string]$label, [string[]]$extra) {
+            $log = Join-Path $env:RUNNER_TEMP "setup-$label.log"
+            Remove-Item -LiteralPath $log -ErrorAction SilentlyContinue
+            $arguments = @('/VERYSILENT') + $extra + @("/LOG=`"$log`"")
+            Write-Host "  setup $($arguments -join ' ')"
+            $p = Start-Process -FilePath $setup -ArgumentList $arguments -PassThru
+            $null = $p.Handle
+            if (-not $p.WaitForExit(300000)) { $p.Kill($true); $p.WaitForExit(); throw "The $label setup was still running after 300 s." }
+            $ended = $p.ExitTime.ToUniversalTime()
+            $text = if (Test-Path -LiteralPath $log) { Get-Content -Raw -LiteralPath $log } else { '' }
+            Write-Host "  exited with $($p.ExitCode) at $($ended.ToString('o'))"
+            [pscustomobject]@{ ExitCode = $p.ExitCode; Ended = $ended; Log = $text }
+          }
+
+          $waitedLine = 'Waited (\d+) ms for InstallerClean to close\.'
+
+          "== With /UPDATEFROMCLI, the mutex held for 8 s"
+          $holder = Start-Holder 'switch' 8
+          try {
+            $run = Invoke-Setup 'switch' $cli
+            if (-not $holder.Process.WaitForExit(60000)) { Fail "The holder for the switch's run did not end." }
+          }
+          finally {
+            if (-not $holder.Process.HasExited) { $holder.Process.Kill(); $holder.Process.WaitForExit() }
+          }
+          $released = if (Test-Path -LiteralPath $holder.Released) { [DateTime]::Parse((Get-Content -LiteralPath $holder.Released).Trim(), $null, 'RoundtripKind') }
+          if (-not $released) { Fail "The holder for the switch's run wrote no moment it let go." }
+          else {
+            Write-Host "  the holder let go at $($released.ToString('o'))"
+            if ($run.Ended -lt $released) { Fail "The setup started with /UPDATEFROMCLI ended before the mutex was let go." }
+          }
+          if ($run.ExitCode -ne 0) { Fail "The setup started with /UPDATEFROMCLI exited with $($run.ExitCode)." }
+          $waited = [regex]::Match($run.Log, $waitedLine)
+          if (-not $waited.Success) { Fail "The log of the setup started with /UPDATEFROMCLI has no line saying how long it waited." }
+          else {
+            Write-Host "  log: $($waited.Value)"
+            if ([int]$waited.Groups[1].Value -lt 4000) { Fail "The setup started with /UPDATEFROMCLI waited $($waited.Groups[1].Value) ms, under the hold." }
+          }
+          $runLines = @($run.Log -split '\r?\n' | Where-Object { $_ -match 'Run entry|Filename:' })
+          if ($runLines) { $runLines | ForEach-Object { Write-Host "  log: $_" } } else { Write-Host "  log: no [Run] entry named" }
+          # The app running from the installed folder, looked for until $seconds have passed.
+          function Find-Opened([int]$seconds) {
+            $until = [DateTime]::UtcNow.AddSeconds($seconds)
+            do {
+              $opened = @(Get-Process -Name InstallerClean -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $installed })
+              if ($opened) { return $opened }
+              Start-Sleep -Milliseconds 250
+            } while ([DateTime]::UtcNow -lt $until)
+            @()
+          }
+          $opened = @(Find-Opened 30)
+          if ($opened) { Fail "The setup started with /UPDATEFROMCLI opened the app (process $($opened.Id -join ', '))."; $opened | Stop-Process -Force }
+          else { Write-Host "  no InstallerClean.exe running from $installed" }
+
+          "== With /UPDATEFROMAPP, the mutex free: the look for the app must find it"
+          $run = Invoke-Setup 'app' ($withoutSwitch + @('/UPDATEFROMAPP'))
+          if ($run.ExitCode -ne 0) { Fail "The setup started with /UPDATEFROMAPP exited with $($run.ExitCode)." }
+          $opened = @(Find-Opened 30)
+          if (-not $opened) { Fail "The setup started with /UPDATEFROMAPP left no InstallerClean.exe running from $installed, so the look above cannot see one." }
+          else {
+            Write-Host "  InstallerClean.exe running from $installed, process $($opened.Id -join ', ')"
+            $opened | Stop-Process -Force
+            foreach ($app in $opened) {
+              if (-not $app.WaitForExit(30000)) { Fail "The app the setup opened, process $($app.Id), was still running 30 s after it was ended." }
+            }
+          }
+
+          "== Without either switch, the mutex held for 60 s"
+          $planted = [DateTime]::new(2001, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
+          (Get-Item -LiteralPath $installed).LastWriteTimeUtc = $planted
+          $before = (Get-Item -LiteralPath $installed).LastWriteTimeUtc
+          if ($before -ne $planted) { Fail "The installed exe's time could not be set to $($planted.ToString('o'))." }
+          $holder = Start-Holder 'control' 60
+          try {
+            $run = Invoke-Setup 'control' $withoutSwitch
+            if ($holder.Process.HasExited) { Fail "The control's holder had let go before the setup ended; the control proves nothing." }
+          }
+          finally {
+            if (-not $holder.Process.HasExited) { $holder.Process.Kill(); $holder.Process.WaitForExit() }
+          }
+          if ($run.ExitCode -eq 0) { Fail "The setup without the switch exited with 0 with the mutex held." }
+          if ($run.Log -match $waitedLine) { Fail "The setup without the switch waited for the mutex." }
+          else { Write-Host "  log: no line saying it waited" }
+          $after = (Get-Item -LiteralPath $installed).LastWriteTimeUtc
+          if ($after -ne $before) { Fail "The setup without the switch wrote $installed with the mutex held (its time is $($after.ToString('o')))." }
+          else { Write-Host "  $installed still carries the planted time $($after.ToString('o'))" }
+
+          if ($failed.Count) { exit 1 }
 
   # The command line's own download, updating to a newer version, waits up to a minute
   # for the newer version to say its own code is running before it hands the run over.

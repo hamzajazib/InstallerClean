@@ -313,11 +313,13 @@ internal sealed class CommandLineUpdate
     /// waits on one; a box it would have shown fails the setup. /NOCLOSEAPPLICATIONS keeps
     /// Setup from closing programs holding files it replaces, this run among them, which
     /// waits on it. /SILENT shows Setup's progress where a person is watching, and
-    /// /VERYSILENT shows nothing where nobody is. /UPDATEFROMAPP is left out: it is what
-    /// opens the window afterwards.
+    /// /VERYSILENT shows nothing where nobody is. /UPDATEFROMCLI has Setup wait up to 30
+    /// seconds for every copy to let the single-instance mutex go before it checks it, and
+    /// opens nothing afterwards. /UPDATEFROMAPP is left out: it is what opens the window
+    /// afterwards.
     /// </summary>
     internal static string SetupArguments(bool canAsk) =>
-        (canAsk ? "/SILENT" : "/VERYSILENT") + " /SP- /NORESTART /SUPPRESSMSGBOXES /NOCLOSEAPPLICATIONS";
+        (canAsk ? "/SILENT" : "/VERYSILENT") + " /SP- /NORESTART /SUPPRESSMSGBOXES /NOCLOSEAPPLICATIONS /UPDATEFROMCLI";
 
     /// <summary>
     /// Runs the update for a run of <paramref name="command"/> given
@@ -607,8 +609,9 @@ internal sealed class CommandLineUpdate
         // Delete, and another run's update. A /s takes no mutex, so a process running from
         // this exe's file is looked for as well, before the download and again just before
         // the rename, and one that has reached its own code holds the file against
-        // renaming besides. The setup names the same mutex and stops while it is open, so
-        // the mutex is released and its handle closed before the setup runs.
+        // renaming besides. The setup names the same mutex and, after waiting up to 30
+        // seconds for it to be let go (/UPDATEFROMCLI), stops while it is open, so the
+        // mutex is released and its handle closed before the setup runs.
         var holdsLock = _host.TryTakeInstanceLock();
         try
         {
