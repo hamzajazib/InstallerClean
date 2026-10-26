@@ -254,7 +254,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
 
 #if DEBUG
     /// <summary>A program of <paramref name="length"/> bytes on disk, with the gate's path beside it.</summary>
-    private (string File, string Gate, byte[] Bytes) GatedLocalFile(int length = 9 * 1024 * 1024)
+    private (string File, string Gate, byte[] Bytes) GatedLocalFile(int length = 4 * 1024 * 1024)
     {
         var bytes = Program(length);
         var file = Path.Combine(_folder, "local.exe");
@@ -315,7 +315,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(17 * 1024 * 1024, 8 * 1024 * 1024)]
+    [InlineData(16 * 1024 * 1024 + 2, 8 * 1024 * 1024)]
     [InlineData(4 * 1024 * 1024, 2 * 1024 * 1024)]
     public async Task A_download_held_at_the_gate_has_part_of_the_file_on_disk_and_cancelling_it_leaves_nothing(
         int length, int heldAt)
