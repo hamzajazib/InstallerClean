@@ -135,10 +135,11 @@ internal static class HandOverContract
     /// installed. It carries nothing; what failed is in crash.log.
     /// </summary>
     /// <remarks>
-    /// The copy given it is the older one, so every window from
-    /// <see cref="FirstVersionTakingHandOverSwitches"/> on takes it, and every later version
-    /// starts a copy it has put back with this switch and no other: an older window given a
-    /// switch it does not know opens without saying the update failed.
+    /// The copy given it is the older one, so what a window from
+    /// <see cref="FirstVersionTakingHandOverSwitches"/> on reads it as has to stay the same in
+    /// every later version, and a later version starts a copy it has put back with this
+    /// switch and no other: a window given a switch it does not know opens without saying
+    /// the update failed.
     /// </remarks>
     internal const string UpdateFailedSwitch = "/updatefailed";
 
@@ -170,12 +171,11 @@ internal static class HandOverContract
     /// once and well formed: such a start runs nothing and sets no event.
     /// </summary>
     /// <remarks>
-    /// A copy from <see cref="FirstVersionTakingHandOverSwitches"/> on starts the newer
-    /// version it updates to with these three, and on the command line with the command as
-    /// typed, <see cref="CliContract.CancelEventSwitch"/> and <see cref="CliContract.NoUpdateSwitch"/>
-    /// beside them, and it goes on doing so for every newer version it ever updates to. So
-    /// every later version reads these three as a request to replace and the arguments
-    /// beside them as the command, or no copy from that version on can update to it.
+    /// Do not change what this reads. A copy from <see cref="FirstVersionTakingHandOverSwitches"/>
+    /// on is to start the newer version it updates to with these three, and on the command
+    /// line with the command as typed, <see cref="CliContract.CancelEventSwitch"/> and
+    /// <see cref="CliContract.NoUpdateSwitch"/> beside them, for every newer version it ever
+    /// updates to. A later version reading them another way is one no such copy can update to.
     /// </remarks>
     internal static ReplaceRead ReadReplaceRequest(string[] args, out ReplaceRequest? request)
     {

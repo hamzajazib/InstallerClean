@@ -677,6 +677,9 @@ internal static partial class Kernel32
     public const uint WAIT_TIMEOUT = 0x102;
     public const uint WAIT_FAILED = 0xFFFFFFFF;
 
+    /// <summary>A wait's timeout that never runs out.</summary>
+    public const uint INFINITE = 0xFFFFFFFF;
+
     /// <summary>
     /// Renames <paramref name="lpExistingFileName"/> to <paramref name="lpNewFileName"/> as
     /// <paramref name="dwFlags"/> says. With <see cref="MOVEFILE_REPLACE_EXISTING"/> a file at
