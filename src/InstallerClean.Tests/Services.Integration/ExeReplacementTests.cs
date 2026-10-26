@@ -297,6 +297,25 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
+    public async Task A_read_only_exe_is_read_only_again_where_a_step_of_the_replace_throws()
+    {
+        var oldCopy = StartOldCopy();
+        File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = EndOnceSet(oldCopy, started);
+
+        var outcome = ExeReplacement.Run(request, startAtPath: true, new ReplaceSeams(
+            ThisExe: NewerFile(), HardLink: (_, _) => throw new InvalidOperationException("thrown by the link")));
+        await ending;
+
+        Assert.Equal(ReplaceOutcome.Failed, outcome);
+        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
+        Assert.True(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+        Assert.Contains("thrown by the link", TestCrashLog.Text());
+    }
+
+    [Fact]
     public async Task A_read_only_exe_put_back_is_read_only_again()
     {
         var oldCopy = StartOldCopy();
@@ -352,6 +371,33 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.Equal(ReplaceOutcome.NotHandedOver, outcome);
         Assert.False(started.WaitOne(0));
         Assert.False(File.Exists(Replacing));
+    }
+
+    [Fact]
+    public void A_link_at_the_held_files_name_is_refused_without_waiting_out_the_retries()
+    {
+        var oldCopy = StartOldCopy();
+        var elsewhere = Directory.CreateDirectory(Path.Combine(_root, "elsewhere")).FullName;
+        try
+        {
+            Directory.CreateSymbolicLink(Lock, elsewhere);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return; // this host cannot create symlinks; CI's runner can
+        }
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var timer = Stopwatch.StartNew();
+
+        var outcome = ExeReplacement.Run(request, startAtPath: false,
+            new ReplaceSeams(ThisExe: NewerFile(), HoldRetryBound: TimeSpan.FromSeconds(30)));
+
+        Assert.Equal(ReplaceOutcome.NotHandedOver, outcome);
+        Assert.True(timer.Elapsed < TimeSpan.FromSeconds(10), timer.Elapsed.ToString());
+        Assert.False(started.WaitOne(0));
+        Assert.True(Directory.Exists(elsewhere));
+        Assert.Contains("is a reparse point", TestCrashLog.Text());
     }
 
     [Fact]
