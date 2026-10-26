@@ -70,14 +70,18 @@ public interface IAppUpdater
 public sealed class PreparedUpdate
 {
     private Action? _undo;
+    private readonly Action? _deleteDownload;
 
-    public PreparedUpdate(string version, string fileToStart, string arguments, Action undo, string? replaces = null)
+    public PreparedUpdate(
+        string version, string fileToStart, string arguments, Action undo, string? replaces = null,
+        Action? deleteDownload = null)
     {
         Version = version;
         FileToStart = fileToStart;
         Arguments = arguments;
         Replaces = replaces;
         _undo = undo;
+        _deleteDownload = deleteDownload;
     }
 
     /// <summary>The version this is, as the update check gave it.</summary>
@@ -107,6 +111,19 @@ public sealed class PreparedUpdate
     public void Undo()
     {
         try { Interlocked.Exchange(ref _undo, null)?.Invoke(); }
+        catch (Exception ex) { Helpers.CrashLog.TryWrite(ex); }
+    }
+
+    /// <summary>
+    /// Deletes the download and the folder it was saved in where nothing else is in it,
+    /// once what was downloaded has been written elsewhere, and keeps the hold on the
+    /// start-up clean-up until <see cref="Undo"/> or the end of the process. Once the
+    /// folder has gone, neither this nor <see cref="Undo"/> reaches into its path again.
+    /// Does nothing where the update was not downloaded to a folder of its own. Never throws.
+    /// </summary>
+    public void DeleteDownload()
+    {
+        try { _deleteDownload?.Invoke(); }
         catch (Exception ex) { Helpers.CrashLog.TryWrite(ex); }
     }
 }
@@ -377,20 +394,36 @@ public sealed class AppUpdater : IAppUpdater
             // The setup's copy starts the download as a setup; the window's other copies start it
             // to put itself at the running exe's path. Either runs it from the staging folder, so
             // the hold stays out until the update is undone or this process ends.
+            // The download is deleted by its path, by DeleteDownload or Undo, until its folder
+            // has gone. Once the folder is gone its name is free, and anybody who can write
+            // to the root can make a folder or a link under it, so nothing here reaches into
+            // that path again. A download held open, by an antivirus looking at it say,
+            // keeps the folder, which stays this update's own: an undo tries it again, and
+            // otherwise a later start's clean-up takes it.
             var isSetup = Kind == AppCopyKind.Setup;
+            var folderGone = false;
+            var deleteGate = new object();
+            void DeleteDownload()
+            {
+                lock (deleteGate)
+                {
+                    if (folderGone) return;
+                    Helpers.StorageHelpers.TryDeleteTempFile(staged);
+                    folderGone = folder.TryRemoveIfEmpty();
+                }
+            }
             return new PreparedUpdate(version, staged, isSetup ? _setupArguments : string.Empty, () =>
                 {
                     try
                     {
-                        Helpers.StorageHelpers.TryDeleteTempFile(staged);
-                        folder.TryRemoveIfEmpty();
+                        DeleteDownload();
                     }
                     finally
                     {
                         hold.Release();
                     }
                 },
-                isSetup ? null : _exePath);
+                isSetup ? null : _exePath, DeleteDownload);
         }
         catch
         {

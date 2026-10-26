@@ -84,18 +84,25 @@ public sealed class UpdateStagingFolder
 
     /// <summary>
     /// Removes this folder where it is empty, as it is once the download has been
-    /// moved out of it. Leaves it where anything is still inside, and never throws:
-    /// <see cref="RemoveLeftovers(string)"/> takes what is left at a later start.
+    /// moved out of it, and answers whether it is gone. Leaves it where anything is still
+    /// inside, and never throws: <see cref="RemoveLeftovers(string)"/> takes what is left
+    /// at a later start.
     /// </summary>
-    public void TryRemoveIfEmpty()
+    public bool TryRemoveIfEmpty()
     {
         try
         {
             Directory.Delete(FullPath, recursive: false);
+            return true;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return true;
         }
         catch
         {
-            // Not empty, or already gone; either way there is nothing to do now.
+            // Not empty, or Windows refused the delete: there is nothing more to do now.
+            return false;
         }
     }
 

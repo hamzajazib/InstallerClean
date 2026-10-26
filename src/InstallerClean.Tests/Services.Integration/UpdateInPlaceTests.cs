@@ -950,6 +950,26 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_command_lines_undo_never_reaches_into_its_download_folder_once_that_has_gone()
+    {
+        var (updater, exe, _) = CommandLineDownloadUpdater(new OneAnswer(Release(2)));
+        var staged = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+        var download = staged.FileToStart;
+        var folder = Path.GetDirectoryName(download)!;
+
+        var prepared = CommandLineUpdate.StageBeside(staged, exe, CancellationToken.None);
+        Assert.False(Directory.Exists(folder));
+        // Anything able to write to the staging root can make the same name again.
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(download, Program(9));
+
+        prepared.Undo();
+
+        Assert.Equal(Program(9), File.ReadAllBytes(download));
+        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+    }
+
+    [Fact]
     public async Task A_command_line_whose_undo_keeps_the_newer_version_keeps_the_clean_up_off()
     {
         var gate = new UpdateLeftoverGate();

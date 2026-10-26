@@ -554,12 +554,14 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Writes the newer version <paramref name="staged"/> holds beside this exe
     /// (<see cref="SelfReplacement.StageAsync"/>), where <see cref="SelfReplacement.SwapIn"/>
-    /// takes it from, and deletes the download, whether or not the write went. A write that
-    /// fails takes the rest of <paramref name="staged"/> away too and throws. Answers an
-    /// update for this exe's path whose undo deletes the newer version written beside it
-    /// and then takes away the rest of <paramref name="staged"/>, its folder and its hold on
-    /// the start-up clean-up. Where nothing is at the exe's path, the undo keeps both, the
-    /// newer version being one of the two files that can go there.
+    /// takes it from, and deletes the download and its folder, whether or not the write
+    /// went (<see cref="PreparedUpdate.DeleteDownload"/>). A write that fails takes the rest
+    /// of <paramref name="staged"/> away too and throws. Answers an update for this exe's
+    /// path whose undo deletes the newer version written beside it and then undoes
+    /// <paramref name="staged"/>, which lets go of its hold on the start-up clean-up and
+    /// reaches into the download's folder no more. Where nothing is at the
+    /// exe's path, the undo keeps both, the newer version being one of the two files that
+    /// can go there.
     /// </summary>
     internal static PreparedUpdate StageBeside(PreparedUpdate staged, string exePath, CancellationToken token)
     {
@@ -573,7 +575,7 @@ internal sealed class CommandLineUpdate
             staged.Undo();
             throw;
         }
-        Helpers.StorageHelpers.TryDeleteTempFile(staged.FileToStart);
+        staged.DeleteDownload();
         return new PreparedUpdate(staged.Version, exePath, string.Empty, () =>
         {
             if (!File.Exists(exePath)) return;
