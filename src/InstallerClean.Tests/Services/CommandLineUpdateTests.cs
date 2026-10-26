@@ -768,6 +768,32 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Empty(TestCrashLog.Entries());
     }
 
+    [Theory]
+    [InlineData(AppCopyKind.Setup, false)]
+    [InlineData(AppCopyKind.Setup, true)]
+    [InlineData(AppCopyKind.CommandLineDownload, false)]
+    [InlineData(AppCopyKind.CommandLineDownload, true)]
+    public void An_installed_line_that_fails_still_leaves_the_line_saying_a_delete_only_lists(AppCopyKind kind, bool hostFault)
+    {
+        _host.Answers.Enqueue("y");
+        if (kind == AppCopyKind.Setup) SetupInstalls();
+        _host.NewerVersionExitCode = 0;
+        _host.OnWriteLine = line =>
+        {
+            if (line != string.Format(Strings.Cli_UpdateInstalled, Latest)) return;
+            if (hostFault) throw new InvalidOperationException("a fault in the host");
+            throw new IOException("the console refused it");
+        };
+
+        var result = Run(kind == AppCopyKind.Setup ? Setup() : Download(), canAsk: true, command: "/d",
+            arguments: ["/d", "D:\\Backup"]);
+
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
+        Assert.Contains(Strings.Cli_UpdateListsOnlyAfterDelete, _host.Output);
+        if (hostFault) Assert.Contains("a fault in the host", TestCrashLog.OnlyEntry());
+        else Assert.Empty(TestCrashLog.Entries());
+    }
+
     [Fact]
     public void A_console_that_refuses_every_line_after_the_setup_still_runs_the_scan_a_delete_answered_yes_to()
     {

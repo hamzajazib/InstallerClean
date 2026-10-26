@@ -726,14 +726,13 @@ internal sealed class CommandLineUpdate
 
         // Says the newer version is installed and, where a person answered yes to a Delete
         // or a Move, that it runs a scan, unless Ctrl+C has come. Each line is written on its
-        // own (SayGuarded), so one that fails takes neither the other line nor the run with
-        // it, and the newer version is started either way.
+        // own, so one that fails takes neither the other line nor the run with it.
         void SayInstalledAndWhatRuns()
         {
             SayGuarded(() => SayInstalled(latest));
             if (token.IsCancellationRequested) return;
-            if (canAsk && command == "/d") SayGuarded(() => _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterDelete));
-            if (canAsk && command == "/m") SayGuarded(() => _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterMove));
+            if (canAsk && command == "/d") SayLine(Strings.Cli_UpdateListsOnlyAfterDelete);
+            if (canAsk && command == "/m") SayLine(Strings.Cli_UpdateListsOnlyAfterMove);
         }
     }
 
@@ -939,6 +938,9 @@ internal sealed class CommandLineUpdate
     /// where it has one, is written before it (<see cref="SayGuarded"/>).
     /// </summary>
     private static void SayClosing(Action say) => SayGuarded(say);
+
+    /// <summary>Writes <paramref name="line"/> through <see cref="SayGuarded"/>.</summary>
+    private void SayLine(string line) => SayGuarded(() => _host.WriteLine(line));
 
     /// <summary>
     /// Writes a line whose failure changes nothing about the run. Nothing it meets leaves
