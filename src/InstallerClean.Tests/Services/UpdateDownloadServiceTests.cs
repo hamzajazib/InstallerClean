@@ -287,6 +287,12 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         Assert.InRange(point, 1, length - 1);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void The_gate_never_holds_before_the_first_byte(long length) =>
+        Assert.Equal(1, AppUpdater.GatePoint(length));
+
     [Fact]
     public async Task A_gate_and_a_reached_file_left_by_an_earlier_download_are_gone_once_the_local_file_answers()
     {

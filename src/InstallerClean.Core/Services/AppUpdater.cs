@@ -483,7 +483,8 @@ public sealed class AppUpdater : IAppUpdater
     /// <summary>
     /// How much of a file of <paramref name="length"/> bytes a download held at the gate has
     /// passed when it stops: half the file, and never less than one byte or more than 8 MB, so
-    /// every kind of copy stops with part of it on disk.
+    /// a file of two bytes or more stops with part of it on disk, and no hold comes before
+    /// the first byte.
     /// </summary>
     internal static long GatePoint(long length) => Math.Clamp(length / 2, 1, 8 * 1024 * 1024);
 
