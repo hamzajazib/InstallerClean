@@ -696,6 +696,8 @@ const STRIPPED = new Set([
   'Cli.EventLogUpdateDownloadFailedThenCancelled',
   'Cli.EventLogUpdateInstallFailedThenCancelled',
   'Cli.EventLogUpdateInUseThenCancelled',
+  // The machine Cli key for an update not installed because nothing was left at the path, by the same rule.
+  'Cli.EventLogUpdateNothingAtPath',
 ]);
 let stripped = 0;
 text = text.replace(/[^\S\n]*<data name="(Cli\.[^"]*)"[\s\S]*?<\/data>\n?/g,

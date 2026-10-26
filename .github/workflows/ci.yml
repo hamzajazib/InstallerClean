@@ -473,6 +473,15 @@ jobs:
               exit 1
               ;;
           esac
+          # Each language's generator checks what it wrote and says GENERATION HAS ISSUES
+          # where it finds a fault, such as a key in neither its translations nor its
+          # stripped set, while still finishing.
+          case "$log" in
+            *"GENERATION HAS ISSUES"*)
+              echo "A generator reported GENERATION HAS ISSUES; its output is above." >&2
+              exit 1
+              ;;
+          esac
 
       - name: Check the access-key sets for a clash
         if: '!cancelled()'

@@ -2505,6 +2505,8 @@ Esegui di nuovo InstallerClean come amministratore.</value></data>
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->
+  <!-- 0 = the version that was not installed, 1 = the newest release's page. Event ID 3007, written
+       by that version, the copy being updated having closed and left nothing at its path. -->
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
        before it started, so nothing ran. -->
