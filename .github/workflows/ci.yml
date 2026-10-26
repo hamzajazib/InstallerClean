@@ -1014,10 +1014,12 @@ jobs:
       # fails unless each look for a file to load beside a build or in a working folder of
       # its own is planted for, each for data is not, a load of a planted file fails, and a
       # look recorded under a short name is read in full or fails (Test-ImageNameControls,
-      # Test-WorkingFolderControls and Test-ShortNameControls in native-libraries.ps1). The checks on how a build in replace mode ended are run the
-      # same way over ends made up with a fault planted in each, and must fail at each
-      # (Test-ReplaceControls), and so is the check on the slim's loads before its Main
-      # (Test-WhereInstalledControls).
+      # Test-WorkingFolderControls and Test-ShortNameControls in native-libraries.ps1). The
+      # checks on how a build in replace mode ended are run the same way over ends made up
+      # with a fault planted in each, and must fail at each (Test-ReplaceControls), and so
+      # are the check on the slim's loads before its Main (Test-WhereInstalledControls) and
+      # the reading of each run's rows, and of the replace a run starts, from the lifetime
+      # of its own process (Test-LifetimeControls).
       #
       # Each build is also started in replace mode, as a newer version an update downloaded
       # is started to put itself at the old copy's path (Invoke-Replace): from a staging
@@ -1038,6 +1040,7 @@ jobs:
           Test-ImageNameControls
           Test-WorkingFolderControls
           Test-ShortNameControls
+          Test-LifetimeControls
           Test-ReplaceControls
           Test-WhereInstalledControls
           "  interactive: $([Environment]::UserInteractive); session $((Get-Process -Id $PID).SessionId)"
@@ -1062,7 +1065,9 @@ jobs:
             $ended = Get-Date
             [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id; Started = $started; Ended = $ended }
           }
-          $byProcess = Read-Record (Stop-Record 'first') $runs
+          $read = Read-RecordWithReplaces (Stop-Record 'first') $runs
+          $byProcess = $read.ByProcess
+          $runs = $read.Runs
 
           $planned = [System.Collections.Generic.List[object]]::new()
           foreach ($run in $runs) {
@@ -1094,7 +1099,7 @@ jobs:
             # is as wrong as an entry. A replace that finds nothing left at the path writes
             # why, which is printed.
             $crashLogPattern = '\\AppData\\Local\\(' + (($crashLogFolders | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')\\crash\.log$'
-            $rows = $byProcess[[string]$run.Id]
+            $rows = $byProcess[(Get-RunKey $run)]
             $writes = @(for ($i = 0; $i -lt $rows.Count; $i++) {
               if ($rows[$i].Operation -eq 'WriteFile' -and $rows[$i].Path -match $crashLogPattern) { $i + 1 }
             })
@@ -1138,7 +1143,7 @@ jobs:
             if ($run.StartedCopy) { continue }
             $plants = @(Get-RunPlants $run $read $notPlanted $listedSeen $extractionFolders)
 
-            $alone = @($plants | Where-Object { $_.Place -eq 'beside' -and (Split-Path $_.Path -Leaf) -in $plantedAlone })
+            $alone = @($plants | Where-Object { $_.Place -in 'beside', 'working' -and (Split-Path $_.Path -Leaf) -in $plantedAlone })
             # The replace a run starts is started again by that run in the second pass, so
             # its plants go with the run's, in the same staging folder, and are judged
             # against the replace.
@@ -1153,9 +1158,26 @@ jobs:
                 Plants = @($plants | Where-Object { $_ -notin $alone }); ReplacePlants = @()
               })
             }
+            # A plant alone for the replace goes with a run of its own of the build that starts
+            # it, labelled as that run, which the replace's label then follows. One the run
+            # plants alone too is beside the run as well, which takes it first, so that run's own
+            # plant alone is the one judged.
+            if ($run.StartedReplace) {
+              $runAlone = @($planned | Where-Object { $_.BuildLabel -eq $run.Build.Label -and $_.JudgeOnLoadAlone } | ForEach-Object { $_.Plants } |
+                ForEach-Object { "$($_.Place)|$($_.Path)" })
+              foreach ($plant in @($alone | Where-Object { "$($_.Place)|$($_.Path)" -in $runAlone })) {
+                "  not planted alone for $($run.Label): $($plant.Path), which $($run.Build.Label) is planted alone with"
+              }
+              $alone = @($alone | Where-Object { "$($_.Place)|$($_.Path)" -notin $runAlone })
+            }
+            # The place is in the label, so a name looked for both beside the exe and in its
+            # working folder gives two runs with folders of their own.
             foreach ($plant in $alone) {
+              $where = if ($plant.Place -eq 'working') { ' in its working folder' } else { '' }
+              $aloneLabel = if ($run.StartedReplace) { "$($run.Build.Label) with $(Split-Path $plant.Path -Leaf) alone$where for its replace" }
+                else { "$($run.Label) with $(Split-Path $plant.Path -Leaf) alone$where" }
               $planned.Add([pscustomobject]@{
-                Label = "$($run.Label) with $(Split-Path $plant.Path -Leaf) alone"; BuildLabel = $run.Build.Label; JudgeOnLoadAlone = $true
+                Label = $aloneLabel; BuildLabel = $run.Build.Label; JudgeOnLoadAlone = $true
                 BundleFiles = $bundleFiles; Plants = @(if (-not $run.StartedReplace) { $plant }); ReplacePlants = @(if ($run.StartedReplace) { $plant })
               })
             }
@@ -1219,7 +1241,9 @@ jobs:
               Placed = $placed; BundleFiles = @($p.BundleFiles | Where-Object { $_ }); JudgeOnLoadAlone = $p.JudgeOnLoadAlone
             }
           }
-          $byProcess = Read-Record (Stop-Record 'second') $runs
+          $read = Read-RecordWithReplaces (Stop-Record 'second') $runs
+          $byProcess = $read.ByProcess
+          $runs = $read.Runs
 
           foreach ($run in $runs) {
             $read = Read-Run $run $byProcess
@@ -1267,7 +1291,7 @@ jobs:
           $plantsFile = Join-Path $env:RUNNER_TEMP 'plants.json'
           if (Test-Path $plantsFile) {
             foreach ($p in @(Get-Content -Raw $plantsFile | ConvertFrom-Json)) {
-              foreach ($plant in @($p.Plants | Where-Object { $_ -and $_.Place -eq 'extraction' -and (Test-Path -LiteralPath $_.Path) })) {
+              foreach ($plant in @(@($p.Plants) + @($p.ReplacePlants) | Where-Object { $_ -and $_.Place -eq 'extraction' -and (Test-Path -LiteralPath $_.Path) })) {
                 Remove-Item -LiteralPath $plant.Path -Force -ErrorAction SilentlyContinue
                 if (Test-Path -LiteralPath $plant.Path) { Fail "The planted $($plant.Path) could not be removed before the trace." }
                 else { "  removed the planted $($plant.Path)" }
@@ -1779,9 +1803,9 @@ jobs:
             $byProcess = Read-Record $csv @($run)
             $read = Read-Run $run $byProcess
             if ($read) {
-              $run.TempFolders = @(Test-OwnLoads $run $byProcess[[string]$run.Id])
+              $run.TempFolders = @(Test-OwnLoads $run $byProcess[(Get-RunKey $run)])
               if ($pass -eq 'second') { Test-PlantedRun $run $read }
-              $started = @(Test-StartedProcesses $csv $run $byProcess[[string]$run.Id] '')
+              $started = @(Test-StartedProcesses $csv $run $byProcess[(Get-RunKey $run)] '')
               foreach ($child in $started) { $kept.Add("$($child.Id)`t$($child.Exe)") }
               Show-TempFolders $out (@($run) + $started)
             }
@@ -1806,13 +1830,14 @@ jobs:
 
       # A Process Monitor record holds every process on the runner, so only the rows of
       # the setup's processes, each by its process ID and name, and of every process
-      # named as one of the builds' exes are kept, in the record's order,
-      # each column as recorded. The log's row N for a process is its Nth row in the
-      # file with that PID. Detail is emptied on a row that starts or creates a process
-      # and must stay so, since the artifact is public. The host traces are kept whole, and
-      # so is each crash log the app keeps as the job leaves it, beside the first pass's
-      # copy of it: crash.log from the app's folder, nofaff-crash.log from the NoFaff one.
-      # A run that ended before a record was saved keeps what there is, and this step
+      # named as one of the builds' exes or as a download is staged are kept, in the
+      # record's order, each column as recorded. The log's row N for a process is its Nth
+      # row in the file with that PID; its row N of the record is the record's own Nth row,
+      # which this file does not number. Detail is emptied on a row that starts or creates
+      # a process and must stay so, since the artifact is public. The host traces are kept
+      # whole, and so is each crash log the app keeps as the job leaves it, beside the first
+      # pass's copy of it: crash.log from the app's folder, nofaff-crash.log from the NoFaff
+      # one. A run that ended before a record was saved keeps what there is, and this step
       # judges nothing. The artifact's name carries the run attempt, so a job run again
       # uploads under a name of its own.
       - name: Keep the Process Monitor rows and the host traces
@@ -1821,7 +1846,7 @@ jobs:
         run: |
           $kept = Join-Path $env:RUNNER_TEMP 'kept'
           New-Item -ItemType Directory -Force -Path $kept | Out-Null
-          $exes = 'installerclean-cli.exe', 'InstallerClean.exe'
+          $exes = 'installerclean-cli.exe', 'InstallerClean.exe', 'InstallerClean-portable.exe', 'InstallerClean-slim.exe'
           foreach ($name in 'first', 'second') {
             $csv = Join-Path $env:RUNNER_TEMP "procmon\$name.csv"
             if (-not (Test-Path $csv)) { "  no $csv"; continue }

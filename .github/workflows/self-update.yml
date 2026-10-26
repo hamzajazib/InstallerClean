@@ -481,7 +481,7 @@ jobs:
             ConvertTo-Json -Depth 5 -InputObject ([pscustomobject]@{ Plants = $plants; BundleFiles = $bundleFiles }) |
               Set-Content (Join-Path $env:RUNNER_TEMP 'plants.json')
 
-            $started = @(Test-StartedProcesses $env:UPDATE_RECORD $old $byProcess[[string]$old.Id] $env:EXE)
+            $started = @(Test-StartedProcesses $env:UPDATE_RECORD $old $byProcess[(Get-RunKey $old)] $env:EXE)
             foreach ($child in $started) { $kept.Add("$($child.Id)`t$($child.Exe)") }
             if ('${{ matrix.route }}' -eq 'setup' -and -not @($kept | Select-Object -Skip 1)) { Fail "The old copy started no setup that Process Monitor recorded." }
           }

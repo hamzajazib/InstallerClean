@@ -71,7 +71,7 @@ function Stop-Record([string]$name) {
 # the windows share the single-instance mutex. The command line scans and ends;
 # a window is given twenty seconds and then ended.
 # The addresses github.com resolved to around each run that checks for updates, by its
-# process id, which Test-UpdateCheck judges its connections against.
+# process ID and label, which Test-UpdateCheck judges its connections against.
 $script:GitHubAddressesByRun = @{}
 
 # The addresses github.com resolves to now, or none where the lookup fails.
@@ -87,7 +87,7 @@ function Invoke-Build($build, [string]$label, [string]$folder) {
   # Read now, so the exit code is kept once the process ends.
   $null = $p.Handle
   if (-not $p.WaitForExit($build.Wait * 1000)) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit() }
-  if ($build.UpdateCheck) { $script:GitHubAddressesByRun[[string]$p.Id] = @(@($before) + @(Get-GitHubAddresses) | Sort-Object -Unique) }
+  if ($build.UpdateCheck) { $script:GitHubAddressesByRun["$($p.Id)|$label"] = @(@($before) + @(Get-GitHubAddresses) | Sort-Object -Unique) }
   Write-Host "  ${label}: process $($p.Id), ended with $($p.ExitCode)"
   $p.Id
 }
@@ -131,36 +131,179 @@ function Get-FullPath([string]$path) {
   $longParts[$short] + $path.Substring($short.Length)
 }
 
-# Each run's rows, by process. Process Monitor writes the record in event order,
-# so a row's place among its process's rows is its place in that sequence. Rows
-# are taken by process ID as well as name, since other processes on the runner
-# can carry the same name. Each path is written in full by Get-FullPath, and the
-# step fails, naming the path, where one cannot be, so a look spelled in short names
-# is judged with the rest.
-function Read-Record([string]$csv, [object[]]$runs) {
-  $exes = @{}
-  foreach ($run in $runs) {
-    if ($exes.ContainsKey([string]$run.Id)) { Fail "Two runs had process $($run.Id) in one record, so neither is judged." }
-    $exes[[string]$run.Id] = $run.Exe
-  }
-  $shared = @($runs | Group-Object { [string]$_.Id } | Where-Object Count -gt 1 | ForEach-Object Name)
-  $byProcess = @{}
+# Each run's rows, by the run's key (Get-RunKey). Process Monitor writes the record in
+# event order, so a row's place among its process's rows is its place in that sequence.
+# Windows hands a process ID on once a process has ended, and the stand-in old copy
+# Invoke-Replace starts carries the name of the build's exe, so a process ID and a name do
+# not say whose rows are whose. Each process's rows from its Process Start row to the
+# next Process Start row of its ID are one lifetime: Windows closes a process's handles
+# after its Process Exit row, so its CloseFile and RegCloseKey rows come after that row.
+# A lifetime is a run's where it is the run's process ID and its first Load Image, which
+# is the process's own image, is the run's exe in the run's folder. A run with StartedBy is
+# the copy that run starts, so its lifetime also begins while that run's does. A run with
+# ByProcessId, a process another started whose folder its own rows settle
+# (Test-StartedProcesses), takes the first lifetime of its ID and name begun after the row
+# After that no other such run has taken.
+# Every row a run is given carries its row in the record as Row.
+#
+# With $started, a run that starts a replace (Test-StartsReplace) has that replace read in
+# the same pass: a lifetime of another process whose image is the run's own exe, begun
+# while the run's lifetime is, is a run of its own (New-StartedReplace), added to
+# $started. Each path is written in full by Get-FullPath, and the step fails, naming the
+# path, where one cannot be, so a look spelled in short names is judged with the rest.
+#
+# The step fails, and the run is judged on none of its rows and its key added to $dropped,
+# where two runs could take one lifetime or two lifetimes are one run's. It fails too
+# where a process with a run's ID and the name of its exe has rows with no Process Start
+# before them, or a lifetime of a run's ID ends with no load of its image, unless the run
+# is a ByProcessId run, which Test-StartedProcesses refuses itself: whether those rows are
+# the run's is not known. Any other process with such rows is given to no run, and a line
+# says so, since rows given to no run judge nothing: a process started before the record
+# began, such as a replace still running from an earlier update.
+function Read-Record([string]$csv, [object[]]$runs, [System.Collections.Generic.List[object]]$started = $null,
+    [System.Collections.Generic.HashSet[string]]$dropped = $null) {
   $usedParts.Clear()
   $unwritten = [ordered]@{}
-  Import-Csv $csv | ForEach-Object {
-    $exe = $exes[$_.PID]
-    if ($exe -and $_.'Process Name' -eq $exe -and $_.PID -notin $shared) {
-      if (-not $byProcess.ContainsKey($_.PID)) { $byProcess[$_.PID] = [System.Collections.Generic.List[object]]::new() }
-      $full = if ($_.Path.Contains('~')) { Get-FullPath $_.Path } else { $_.Path }
-      if ($null -eq $full) { if (-not $unwritten.Contains($_.Path)) { $unwritten[$_.Path] = "$exe, process $($_.PID)" } }
-      else { $_.Path = $full }
-      $byProcess[$_.PID].Add($_)
-    }
+  $byId = @{}
+  foreach ($run in $runs) {
+    $id = [string]$run.Id
+    if (-not $byId.ContainsKey($id)) { $byId[$id] = [System.Collections.Generic.List[object]]::new() }
+    $byId[$id].Add($run)
+    $run | Add-Member -Force -NotePropertyName RecordKey -NotePropertyValue $id
+    if (-not $run.PSObject.Properties['ByProcessId']) { $run | Add-Member -Force -NotePropertyName Image -NotePropertyValue (Get-RunImage $run) }
   }
+  # Runs that share a process ID, a lifetime apart, are kept apart by label.
+  foreach ($list in @($byId.Values | Where-Object Count -gt 1)) { foreach ($run in $list) { $run.RecordKey = "$($run.Id)|$($run.Label)" } }
+  $names = [System.Collections.Generic.HashSet[string]]::new([string[]]@($runs | ForEach-Object Exe), [StringComparer]::OrdinalIgnoreCase)
+  $starting = @(if ($null -ne $started) { $runs | Where-Object { Test-StartsReplace $_ } })
+  $owners = @{}
+  $unjudged = [System.Collections.Generic.HashSet[string]]::new()
+  $live = @{}
+  $byProcess = @{}
+  $index = 0
+
+  function Get-RowPath($row) {
+    $full = Get-FullPath $row.Path
+    if ($null -eq $full) {
+      if (-not $unwritten.Contains($row.Path)) { $unwritten[$row.Path] = "$($row.'Process Name'), process $($row.PID)" }
+      return $row.Path
+    }
+    $full
+  }
+
+  function Add-LifetimeRow($life, $row) {
+    $row.Path = Get-RowPath $row
+    $byProcess[$life.Key].Add($row)
+  }
+
+  # Whether $run's lifetime began before row $at and had not ended by then.
+  function Test-LiveAt($run, [int]$at) {
+    $life = $owners[$run.RecordKey]
+    $life -and $life.Start -lt $at -and (-not $life.Ended -or $life.Ended -gt $at)
+  }
+
+  # Settles whose $life is, once its image is known or it has ended without one.
+  function Resolve-Lifetime($life, [string]$image) {
+    $life.Decided = $true
+    $id = $life.Id
+    $candidates = @($byId[$id] | Where-Object { $_ })
+    # A process another started takes the first lifetime of its ID and name begun after the
+    # row that named it, and of two such processes, the one named later.
+    $children = @($candidates | Where-Object { $_.PSObject.Properties['ByProcessId'] -and $_.Exe -eq $life.Name -and $life.Start -gt $_.After -and -not $owners.ContainsKey($_.RecordKey) } |
+      Sort-Object After -Descending | Select-Object -First 1)
+    $claim = @(foreach ($run in $candidates) {
+      $mine = if ($run.PSObject.Properties['ByProcessId']) { $run -in $children }
+        else { $image -and $image -eq $run.Image -and (-not $run.PSObject.Properties['StartedBy'] -or (Test-LiveAt $run.StartedBy $life.Start)) }
+      if ($mine) { $run }
+      elseif ($image) { Write-Host "  process $id from row $($life.Start) of the record, running $image, is not $($run.Label), so those rows are not its" }
+    })
+    if (-not $claim -and $image) {
+      $parent = @($starting | Where-Object { $_.Image -eq $image -and (Test-LiveAt $_ $life.Start) })
+      if ($parent) {
+        $replace = New-StartedReplace $parent[0] ([int]$id)
+        $replace | Add-Member -Force -NotePropertyName RecordKey -NotePropertyValue "$id|$($replace.Label)|$($life.Start)"
+        $replace | Add-Member -Force -NotePropertyName Image -NotePropertyValue $image
+        $started.Add($replace)
+        $claim = @($replace)
+      }
+    }
+    if (-not $claim) {
+      $own = @($candidates | Where-Object { $_.Exe -eq $life.Name -and -not $_.PSObject.Properties['ByProcessId'] })
+      if (-not $image -and $own) { Fail "Process Monitor recorded no load of the image of $($life.Name), process $id, from row $($life.Start) of the record, so whether those rows are $($own[0].Label)'s is not known." }
+      elseif (-not $image) { Write-Host "  $($life.Name), process $id, from row $($life.Start) of the record, loaded no image, so its rows are no run's" }
+      $life.Held = $null
+      return
+    }
+    if ($claim.Count -gt 1) {
+      Fail "Process Monitor recorded process $id from row $($life.Start) of the record as the run of each of $(($claim | ForEach-Object Label) -join ' and '), so none of them is judged."
+      foreach ($run in $claim) { $null = $unjudged.Add($run.RecordKey) }
+      $life.Held = $null
+      return
+    }
+    $run = $claim[0]
+    if ($owners.ContainsKey($run.RecordKey)) {
+      Fail "Process Monitor recorded two lifetimes of process $id, from rows $($owners[$run.RecordKey].Start) and $($life.Start) of the record, that are both $($run.Label), so neither is judged."
+      $null = $unjudged.Add($run.RecordKey)
+      $life.Held = $null
+      return
+    }
+    $owners[$run.RecordKey] = $life
+    $life.Key = $run.RecordKey
+    $byProcess[$life.Key] = [System.Collections.Generic.List[object]]::new()
+    foreach ($held in $life.Held) { Add-LifetimeRow $life $held }
+    $life.Held = $null
+  }
+
+  function New-Lifetime([string]$id, [string]$name, [int]$start, [bool]$decided) {
+    [pscustomobject]@{ Id = $id; Name = $name; Start = $start; Ended = $null; Decided = $decided; Key = $null
+      Held = $(if (-not $decided) { , [System.Collections.Generic.List[object]]::new() }) }
+  }
+
+  Import-Csv $csv | ForEach-Object {
+    $index++
+    $name = $_.'Process Name'
+    if (-not $names.Contains($name)) { return }
+    $id = $_.PID
+    $life = $live[$id]
+    if ($_.Operation -eq 'Process Start' -or -not $life -or $life.Name -ne $name) {
+      # A lifetime still waiting for its image ends here without one.
+      if ($life -and -not $life.Decided) { Resolve-Lifetime $life '' }
+      if ($_.Operation -eq 'Process Start') { $life = New-Lifetime $id $name $index $false }
+      else {
+        $own = @($byId[$id] | Where-Object { $_ -and $_.Exe -eq $name -and -not $_.PSObject.Properties['ByProcessId'] })
+        if ($own) { Fail "Process Monitor recorded $name, process $id, from row $index of the record with no Process Start before it, so whether those rows are $($own[0].Label)'s is not known." }
+        else { Write-Host "  $name, process $id, from row $index of the record: no Process Start before it, so its rows are no run's" }
+        $life = New-Lifetime $id $name $index $true
+      }
+      $live[$id] = $life
+    }
+    if ($_.Operation -eq 'Process Exit') { $life.Ended = $index }
+    if (-not $life.Decided) {
+      $_ | Add-Member -NotePropertyName Row -NotePropertyValue $index
+      $life.Held.Add($_)
+      # Written in full only to be compared: a path that cannot be is failed once its rows are a run's.
+      if ($_.Operation -eq 'Load Image') { $full = Get-FullPath $_.Path; Resolve-Lifetime $life $(if ($null -eq $full) { $_.Path } else { $full }) }
+    }
+    elseif ($life.Key) { $_ | Add-Member -NotePropertyName Row -NotePropertyValue $index; Add-LifetimeRow $life $_ }
+  }
+  foreach ($life in @($live.Values | Where-Object { -not $_.Decided })) { Resolve-Lifetime $life '' }
+  # A run judged on none of its rows loses those read before that was known, too.
+  foreach ($key in $unjudged) { $byProcess.Remove($key); if ($null -ne $dropped) { $null = $dropped.Add($key) } }
   Write-Host "Process Monitor recorded $([int]($byProcess.Values | Measure-Object -Property Count -Sum).Sum) operations by the builds."
   foreach ($short in $usedParts) { Write-Host "  paths under $short are read in full, under $($longParts[$short])" }
   foreach ($path in $unwritten.Keys) { Fail "$($unwritten[$path]): Process Monitor recorded $path, which could not be written in full, so the looks there were not judged." }
   $byProcess
+}
+
+# The key Read-Record gives $run's rows under: its process ID, or where another run in the
+# same record had that ID, the ID with its label.
+function Get-RunKey($run) { if ($run.PSObject.Properties['RecordKey']) { $run.RecordKey } else { [string]$run.Id } }
+
+# The path of $run's exe, written in full where its folder is spelled in short names.
+function Get-RunImage($run) {
+  $path = "$($run.Folder.TrimEnd('\'))\$($run.Exe)"
+  $full = Get-FullPath $path
+  if ($null -eq $full) { $path } else { $full }
 }
 
 # Looks beside a run's exe or under %TEMP%\.net that are for data rather than for a
@@ -187,7 +330,7 @@ $dataExtensions = [System.Collections.Generic.HashSet[string]]::new([string[]]@(
 # which a start of the command line or the window clears, the exclusion going by name
 # whatever the run; and where it is at a path the run opens as a folder or has rows under,
 # as the folders a bundle extracts into. The working folder itself, which Windows opens for
-# the run as it starts, is a folder and so left out too.
+# the run as it starts, is not in it, so it is left out too.
 function Get-Libraries($rows, [string]$folder, [string]$exe, [string]$workingFolder = '') {
   $own = $folder.TrimEnd('\') + '\'
   $working = if ($workingFolder) { $workingFolder.TrimEnd('\') + '\' }
@@ -298,7 +441,7 @@ function Get-Plant([string]$name, $loads) {
 # nothing where Process Monitor recorded nothing for it.
 function Read-Run($run, $byProcess) {
   Write-Host "== $($run.Label), $($run.Exe), process $($run.Id)"
-  $rows = $byProcess[[string]$run.Id]
+  $rows = $byProcess[(Get-RunKey $run)]
   if (-not $rows) { Fail "$($run.Label): Process Monitor recorded nothing for process $($run.Id)."; return }
   Write-Host "  $($rows.Count) operations"
   $libraries = @(Get-Libraries $rows $run.Folder $run.Exe $run.WorkingFolder)
@@ -334,14 +477,14 @@ function Test-MustLoad($run, $loads) {
 # judged, so a run of the same exe before or after it cannot answer for it
 # (Read-ApplicationLog).
 function Test-UpdateCheck($run, $byProcess) {
-  $github = @(@($script:GitHubAddressesByRun[[string]$run.Id]) + @(Get-GitHubAddresses) | Where-Object { $_ } | Sort-Object -Unique)
-  $answers = @($byProcess[[string]$run.Id] | Where-Object {
+  $github = @(@($script:GitHubAddressesByRun["$($run.Id)|$($run.Label)"]) + @(Get-GitHubAddresses) | Where-Object { $_ } | Sort-Object -Unique)
+  $answers = @($byProcess[(Get-RunKey $run)] | Where-Object {
     $_.Operation -eq 'TCP Receive' -and $_.Path -match '-> (.+):(https|443)$' -and
     ($Matches[1] -match '(^|\.)github\.com$' -or $Matches[1] -in $github)
   })
   if ($answers) { "  $($run.Label): the update check had an answer from $(($answers[0].Path -split ' -> ')[-1]) at $($answers[0].'Time of Day')" }
   else {
-    $seen = @($byProcess[[string]$run.Id] | Where-Object { $_.Operation -eq 'TCP Receive' } | ForEach-Object { ($_.Path -split ' -> ')[-1] } | Sort-Object -Unique)
+    $seen = @($byProcess[(Get-RunKey $run)] | Where-Object { $_.Operation -eq 'TCP Receive' } | ForEach-Object { ($_.Path -split ' -> ')[-1] } | Sort-Object -Unique)
     Fail ("$($run.Label): the update check got no answer from GitHub, so the run's network libraries were not judged. " +
       "github.com resolved to $(if ($github) { $github -join ', ' } else { 'nothing' }) around the run; " +
       "the run received from $(if ($seen) { $seen -join ', ' } else { 'nowhere' }).")
@@ -747,7 +890,8 @@ function Get-WhenSuffix($run, $row, $marker) {
 function Test-PlantedRun($run, $read) {
   # A native library is mapped and loaded; a managed one can be read instead, so
   # any of the three by the build counts as the planted file being taken.
-  $placedPaths = @($run.Placed | ForEach-Object Path)
+  # A run sharing its folder with another is judged against that run's plants too.
+  $placedPaths = @(@($run.Placed) + @($run.SharedPlaced) | Where-Object { $_ } | ForEach-Object Path)
   $loadedPaths = @($read.Loads | ForEach-Object Path)
   foreach ($taken in ($read.Libraries | Where-Object { $_.Operation -in 'CreateFileMapping', 'ReadFile' -and $placedPaths -contains $_.Path -and $loadedPaths -notcontains $_.Path } | Group-Object Path)) {
     $first = $taken.Group[0]
@@ -832,13 +976,14 @@ function Test-StartedProcesses([string]$csv, $parent, $parentRows, [string]$skip
         if ($skip -and $row.Path -eq $skip) { continue }
         if ($row.Detail -notmatch '^PID: (\d+)') { Fail "A Process Create row of process $($p.Run.Id) names no process ID."; continue }
         [pscustomobject]@{ Label = Split-Path $row.Path -Leaf; Build = [pscustomobject]@{ Exe = $row.Path }; Folder = Split-Path $row.Path
-          Exe = Split-Path $row.Path -Leaf; Id = [int]$Matches[1]; Parent = "$($p.Run.Exe), process $($p.Run.Id)"; StartedAs = $row.Path; TempFolders = @() }
+          Exe = Split-Path $row.Path -Leaf; Id = [int]$Matches[1]; Parent = "$($p.Run.Exe), process $($p.Run.Id)"; StartedAs = $row.Path; TempFolders = @()
+          ByProcessId = $true; After = $(if ($row.PSObject.Properties['Row']) { $row.Row } else { 0 }) }
       }
     })
     if (-not $started) { break }
     $byChild = Read-Record $csv $started
     $next = foreach ($child in $started) {
-      $rows = $byChild[[string]$child.Id]
+      $rows = $byChild[(Get-RunKey $child)]
       if (-not $rows) { $all.Add($child); Fail "Process Monitor recorded nothing for $($child.Exe), process $($child.Id)."; continue }
       $image = @($rows | Where-Object { $_.Operation -eq 'Load Image' -and (Split-Path $_.Path -Leaf) -eq $child.Exe })
       if (-not $image) { $all.Add($child); Fail "$($child.Exe), process $($child.Id), started as $($child.StartedAs): Process Monitor recorded no load of its image, so its folder is not known and its looks were not judged."; continue }
@@ -968,6 +1113,7 @@ function Test-SetupControls {
   $created = 'Desired Access: Generic Read/Write, Disposition: OverwriteIf, OpenResult: Created'
   $opened = 'Desired Access: Generic Read, Disposition: Open, OpenResult: Opened'
   $rows = @(
+    @(201, 'control.tmp', 'Process Start', '', ''),
     @(201, 'control.tmp', 'Load Image', "$own\control.tmp", ''),
     @(201, 'control.tmp', 'Load Image', "$own\planted.dll", ''),
     @(201, 'control.tmp', 'CreateFile', "$own\opened.dll", $opened),
@@ -979,8 +1125,10 @@ function Test-SetupControls {
     @(201, 'control.tmp', 'Load Image', "$other\uncreated.dll", ''),
     @(201, 'control.tmp', 'CreateFile', "$unseen\helper.dll", $created),
     @(201, 'control.tmp', 'Load Image', "$unseen\helper.dll", ''),
+    @(202, 'skipped.exe', 'Process Start', '', ''),
     @(202, 'skipped.exe', 'Load Image', $skip, ''),
     @(202, 'skipped.exe', 'Load Image', 'C:\Program Files\Control\planted.dll', ''),
+    @(203, 'noimage.exe', 'Process Start', '', ''),
     @(203, 'noimage.exe', 'CreateFile', 'C:\Windows\System32\kernel32.dll', $opened)
   ) | ForEach-Object {
     [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; 'Process Name' = $_[1]; PID = [string]$_[0]; Operation = $_[2]; Path = $_[3]; Result = 'SUCCESS'; Detail = $_[4] }
@@ -1076,8 +1224,8 @@ function Test-ImageNameControls {
 # Runs Get-Libraries, Get-RunPlants and Test-PlantedRun over records made up for a run
 # started in a working folder of its own. The first pass looks there for a .dll, which
 # must be planted there although the not-planted list names it beside the exe, and for
-# a data name, which may not be; it opens the working folder itself, which may not be
-# planted for, and looks beside the exe for a .dll, which must be planted there. The
+# a data name, which may not be; and it looks beside the exe for a .dll, which must be
+# planted there. It opens the working folder itself as well, as Windows does for a run. The
 # second pass must fail where it loads the .dll planted in the working folder and where it
 # loads a file from the working folder that the first pass did not look for.
 function Test-WorkingFolderControls {
@@ -1144,6 +1292,7 @@ function Test-ShortNameControls {
   $csv = Join-Path ([IO.Path]::GetTempPath()) ('short-name-control-' + [guid]::NewGuid().ToString('N') + '.csv')
   try {
     @(
+      @('Process Start', 'SUCCESS', ''),
       @('Load Image', 'SUCCESS', "$folder\control.exe"),
       @('QueryOpen', 'NAME NOT FOUND', "$short\control-short-names\winspool.drv"),
       @('QueryOpen', 'NAME NOT FOUND', $missing)
@@ -1160,6 +1309,144 @@ function Test-ShortNameControls {
   if ($names -ne 'winspool.drv') { Fail "The control on short names planted '$names', where it should plant winspool.drv, looked for under $short." }
   else { Write-Host "  planted for the look under ${short}: $names" }
   Assert-Caught $result.Caught @("Process Monitor recorded $missing, which could not be written in full") 'short names'
+}
+
+# Runs Read-RecordWithReplaces over a record made up for the purpose, in which process IDs
+# are handed on, stand-ins carry the builds' exe names, and every process has rows after
+# its Process Exit row, as Windows closes its handles. Each run must be given the rows of
+# its own lifetime, those after its exit included, and no others: a run whose ID a
+# stand-in had before it, a replace whose ID a stand-in had, a replace and a run given one
+# ID a lifetime apart, and the copy a replace starts at the path, whose ID and image the
+# stand-in there had. A replace must follow the run that started it, a stand-in of the
+# staged exe's name beside it must not, a run judged on its loads alone that started
+# none must pass, and so must a process of a run's exe name that is no run's, with no
+# Process Start or no load of its image. A process another started must be given the
+# lifetime begun after the row naming it, not an earlier or a later one of its ID and
+# name. Two runs that could take one lifetime, two lifetimes of one run, a run's process
+# with no Process Start, one with no load of its image, and two replaces of one run must
+# each fail once, and the runs they leave unjudged must be left out.
+function Test-LifetimeControls {
+  Write-Host "== Control: whose lifetime each row in a record is"
+  $command = [pscustomobject]@{ Replace = 'command' }
+  $window = [pscustomobject]@{ Replace = 'replaced' }
+  $other = [pscustomobject]@{ Replace = $null }
+  function New-ControlRun([string]$label, [int]$id, $build, [string]$folder, [string]$exe, [switch]$LoadAlone) {
+    [pscustomobject]@{ Label = $label; Build = $build; Folder = $folder; Exe = $exe; Id = $id; JudgeOnLoadAlone = [bool]$LoadAlone }
+  }
+  $winRun = New-ControlRun 'window' 1100 $window 'C:\stage11' 'win.exe'
+  $copy = New-ControlRun 'window, the copy' 1101 $other 'C:\target11' 'app.exe'
+  $copy | Add-Member -NotePropertyName StartedBy -NotePropertyValue $winRun
+  $runs = @(
+    New-ControlRun 'read' 100 $command 'C:\stage1' 'staged.exe'
+    New-ControlRun 'reused' 200 $other 'C:\run2' 'other.exe'
+    New-ControlRun 'reuse replace' 300 $command 'C:\stage3' 'staged.exe'
+    New-ControlRun 'handed on' 400 $command 'C:\stage4' 'staged.exe'
+    New-ControlRun 'given its ID' 600 $other 'C:\run6' 'given.exe'
+    New-ControlRun 'two lifetimes' 500 $other 'C:\run5' 'twice.exe'
+    New-ControlRun 'no start' 700 $other 'C:\run7' 'nostart.exe'
+    New-ControlRun 'no image' 800 $other 'C:\run8' 'noimage.exe'
+    New-ControlRun 'none' 900 $command 'C:\stage9' 'staged.exe' -LoadAlone
+    New-ControlRun 'twice' 1000 $command 'C:\stage10' 'staged.exe'
+    $winRun
+    $copy
+    New-ControlRun 'one of two' 1200 $other 'C:\run12' 'same.exe'
+    New-ControlRun 'other of two' 1200 $other 'C:\run12' 'same.exe')
+  function Get-Lifetime([int]$id, [string]$name, [string]$image, [string[]]$looks, [switch]$Open) {
+    @(, @($id, $name, 'Process Start', ''))
+    @(, @($id, $name, 'Thread Create', ''))
+    if ($image) { @(, @($id, $name, 'Load Image', $image)) }
+    foreach ($look in $looks) { @(, @($id, $name, 'QueryOpen', $look)) }
+    if (-not $Open) { Get-End $id $name $(if ($image) { Split-Path $image } else { 'C:\nowhere' }) }
+  }
+  # The Process Exit row, and the handle closed after it.
+  function Get-End([int]$id, [string]$name, [string]$folder) {
+    @(, @($id, $name, 'Process Exit', ''))
+    @(, @($id, $name, 'CloseFile', "$folder\closed-after-exit.txt"))
+  }
+  $rows = @(
+    # A stand-in had 200 and 301 before the runs that are given them.
+    Get-Lifetime 200 'other.exe' 'C:\run2-target\other.exe' @('C:\run2-target\stand-in.dll')
+    Get-Lifetime 301 'staged.exe' 'C:\stage3-target\staged.exe' @('C:\stage3-target\stand-in.dll')
+    # And the stand-in at the window's path had the ID its copy is given, before the window started.
+    Get-Lifetime 1101 'app.exe' 'C:\target11\app.exe' @('C:\target11\stand-in.dll')
+    Get-Lifetime 200 'other.exe' 'C:\run2\other.exe' @('C:\run2\own.dll')
+    Get-Lifetime 100 'staged.exe' 'C:\stage1\staged.exe' @() -Open
+    Get-Lifetime 102 'staged.exe' 'C:\stage1-target\staged.exe' @('C:\stage1-target\stand-in.dll')
+    Get-Lifetime 101 'staged.exe' 'C:\stage1\staged.exe' @('C:\stage1\helper.dll')
+    Get-End 100 'staged.exe' 'C:\stage1'
+    Get-Lifetime 300 'staged.exe' 'C:\stage3\staged.exe' @() -Open
+    Get-Lifetime 301 'staged.exe' 'C:\stage3\staged.exe' @('C:\stage3\helper.dll')
+    Get-End 300 'staged.exe' 'C:\stage3'
+    # The replace of 400 ends, and a later run is given its ID.
+    Get-Lifetime 400 'staged.exe' 'C:\stage4\staged.exe' @() -Open
+    Get-Lifetime 600 'staged.exe' 'C:\stage4\staged.exe' @('C:\stage4\helper.dll')
+    Get-End 400 'staged.exe' 'C:\stage4'
+    Get-Lifetime 600 'given.exe' 'C:\run6\given.exe' @('C:\run6\own.dll')
+    Get-Lifetime 500 'twice.exe' 'C:\run5\twice.exe' @()
+    Get-Lifetime 500 'twice.exe' 'C:\run5\twice.exe' @()
+    @(, @(700, 'nostart.exe', 'QueryOpen', 'C:\run7\helper.dll'))
+    Get-Lifetime 800 'noimage.exe' '' @('C:\run8\helper.dll')
+    # A process of a run's exe name that is no run's, started before the record and with no image.
+    @(, @(701, 'staged.exe', 'QueryOpen', 'C:\nowhere\helper.dll'))
+    Get-Lifetime 801 'staged.exe' '' @('C:\nowhere\helper.dll')
+    Get-Lifetime 900 'staged.exe' 'C:\stage9\staged.exe' @()
+    Get-Lifetime 1000 'staged.exe' 'C:\stage10\staged.exe' @() -Open
+    Get-Lifetime 1001 'staged.exe' 'C:\stage10\staged.exe' @()
+    Get-Lifetime 1002 'staged.exe' 'C:\stage10\staged.exe' @()
+    Get-End 1000 'staged.exe' 'C:\stage10'
+    Get-Lifetime 1100 'win.exe' 'C:\stage11\win.exe' @() -Open
+    Get-Lifetime 1101 'app.exe' 'C:\target11\app.exe' @('C:\target11\own.dll')
+    Get-End 1100 'win.exe' 'C:\stage11'
+    Get-Lifetime 1200 'same.exe' 'C:\run12\same.exe' @()
+    # A process another started, whose ID an earlier process of its name had.
+    Get-Lifetime 1300 'child.tmp' 'C:\old\child.tmp' @('C:\old\stale.dll')
+    Get-Lifetime 1300 'child.tmp' 'C:\new\child.tmp' @('C:\new\own.dll')
+    # And a later process another started, given the same ID.
+    Get-Lifetime 1300 'child.tmp' 'C:\newer\child.tmp' @('C:\newer\own.dll'))
+  $starts = @(for ($i = 0; $i -lt $rows.Count; $i++) { if ($rows[$i][0] -eq 1300 -and $rows[$i][2] -eq 'Process Start') { $i } })
+  foreach ($child in @(@('child', 1), @('child, later', 2))) {
+    $runs += [pscustomobject]@{ Label = $child[0]; Build = $other; Folder = 'C:\nowhere'; Exe = 'child.tmp'; Id = 1300; ByProcessId = $true; After = $starts[$child[1]] }
+  }
+  $csv = Join-Path ([IO.Path]::GetTempPath()) ('record-lifetime-control-' + [guid]::NewGuid().ToString('N') + '.csv')
+  try {
+    $rows | ForEach-Object {
+      [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; 'Process Name' = $_[1]; PID = [string]$_[0]; Operation = $_[2]; Path = $_[3]; Result = 'SUCCESS'; Detail = '' }
+    } | Export-Csv -Path $csv -NoTypeInformation
+    $result = Invoke-Caught { Read-RecordWithReplaces $csv $runs }
+  }
+  finally { Remove-Item -LiteralPath $csv -Force -ErrorAction SilentlyContinue }
+  $read = @($result.Output | Where-Object { $_ -is [pscustomobject] -and $_.PSObject.Properties['ByProcess'] })
+  if ($read.Count -ne 1) { Fail "The control on whose lifetime each row is answered $($read.Count) readings, where it answers one."; return }
+  $labels = @($read[0].Runs | ForEach-Object Label) -join ', '
+  $expected = (@('read', (Get-StartedReplaceLabel 'read'), 'reused', 'reuse replace', (Get-StartedReplaceLabel 'reuse replace'), 'handed on',
+    (Get-StartedReplaceLabel 'handed on'), 'given its ID', 'no start', 'no image', 'none', 'twice', (Get-StartedReplaceLabel 'twice'),
+    (Get-StartedReplaceLabel 'twice'), 'window', 'window, the copy', 'child', 'child, later') -join ', ')
+  if ($labels -ne $expected) { Fail "The control on whose lifetime each row is answered the runs '$labels', where it answers '$expected'." }
+  else { Write-Host "  runs: $labels" }
+  # Each run's own looks and the handle it closed after its exit, and none of a stand-in's.
+  foreach ($check in @(@('read', 'C:\stage1'), @((Get-StartedReplaceLabel 'read'), 'C:\stage1\helper.dll'), @('reused', 'C:\run2\own.dll'),
+      @((Get-StartedReplaceLabel 'reuse replace'), 'C:\stage3\helper.dll'), @((Get-StartedReplaceLabel 'handed on'), 'C:\stage4\helper.dll'),
+      @('given its ID', 'C:\run6\own.dll'), @('window, the copy', 'C:\target11\own.dll'), @('child', 'C:\new\own.dll'), @('child, later', 'C:\newer\own.dll'))) {
+    $run = @($read[0].Runs | Where-Object Label -eq $check[0])
+    if ($run.Count -ne 1) { Fail "The control on whose lifetime each row is answered $($run.Count) runs labelled $($check[0]), where it answers one."; continue }
+    $rowsOf = @($read[0].ByProcess[(Get-RunKey $run[0])])
+    $looks = @($rowsOf | Where-Object Operation -eq 'QueryOpen' | ForEach-Object Path) -join ', '
+    $want = if ($check[1].EndsWith('.dll')) { $check[1] } else { '' }
+    $closed = @($rowsOf | Where-Object Operation -eq 'CloseFile' | ForEach-Object Path) -join ', '
+    $wantClosed = "$(if ($want) { Split-Path $want } else { $check[1] })\closed-after-exit.txt"
+    if ($looks -ne $want -or $closed -ne $wantClosed) {
+      Fail "The control on whose lifetime each row is gave $($check[0]) the looks '$looks' and the closes '$closed', where it has '$want' and '$wantClosed'."
+    }
+    else { Write-Host "  $($check[0]) looked for '$looks' and closed $closed after its exit" }
+  }
+  $stray = @($read[0].ByProcess.Keys | Where-Object { ($_ -split '\|')[0] -in '500', '700', '800', '701', '801', '102', '1200' })
+  if ($stray) { Fail "The control on whose lifetime each row is read rows under $($stray -join ', '), which is judged as no run." }
+  Assert-Caught $result.Caught @(
+    'Process Monitor recorded process 1200 from row',
+    'Process Monitor recorded two lifetimes of process 500, from rows',
+    'Process Monitor recorded nostart.exe, process 700, from row',
+    'Process Monitor recorded no load of the image of noimage.exe, process 800',
+    'twice started 2 copies of staged.exe') 'whose lifetime each row is'
 }
 
 # ---- Replace mode ----
@@ -1358,6 +1645,46 @@ function Test-ReplaceEnd($end) {
   if ($end.StillRunning) { Fail "$label left a process running from $($end.StillRunning)." }
 }
 
+# The run of the replace $parent started as process $id (Read-Record), judged from the
+# staging folder and working there (StagedRun.StartReplace), against the plants planned for
+# it and against $parent's as files beside it too.
+function New-StartedReplace($parent, [int]$id) {
+  [pscustomobject]@{
+    Label = (Get-StartedReplaceLabel $parent.Label); Build = $parent.Build; Folder = $parent.Folder; Exe = $parent.Exe; Id = $id
+    Started = $null; Ended = $null; Placed = $parent.ReplacePlaced; SharedPlaced = $parent.Placed; Target = $parent.Target
+    WorkingFolder = ''; StartedReplace = $true; StartedBy = $parent; BundleFiles = $parent.BundleFiles; JudgeOnLoadAlone = $parent.JudgeOnLoadAlone
+  }
+}
+
+# Whether $run is one that starts a replace once its command has ended: a run of a build
+# whose Replace is 'command', other than the replace such a run started.
+function Test-StartsReplace($run) { $run.Build.Replace -eq 'command' -and -not $run.PSObject.Properties['StartedReplace'] }
+
+# Reads the record $csv for $runs, and answers the record and the runs with, after each run
+# that starts a replace, the replace it started (Read-Record). A run Read-Record judged on
+# none of its rows is left out, the step having failed for it, and so is a replace of one.
+# Fails where a run that starts a replace started other than one, unless it is judged on
+# its loads alone and started none, which it says, so a replace never judged is never
+# silent.
+function Read-RecordWithReplaces([string]$csv, $runs) {
+  $started = [System.Collections.Generic.List[object]]::new()
+  $dropped = [System.Collections.Generic.HashSet[string]]::new()
+  $byProcess = Read-Record $csv $runs $started $dropped
+  $all = foreach ($run in $runs) {
+    if ($dropped.Contains((Get-RunKey $run))) { continue }
+    $run
+    if (-not (Test-StartsReplace $run)) { continue }
+    $replaces = @($started | Where-Object { $_.StartedBy -eq $run })
+    foreach ($replace in @($replaces | Where-Object { -not $dropped.Contains((Get-RunKey $_)) })) {
+      Write-Host "  $($replace.Label): process $($replace.Id), started by process $($run.Id)"
+      $replace
+    }
+    if ($run.JudgeOnLoadAlone -and -not $replaces) { Write-Host "  $($run.Label) started no replace, so none is judged in this run." }
+    elseif ($replaces.Count -ne 1) { Fail "$($run.Label) started $($replaces.Count) copies of $($run.Exe), where it starts one replace." }
+  }
+  [pscustomobject]@{ ByProcess = $byProcess; Runs = @($all) }
+}
+
 # Starts $build in replace mode from a new staging folder holding $plants, for the pass
 # $pass, and answers the replacer's run and, with -JudgeCopy, for a window build that put
 # itself in place, the run of the copy it started at the path. With -JudgeCopy that copy
@@ -1371,8 +1698,9 @@ function Test-ReplaceEnd($end) {
 # as WorkingFolder. It runs the scan standing for the copy at the path, so the stand-in for
 # that copy is left running until it has ended, and the replace it then starts, detached
 # and from the staging folder, is waited for until the stand-in has ended and the replace
-# with it. That replace is answered as a run of its own (Get-StartedReplaceLabel), judged
-# against $replacePlants, which are put in the staging folder beside $plants.
+# with it. That replace is judged as a run of its own once the record is read
+# (Read-RecordWithReplaces), against $replacePlants, which are put in the staging folder
+# beside $plants; the run carries both lists.
 function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]$LoadAlone, [switch]$JudgeCopy, $replacePlants = @()) {
   $staging = New-StagingFolder
   # Read now: a window started at the path deletes the staged exe as it starts, and the
@@ -1427,12 +1755,10 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
     Stop-Process -Id $replacer.Id -Force -ErrorAction SilentlyContinue
     $replacer.WaitForExit()
   }
-  $replaces = @()
   if ($command) {
     # The replace the run started waits for the copy it stood for, which is ended now.
     $replaces = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith("$staging", 'OrdinalIgnoreCase') })
     Write-Host "  ${label}: $($replaces.Count) replace process(es) running from the staging folder as the run ended: $(($replaces | ForEach-Object Id) -join ', ')"
-    if ($replaces.Count -ne 1 -and -not $LoadAlone) { Fail "$label left $($replaces.Count) replace processes running from the staging folder, where it starts one." }
     Stop-Process -Id $standIn.Id -Force -ErrorAction SilentlyContinue
     $standIn.WaitForExit()
     foreach ($replace in $replaces) {
@@ -1445,14 +1771,8 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
   $runs = @([pscustomobject]@{
     Label = $label; Build = $build; Folder = $staging; Exe = $stagedName; Id = $replacer.Id; Started = $begun; Ended = $ended
     Placed = $placed; Target = $target; WorkingFolder = $(if ($command) { $workingFolder } else { '' })
+    ReplacePlaced = $replacePlaced; SharedPlaced = $replacePlaced
   })
-  # The replace works in the staging folder, its own (StagedRun.StartReplace).
-  foreach ($replace in $replaces) {
-    $runs += [pscustomobject]@{
-      Label = (Get-StartedReplaceLabel $label); Build = $build; Folder = $staging; Exe = $stagedName; Id = $replace.Id; Started = $begun; Ended = $ended
-      Placed = $replacePlaced; Target = $target; WorkingFolder = ''; StartedReplace = $true
-    }
-  }
   $copies = @(Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exeName)) -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $target })
   if ($build.Replace -eq 'replaced' -and $build.StartsAtPath) {
     if ($copies.Count -ne 1) { Fail "$label put itself in place and $($copies.Count) copies were running from $target, where it starts one." }
@@ -1463,7 +1783,7 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
         Write-Host "  ${label}: the copy started at the path is process $($copy.Id)"
         $runs += [pscustomobject]@{
           Label = "$label, the copy started at the path"; Build = $build.AtPath; Folder = $targetFolder; Exe = $exeName; Id = $copy.Id
-          Started = $begun; Ended = $null; StartedCopy = $true
+          Started = $begun; Ended = $null; StartedCopy = $true; StartedBy = $runs[0]
         }
       }
     }
