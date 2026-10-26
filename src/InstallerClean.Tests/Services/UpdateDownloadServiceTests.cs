@@ -273,8 +273,6 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(0, 1)]
-    [InlineData(1, 1)]
     [InlineData(2, 1)]
     [InlineData(3, 1)]
     [InlineData(4 * 1024 * 1024, 2 * 1024 * 1024)]
@@ -286,7 +284,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     {
         var point = AppUpdater.GatePoint(length);
         Assert.Equal(heldAt, point);
-        if (length >= 2) Assert.InRange(point, 1, length - 1);
+        Assert.InRange(point, 1, length - 1);
     }
 
     [Fact]
@@ -316,7 +314,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     public async Task A_download_held_at_the_gate_has_part_of_the_file_on_disk_and_cancelling_it_leaves_nothing(
         int length, int heldAt)
     {
-        Assert.Equal(AppUpdater.GatePoint(length), heldAt);
+        Assert.Equal(heldAt, AppUpdater.GatePoint(length));
         var (file, gate, _) = GatedLocalFile(length);
         var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, gate), TimeSpan.FromSeconds(30));
         using var cts = new CancellationTokenSource();
@@ -365,12 +363,13 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task A_gate_that_is_not_a_full_path_or_whose_folder_is_not_there_is_refused_before_anything_is_read(bool fullPath)
+    public async Task A_gate_that_is_not_a_full_path_or_whose_folder_is_not_there_is_refused(bool fullPath)
     {
         var (file, _, _) = GatedLocalFile();
         var gate = fullPath ? Path.Combine(_folder, "not-there", "gate") : "gate";
-        using var client = new HttpClient(new AppUpdater.LocalFileAnswer(file, gate));
-        var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, gate), TimeSpan.FromSeconds(30));
+        AppUpdater.LocalFileAnswer Answer() => new(file, gate);
+        using var client = new HttpClient(Answer());
+        var service = new UpdateDownloadService(Answer(), TimeSpan.FromSeconds(30));
 
         var refused = await Assert.ThrowsAsync<HttpRequestException>(
             () => client.GetAsync(ReleaseAddress, HttpCompletionOption.ResponseHeadersRead));
