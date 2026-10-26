@@ -344,6 +344,43 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
+    public async Task A_linked_second_name_that_cannot_be_deleted_leaves_the_exe_without_read_only_so_it_goes_later()
+    {
+        var oldCopy = StartOldCopy();
+        File.SetAttributes(Exe, File.GetAttributes(Exe) | FileAttributes.ReadOnly);
+        var (request, started) = RequestFor(oldCopy);
+        using var _ = started;
+        var ending = EndOnceSet(oldCopy, started);
+        var linked = false;
+
+        // The second name is linked and then held, and the newer version is held, so the move
+        // is refused and the second name cannot be deleted.
+        var outcome = ExeReplacement.Run(request, startAtPath: false, new ReplaceSeams(
+            ThisExe: NewerFile(),
+            MoveRetryBound: TimeSpan.FromSeconds(1),
+            HardLink: (link, existing) =>
+            {
+                linked = Kernel32.CreateHardLink(link, existing, IntPtr.Zero);
+                if (linked)
+                {
+                    Hold(link);
+                    Hold(Replacing);
+                }
+                return linked ? 0 : Kernel32.ERROR_INVALID_FUNCTION;
+            }));
+        await ending;
+
+        Assert.True(linked);
+        Assert.Equal(ReplaceOutcome.Refused, outcome);
+        Assert.Equal(File.ReadAllBytes(PowerShell), File.ReadAllBytes(Exe));
+        Assert.False(File.GetAttributes(Exe).HasFlag(FileAttributes.ReadOnly));
+        Assert.Contains("so the exe was left without its read-only attribute", TestCrashLog.Text());
+        foreach (var held in _held) held.Dispose();
+        Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
+        Assert.False(File.Exists(Backup));
+    }
+
+    [Fact]
     public async Task A_read_only_exe_put_back_is_read_only_again()
     {
         var oldCopy = StartOldCopy();
@@ -417,7 +454,7 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.True(timer.Elapsed < TimeSpan.FromSeconds(10), timer.Elapsed.ToString());
         Assert.False(started.WaitOne(0));
         Assert.True(Directory.Exists(Lock));
-        Assert.Contains("is a folder or a reparse point", TestCrashLog.Text());
+        Assert.Contains($"The name ending {ExeReplacement.LockSuffix} is a folder, not a plain file.", TestCrashLog.Text());
     }
 
     [Fact]
@@ -444,7 +481,7 @@ public sealed class ExeReplacementTests : IDisposable
         Assert.True(timer.Elapsed < TimeSpan.FromSeconds(10), timer.Elapsed.ToString());
         Assert.False(started.WaitOne(0));
         Assert.True(Directory.Exists(elsewhere));
-        Assert.Contains("is a folder or a reparse point", TestCrashLog.Text());
+        Assert.Contains($"The name ending {ExeReplacement.LockSuffix} is a reparse point, not a plain file.", TestCrashLog.Text());
     }
 
     [Fact]
