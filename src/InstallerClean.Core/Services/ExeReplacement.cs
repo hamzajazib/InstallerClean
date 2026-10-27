@@ -752,18 +752,26 @@ internal static class ExeReplacement
     /// <summary>
     /// The names beside <paramref name="exePath"/> the setup holds an earlier version of it
     /// under: the exe's name with <see cref="SetupHeldSuffix"/> on the end, alone or followed
-    /// by a hyphen and a number.
+    /// by a hyphen and a number. A folder this process cannot list answers none, and the
+    /// rest of the clean-up goes ahead.
     /// </summary>
     internal static List<string> SetupHeldCopies(string exePath)
     {
         var folder = Path.GetDirectoryName(exePath)!;
         var stem = Path.GetFileName(exePath) + SetupHeldSuffix;
         var found = new List<string>();
-        foreach (var path in Directory.EnumerateFiles(folder, stem + "*"))
+        try
         {
-            var rest = Path.GetFileName(path)[stem.Length..];
-            if (rest.Length == 0 || (rest.Length > 1 && rest[0] == '-' && rest[1..].All(char.IsAsciiDigit)))
-                found.Add(path);
+            foreach (var path in Directory.EnumerateFiles(folder, stem + "*"))
+            {
+                var rest = Path.GetFileName(path)[stem.Length..];
+                if (rest.Length == 0 || (rest.Length > 1 && rest[0] == '-' && rest[1..].All(char.IsAsciiDigit)))
+                    found.Add(path);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
         }
         return found;
     }

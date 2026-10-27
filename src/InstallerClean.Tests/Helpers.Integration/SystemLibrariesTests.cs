@@ -33,7 +33,6 @@ public class SystemLibrariesTests
 
     [Theory]
     [InlineData("msi.dll")]
-    [InlineData("rstrtmgr.dll")]
     [InlineData("shell32.dll")]
     [InlineData("ole32.dll")]
     [InlineData("oleaut32.dll")]

@@ -5,16 +5,15 @@
 //
 // Before writing, the setup renames each file it is about to write to {app} aside, and
 // moves it back where the install fails, so a file a running program holds open cannot
-// leave {app} part old and part new. A [Files] entry added without its HoldAside call is
-// written over in place again, which is not an error anywhere. The window and the command
+// leave {app} part old and part new. A [Files] entry added without its HoldAside is
+// written over in place, which is not an error anywhere. The window and the command
 // line delete the earlier version the setup held aside of their own exe at their next
 // start, and leave it while the setup's mutex exists, so the suffix and the mutex name in
 // installer/InstallerClean.iss and in ExeReplacement must be the same. Inno Setup cannot
 // read the C# constants, so this check holds them together.
 //
 // Both files are read with their comments blanked, through csharp-source.mjs and
-// iss-source.mjs. Each [Files] destination and each HoldAside call found is printed with
-// its line.
+// iss-source.mjs. Each [Files] destination is printed with its line and its BeforeInstall.
 //
 // Run from the repo root: node scripts/check-setup-held-copies.mjs
 import { readFileSync } from 'node:fs';
@@ -78,42 +77,43 @@ if (setupMutex.length !== 1) {
   }
 }
 
-// Each [Files] entry writing to {app}, by the name it is written under.
+// Each [Files] entry writing under {app} must name, in its BeforeInstall, HoldAside with
+// the path it writes, relative to {app}. A field's value may be quoted or not, and {app}
+// is matched in any case, as Inno Setup reads them.
 let section = '';
-const written = new Map();
-const held = new Map();
+let entries = 0;
 for (const l of lines) {
   const heading = l.text.match(/^\[([^\]]+)\]$/);
   if (heading) {
     section = heading[1].toLowerCase();
     continue;
   }
-  if (section === 'files' && /^Source\s*:/i.test(l.text)) {
-    const field = (name) => l.text.match(new RegExp(`(?:^|;)\\s*${name}\\s*:\\s*"([^"]*)"`, 'i'))?.[1];
-    if (field('DestDir') !== '{app}') continue;
-    const name = field('DestName') ?? field('Source')?.split('\\').pop();
-    console.log(`${SETUP_FILE}:${l.line}: writes {app}\\${name}`);
-    written.set(name.toLowerCase(), l.line);
+  if (section !== 'files' || !/^Source\s*:/i.test(l.text)) continue;
+  const field = (name) => {
+    const m = l.text.match(new RegExp(`(?:^|;)\\s*${name}\\s*:\\s*("([^"]*)"|[^;]*)`, 'i'));
+    return m ? (m[2] ?? m[1]).trim() : undefined;
+  };
+  const destDir = field('DestDir');
+  if (destDir === undefined) {
+    problems.push(`${SETUP_FILE}:${l.line}: a [Files] entry with no DestDir the check can read`);
+    continue;
   }
-  if (section === 'code') {
-    for (const m of l.text.matchAll(/HoldAside\s*\(\s*'([^']*)'\s*\)/g)) {
-      console.log(`${SETUP_FILE}:${l.line}: holds aside ${m[1]}`);
-      held.set(m[1].toLowerCase(), l.line);
-    }
-  }
+  const under = destDir.match(/^\{app\}(?:\\(.*))?$/i);
+  if (!under) continue;
+  entries++;
+  const sub = (under[1] ?? '').replace(/\\+$/, '');
+  const leaf = field('DestName') ?? field('Source')?.split('\\').pop();
+  const name = sub ? `${sub}\\${leaf}` : leaf;
+  const hold = field('BeforeInstall');
+  console.log(`${SETUP_FILE}:${l.line}: writes {app}\\${name}; BeforeInstall: ${hold ?? '(none)'}`);
+  const m = hold?.match(/^HoldAside\s*\(\s*'([^']*)'\s*\)$/);
+  if (!m) problems.push(`${SETUP_FILE}:${l.line}: writes {app}\\${name} without BeforeInstall: HoldAside('${name}')`);
+  else if (m[1].toLowerCase() !== name.toLowerCase()) problems.push(`${SETUP_FILE}:${l.line}: writes {app}\\${name} but holds aside '${m[1]}'`);
 }
-
-if (written.size === 0) problems.push(`${SETUP_FILE}: no [Files] entry writing to {app} found; the check has read nothing`);
-if (held.size === 0) problems.push(`${SETUP_FILE}: no HoldAside('...') call found; the check has read nothing`);
-for (const [name, line] of written) {
-  if (!held.has(name)) problems.push(`${SETUP_FILE}:${line}: writes {app}\\${name}, which [Code] does not hold aside`);
-}
-for (const [name, line] of held) {
-  if (!written.has(name)) problems.push(`${SETUP_FILE}:${line}: holds aside ${name}, which [Files] does not write to {app}`);
-}
+if (entries === 0) problems.push(`${SETUP_FILE}: no [Files] entry writing to {app} found; the check has read nothing`);
 
 if (problems.length > 0) {
   for (const p of problems) console.error(`check-setup-held-copies: ${p}`);
   process.exit(1);
 }
-console.log(`check-setup-held-copies: the setup holds aside each of the ${written.size} files it writes to {app}, and its names match ExeReplacement`);
+console.log(`check-setup-held-copies: each of the ${entries} files the setup writes to {app} is held aside first, and its names match ExeReplacement`);
