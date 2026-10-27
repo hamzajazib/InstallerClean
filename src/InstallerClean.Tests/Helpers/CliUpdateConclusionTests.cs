@@ -140,7 +140,7 @@ public class CliUpdateConclusionTests
 
         Assert.Null(run.ExitCode);
         Assert.Empty(run.Lines);
-        Assert.Equal((Program.UpdateNotMadeClass(notMade), expected), Assert.Single(run.Entries));
+        Assert.Equal((CliContract.UpdateNotMadeClass(notMade), expected), Assert.Single(run.Entries));
     }
 
     [Theory]
@@ -155,7 +155,22 @@ public class CliUpdateConclusionTests
         UpdateNotMade notMade, bool everyRun)
     {
         Assert.Equal(everyRun ? CliEventClass.UpdateNotPossibleNotice : CliEventClass.UpdateFailedNotice,
-            Program.UpdateNotMadeClass(notMade));
+            CliContract.UpdateNotMadeClass(notMade));
+    }
+
+    [Theory]
+    [InlineData(UpdateNotMade.DownloadFailed, true)]
+    [InlineData(UpdateNotMade.NotRun, true)]
+    [InlineData(UpdateNotMade.InUse, true)]
+    [InlineData(UpdateNotMade.CopyCannotTell, false)]
+    [InlineData(UpdateNotMade.FromSource, false)]
+    [InlineData(UpdateNotMade.NeedsNetFramework48, false)]
+    [InlineData(UpdateNotMade.CannotInstallAutomatically, false)]
+    [InlineData(null, false)]
+    public void A_run_says_it_goes_on_with_this_version_where_the_update_failed_or_InstallerClean_was_in_use(
+        UpdateNotMade? notMade, bool says)
+    {
+        Assert.Equal(says, new CommandLineUpdateResult.CarriedOn(notMade, From, To).SaysRunningInstead);
     }
 
     [Fact]
@@ -235,19 +250,6 @@ public class CliUpdateConclusionTests
     /// Runs <paramref name="act"/> with the console and the Application log captured,
     /// the log refusing every entry where <paramref name="logRefuses"/> is set.
     /// </summary>
-    [Fact]
-    public void Every_reason_an_update_was_not_made_says_it_runs_with_this_version_exactly_where_its_notice_says_the_update_failed()
-    {
-        foreach (var notMade in Enum.GetValues<UpdateNotMade>())
-        {
-            var carried = new CommandLineUpdateResult.CarriedOn(notMade, "3.4.0", "3.5.0");
-            Assert.True(
-                carried.SaysRunningInstead == (Program.UpdateNotMadeClass(notMade) == CliEventClass.UpdateFailedNotice),
-                $"{notMade}: SaysRunningInstead is {carried.SaysRunningInstead}, its notice is {Program.UpdateNotMadeClass(notMade)}");
-        }
-        Assert.False(new CommandLineUpdateResult.CarriedOn(null, null, null).SaysRunningInstead);
-    }
-
     private static Concluded Captured(Func<int?> act, bool logRefuses)
     {
         var original = Console.Out;

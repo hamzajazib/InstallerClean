@@ -1,3 +1,4 @@
+using InstallerClean.Helpers;
 using InstallerClean.Resources;
 
 namespace InstallerClean.Services;
@@ -54,12 +55,12 @@ internal abstract record CommandLineUpdateResult
     {
         /// <summary>
         /// Whether the host says the run goes on with this version, once it knows it does:
-        /// where the update itself was tried and not made, or InstallerClean was in use, and
-        /// not where the lines saying why already point to what to do instead. These are the
-        /// reasons the host's notice classes as the update failing rather than not possible.
+        /// where the update was tried and failed or InstallerClean was in use, whose 3006 is
+        /// the failed-update one (<see cref="CliContract.UpdateNotMadeClass"/>), and not where
+        /// the lines saying why already point to what to do instead.
         /// </summary>
         public bool SaysRunningInstead =>
-            NotMade is UpdateNotMade.InUse or UpdateNotMade.DownloadFailed or UpdateNotMade.NotRun;
+            NotMade is { } notMade && CliContract.UpdateNotMadeClass(notMade) == CliEventClass.UpdateFailedNotice;
     }
 
     /// <summary>

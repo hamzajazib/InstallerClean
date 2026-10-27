@@ -376,11 +376,12 @@ internal static class Program
         // the scan.
         if (cts.IsCancellationRequested) return ReportCancelledBeforeWork(arg);
 
+        // Made before the take, so nothing between the take and the try that releases the
+        // mutex can throw.
+        var report = new RunReport(ConsoleCanAsk());
         var take = TakeInstanceLock(arg, s_standsFor is not null, () => new InstanceLock(), update.RunningInstead, cts.Token);
         if (take.ExitCode is int blockedExitCode) return blockedExitCode;
         var instanceLock = take.Lock;
-
-        var report = new RunReport(ConsoleCanAsk());
         int exitCode;
         try
         {
@@ -542,7 +543,6 @@ internal static class Program
             }
         }
 
-
         if (runningInstead is not null && !token.IsCancellationRequested)
         {
             try
@@ -686,7 +686,7 @@ internal static class Program
             case CommandLineUpdateResult.CarriedOn { NotMade: { } notMade, FromVersion: { } from, ToVersion: { } to }:
                 // The notice says why the update was not made and nothing of what then runs,
                 // which the run's own summary says.
-                MachineContract.WriteEventLog(UpdateNotMadeClass(notMade),
+                MachineContract.WriteEventLog(CliContract.UpdateNotMadeClass(notMade),
                     () => UpdateFailedEventLogLine(arg, from, to, notMade));
                 return null;
             default:
@@ -736,18 +736,6 @@ internal static class Program
     internal static string UpdatedEventLogLine(
         string arg, string fromVersion, string toVersion, IReadOnlyList<string> arguments) =>
         string.Format(Strings.Cli_EventLogUpdated, arg, fromVersion, toVersion, string.Join(' ', arguments));
-
-    /// <summary>
-    /// The class of the 3006 a run that goes on with this version writes: Information where
-    /// the reason holds on every run until something on the PC changes, Warning where it can
-    /// pass by the next run.
-    /// </summary>
-    internal static CliEventClass UpdateNotMadeClass(UpdateNotMade notMade) => notMade switch
-    {
-        UpdateNotMade.CopyCannotTell or UpdateNotMade.FromSource or UpdateNotMade.NeedsNetFramework48
-            or UpdateNotMade.CannotInstallAutomatically => CliEventClass.UpdateNotPossibleNotice,
-        _ => CliEventClass.UpdateFailedNotice,
-    };
 
     /// <summary>
     /// The Event ID 3006 line: this run could not update itself from

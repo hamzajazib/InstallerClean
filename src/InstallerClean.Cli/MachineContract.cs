@@ -92,8 +92,9 @@ internal static class MachineContract
     /// standing property of the machine from a run that fell short of its job, and
     /// on that question 3001 is the standing property while 3000, 3002, 3003 and 3004
     /// are about the run, which is why 3001 is Information and the other four are
-    /// Warning. 3005 is Information because the run fell short of nothing, and 3006 Warning
-    /// because the run went on with an older version than it set out to use, or ran nothing.
+    /// Warning. 3005 is Information because the run fell short of nothing. 3006 is
+    /// Information where the copy does not update for a reason true on every run, and Warning
+    /// where the run went on with an older version than it set out to use, or ran nothing.
     /// Nothing here contradicts that: this paragraph says only that a notice is not
     /// the run's SUMMARY entry, which is what a consumer counting runs is asking.
     /// Two questions, near-identical wording, and the sense that travels between

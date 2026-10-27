@@ -471,9 +471,8 @@ function Test-MustLoad($run, $loads) {
 # it can, and by its address otherwise, so an address counts where github.com resolved
 # to it just before the run, just after it, or as it is judged: GitHub's addresses
 # change from one lookup to the next. Every /s run writes one summary entry to
-# the Application log, the newer version writing it where the run handed over, so a run
-# with no entry there, or a log that cannot be read, fails rather than reading as
-# one that found nothing newer. Only the entries written while the run was going are
+# the Application log, so a run with no entry there, or a log that cannot be read,
+# fails rather than reading as one that found nothing newer. Only the entries written while the run was going are
 # judged, so a run of the same exe before or after it cannot answer for it
 # (Read-ApplicationLog).
 function Test-UpdateCheck($run, $byProcess) {

@@ -179,6 +179,7 @@ public class CliInstanceLockTakeTests
     {
         var original = Console.Out;
         using var console = new StringWriter();
+        using var logState = EventLogRecorder.FreshLogState();
         try
         {
             Console.SetOut(console);

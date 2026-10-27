@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using InstallerClean.Services;
 
 namespace InstallerClean.Helpers;
 
@@ -459,6 +460,18 @@ internal static class CliContract
         movedCount > 0
             ? new CliOperationOutcome(CliExitCode.Partial, CliEventClass.Partial)
             : new CliOperationOutcome(CliExitCode.Error, CliEventClass.HardError);
+
+    /// <summary>
+    /// The class of the 3006 a run that goes on with this version writes: Information where
+    /// the reason holds on every run until something on the PC changes, Warning where it can
+    /// pass by the next run.
+    /// </summary>
+    internal static CliEventClass UpdateNotMadeClass(UpdateNotMade notMade) => notMade switch
+    {
+        UpdateNotMade.CopyCannotTell or UpdateNotMade.FromSource or UpdateNotMade.NeedsNetFramework48
+            or UpdateNotMade.CannotInstallAutomatically => CliEventClass.UpdateNotPossibleNotice,
+        _ => CliEventClass.UpdateFailedNotice,
+    };
 
     /// <summary>
     /// The stable Application-channel Event ID for an entry class. The 1000 band
