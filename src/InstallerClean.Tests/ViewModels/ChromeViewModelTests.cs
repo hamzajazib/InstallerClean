@@ -375,23 +375,42 @@ public class ChromeViewModelTests
     public async Task The_card_says_the_download_is_being_checked_once_it_is_complete()
     {
         var vm = await CreateUpdatingViewModelAsync();
-        string? seen = null;
-        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(async call =>
+        IProgress<UpdateProgress>? progress = null;
+        var download = new TaskCompletionSource<PreparedUpdate>();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(call =>
         {
-            var progress = call.ArgAt<IProgress<UpdateProgress>>(1);
-            progress.Report(new UpdateProgress(null, Checking: true));
-            // Progress<T> posts each report, so the line changes a moment after it is made.
-            var waited = System.Diagnostics.Stopwatch.StartNew();
-            while (vm.UpdatingText != Strings.UpdateNotice_CheckingDownload && waited.Elapsed < TimeSpan.FromSeconds(5))
-                await Task.Delay(10);
-            seen = vm.UpdatingText;
-            throw new UpdateFailedException(UpdateFailureStage.Install, "no");
+            progress = call.ArgAt<IProgress<UpdateProgress>>(1);
+            return download.Task;
         });
 
-        await vm.UpdateNowCommand.ExecuteAsync(null);
+        var run = vm.UpdateNowCommand.ExecuteAsync(null);
+        bool measured;
+        string? seen;
+        bool known;
+        try
+        {
+            Assert.NotNull(progress);
+            // Progress<T> posts each report, so the card changes a moment after it is made.
+            var waited = System.Diagnostics.Stopwatch.StartNew();
+            progress.Report(new UpdateProgress(0.5, Checking: false));
+            while (!vm.IsUpdateProgressKnown && waited.Elapsed < TimeSpan.FromSeconds(5))
+                await Task.Delay(10);
+            measured = vm.IsUpdateProgressKnown;
+            progress.Report(new UpdateProgress(null, Checking: true));
+            while (vm.UpdatingText != Strings.UpdateNotice_CheckingDownload && waited.Elapsed < TimeSpan.FromSeconds(10))
+                await Task.Delay(10);
+            seen = vm.UpdatingText;
+            known = vm.IsUpdateProgressKnown;
+        }
+        finally
+        {
+            download.TrySetException(new UpdateFailedException(UpdateFailureStage.Install, "no"));
+            await run;
+        }
 
+        Assert.True(measured);
         Assert.Equal(Strings.UpdateNotice_CheckingDownload, seen);
-        Assert.False(vm.IsUpdateProgressKnown);
+        Assert.False(known);
     }
 
     [Fact]
