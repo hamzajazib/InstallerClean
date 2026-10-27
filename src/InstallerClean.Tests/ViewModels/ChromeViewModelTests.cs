@@ -772,6 +772,68 @@ public class ChromeViewModelTests
         _dialogService.DidNotReceive().ShowWarning(Arg.Any<string>(), Arg.Any<string>());
     }
 
+    /// <summary>
+    /// The release's requirements read as the window closes: the view model is disposed during
+    /// the read, which then ends cancelled, or where <paramref name="answers"/>, answers no refusal.
+    /// </summary>
+    private void RequirementsReadAsTheWindowCloses(ChromeViewModel vm, bool answers = false) =>
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            vm.Dispose();
+            return answers
+                ? Task.FromResult<UpdateRefusal?>(null)
+                : Task.FromCanceled<UpdateRefusal?>(call.Arg<CancellationToken>());
+        });
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task An_automatic_check_closed_while_its_requirements_are_read_shows_nothing(bool readAnswers)
+    {
+        var vm = CreateRequirementsViewModel();
+        RequirementsReadAsTheWindowCloses(vm, readAnswers);
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        await _updater.Received(1).CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
+        Assert.False(vm.HasNewerVersion);
+        Assert.False(vm.ShowsUpdateNow);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_manual_check_closed_while_its_requirements_are_read_shows_nothing(bool readAnswers)
+    {
+        var vm = CreateRequirementsViewModel();
+        RequirementsReadAsTheWindowCloses(vm, readAnswers);
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        await _updater.Received(1).CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
+        Assert.False(vm.HasNewerVersion);
+        Assert.False(vm.ShowsUpdateNow);
+        _dialogService.DidNotReceive().ShowWarning(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task A_cancellation_that_is_not_the_check_s_own_is_a_read_that_failed_and_keeps_a_refusal_already_read()
+    {
+        // A read that failed leaves a refusal already read for the version in place, where a
+        // read answering no refusal would bring Update now back.
+        var vm = CreateRequirementsViewModel();
+        RequirementsAnswer(UpdateRefusal.CannotInstallFromThisCopy);
+        await vm.RunAutomaticUpdateCheckAsync();
+        AssertRefused(vm, UpdateRefusal.CannotInstallFromThisCopy);
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(
+            Task.FromException<UpdateRefusal?>(new OperationCanceledException()));
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        await _updater.Received(2).CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
+        AssertRefused(vm, UpdateRefusal.CannotInstallFromThisCopy);
+    }
+
     [Fact]
     public async Task A_read_is_given_its_bound_and_one_that_fails_offers_Update_now()
     {
