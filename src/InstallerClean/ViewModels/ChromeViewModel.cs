@@ -694,10 +694,12 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
             var progress = new Progress<UpdateProgress>(step =>
             {
                 // Once the download is complete the card says it is being checked, which
-                // waits while another program, an antivirus say, looks at the new file.
+                // waits while another program, an antivirus say, looks at the new file. The
+                // bar moves without measuring meanwhile, so a long wait does not look stuck.
                 if (step.Checking)
                 {
                     UpdatingText = Strings.UpdateNotice_CheckingDownload;
+                    IsUpdateProgressKnown = false;
                     return;
                 }
                 IsUpdateProgressKnown = step.Fraction is not null;

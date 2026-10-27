@@ -544,6 +544,11 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(ChromeViewModel.IsUpdating))
             OnUpdatingChanged();
 
+        // The card's line changes from the download to its check while the card is up, and
+        // a live region's text changing raises nothing by itself, so the new line is read.
+        if (e.PropertyName == nameof(ChromeViewModel.UpdatingText) && _vm.Chrome.IsUpdating)
+            AnnounceLiveRegion(UpdatingText, () => _vm.Chrome.IsUpdating);
+
         if (e.PropertyName == nameof(ChromeViewModel.IsOfferingUpdate) && !_vm.Chrome.IsOfferingUpdate)
             _ = ShowScanAfterUpdateOfferAsync();
     }

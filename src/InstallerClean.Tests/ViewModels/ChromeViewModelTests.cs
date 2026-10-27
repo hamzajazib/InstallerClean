@@ -379,9 +379,8 @@ public class ChromeViewModelTests
         _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(async call =>
         {
             var progress = call.ArgAt<IProgress<UpdateProgress>>(1);
-            progress.Report(new UpdateProgress(1));
             progress.Report(new UpdateProgress(null, Checking: true));
-            // Progress<T> reports on the thread pool where there is no synchronization context.
+            // Progress<T> posts each report, so the line changes a moment after it is made.
             var waited = System.Diagnostics.Stopwatch.StartNew();
             while (vm.UpdatingText != Strings.UpdateNotice_CheckingDownload && waited.Elapsed < TimeSpan.FromSeconds(5))
                 await Task.Delay(10);
@@ -392,7 +391,7 @@ public class ChromeViewModelTests
         await vm.UpdateNowCommand.ExecuteAsync(null);
 
         Assert.Equal(Strings.UpdateNotice_CheckingDownload, seen);
-        Assert.Equal(100, vm.UpdateProgressPercent);
+        Assert.False(vm.IsUpdateProgressKnown);
     }
 
     [Fact]
