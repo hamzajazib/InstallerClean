@@ -50,10 +50,12 @@ internal static class ExeReplacement
     public const string LockSuffix = ".updating";
 
     /// <summary>
-    /// What the setup renames an earlier version of a file it has replaced to, once the
-    /// install has completed, where that version is still running and cannot be deleted
-    /// (installer/InstallerClean.iss, DoneSuffix), followed by nothing or by a hyphen and
-    /// a number where that name was taken. The setup gives this name to nothing else.
+    /// What the setup renames a file beside the exe to where it is still running, cannot
+    /// be deleted and is not needed: an earlier version once an install has completed,
+    /// or a newer one a failed install left (installer/InstallerClean.iss, DoneSuffix).
+    /// It is followed by nothing or by a hyphen and a number where that name was taken.
+    /// A file the setup holds aside while it writes has another name, since it can be the
+    /// only copy of an earlier version, and is never deleted here.
     /// </summary>
     public const string SetupDoneSuffix = ".setup-done";
 
@@ -719,8 +721,8 @@ internal static class ExeReplacement
             // nothing written to crash.log, since the window asks again many times at
             // every start.
             var setupDone = SetupDoneCopies(exePath);
-            if (!File.Exists(replacing) && !File.Exists(backup) && !File.Exists(exePath + LockSuffix) && setupDone is { Count: 0 })
-                return true;
+            var replaceLeft = File.Exists(replacing) || File.Exists(backup) || File.Exists(exePath + LockSuffix);
+            if (!replaceLeft && setupDone is not { Count: > 0 }) return setupDone is not null;
             using var held = TryHold(exePath, TimeSpan.Zero, out _);
             if (held is null) return false;
             whileHeld?.Invoke();

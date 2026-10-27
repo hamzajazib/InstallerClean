@@ -32,14 +32,21 @@
 ; InstanceLock.Name in src/InstallerClean.Core/Services/InstanceLock.cs, and
 ; scripts/check-instance-lock-name.mjs holds the two together.
 #define AppMutexName "Global\InstallerClean_SingleInstance"
-; What [Code] adds to the name of each file it holds aside while Setup writes. Only
-; Setup moves a file under this name back, and only the uninstaller deletes one.
+; The mutex Setup holds while it runs, named by SetupMutex, so a second setup does
+; not start while one is renaming and writing the files in {app}.
+#define SetupMutexName "Global\InstallerClean_Setup"
+; What [Code] adds to the name of each file it holds aside while Setup writes. The
+; window and the command line never delete a file under this name, which can be the
+; only copy of an earlier version; Setup moves it back, or deletes it once an install
+; has completed, and the uninstaller deletes it.
 #define HeldSuffix ".setup-old"
-; What [Code] renames a held file to once the install has completed, where the file
-; is still running and cannot be deleted. It matches ExeReplacement.SetupDoneSuffix in
+; What [Code] renames a file to where it is still running and cannot be deleted, and
+; is not needed: an earlier version once an install has completed, or a newer one a
+; failed install left. It matches ExeReplacement.SetupDoneSuffix in
 ; src/InstallerClean.Core/Services/ExeReplacement.cs: the window and the command line
-; delete a file under this name beside their own exe as they start, and
-; scripts/check-setup-held-copies.mjs holds the two together.
+; delete a file under this name beside their own exe as they start, Setup deletes
+; every one once an install has completed, and scripts/check-setup-held-copies.mjs
+; holds the two names together.
 #define DoneSuffix ".setup-done"
 AppId=InstallerClean
 AppName=InstallerClean
@@ -61,6 +68,7 @@ AppVerName=InstallerClean {#AppVersion}
 ; reason (HoldAllAside below). Started by an update, from the window or the
 ; command line, Setup first waits for the app to close (InitializeSetup below).
 AppMutex={#AppMutexName}
+SetupMutex={#SetupMutexName}
 ; Setup does not close programs holding the files it replaces: a running
 ; command-line scan would be ended part way through, and [Code] renames each file
 ; aside instead, which Windows allows while it runs.
@@ -266,8 +274,9 @@ end;
 // before writing anything. Where the install fails, Setup deletes what it wrote and
 // DeinitializeSetup moves each file back; where it completes, the files held aside
 // are deleted, and one still running is renamed to a done name, which the copy at the
-// path deletes at its next start, as does the uninstaller. scripts/check-setup-held-copies.mjs fails where
-// HoldAllAside leaves out a file [Files] writes to {app}.
+// path deletes at its next start, as do the next completed install and the uninstaller.
+// scripts/check-setup-held-copies.mjs fails where HoldAllAside leaves out a file
+// [Files] writes to {app}.
 var
   HeldFrom: array of String;
   HeldAt: array of String;
@@ -311,11 +320,11 @@ begin
     end;
 end;
 
-// Renames Path to a free name with Suffix and answers it, or '' with the reason in the
-// setup log. A rename refused while another program has the file open without sharing its
-// delete, as an antivirus can, is tried again for up to 5 seconds; a held name taken
-// meanwhile is passed over for the next free one.
-function RenameAside(const Path, Suffix: String): String;
+// Renames Path to a free name made of Base and Suffix and answers it, or '' with the
+// reason in the setup log. A rename refused while another program has the file open
+// without sharing its delete, as an antivirus can, is tried again for up to 5 seconds;
+// a name taken meanwhile is passed over for the next free one.
+function RenameAside(const Path, Base, Suffix: String): String;
 var
   Held: String;
   Tried, Error: Integer;
@@ -324,7 +333,7 @@ begin
   Tried := 0;
   while True do
   begin
-    Held := FreeAsideName(Path, Suffix);
+    Held := FreeAsideName(Base, Suffix);
     if Held = '' then
     begin
       Log(Format('No free name ending %s for %s.', [Suffix, Path]));
@@ -357,7 +366,7 @@ begin
   Result := True;
   Path := ExpandConstant('{app}\') + Name;
   if not FileExists(Path) then Exit;
-  Held := RenameAside(Path, '{#HeldSuffix}');
+  Held := RenameAside(Path, Path, '{#HeldSuffix}');
   if Held = '' then
   begin
     HeldFailed := Path;
@@ -398,7 +407,7 @@ begin
     if FileExists(HeldFrom[I]) and not DeleteFileW(HeldFrom[I]) then
     begin
       Error := DLLGetLastError;
-      Left := RenameAside(HeldFrom[I], '{#DoneSuffix}');
+      Left := RenameAside(HeldFrom[I], HeldFrom[I], '{#DoneSuffix}');
       if Left = '' then
       begin
         Log(Format('Could not delete %s: %s. The earlier file is left as %s.',
@@ -415,6 +424,30 @@ begin
   end;
   SetArrayLength(HeldFrom, 0);
   SetArrayLength(HeldAt, 0);
+end;
+
+// Deletes every file under a held or a done name for the file Name in {app}, other than
+// those this setup renamed aside and could not delete.
+procedure DeleteLeftAside(const Name: String);
+var
+  Path, Aside: String;
+  I, N, S: Integer;
+  Ours: Boolean;
+begin
+  Path := ExpandConstant('{app}\') + Name;
+  for S := 0 to 1 do
+    for N := 0 to 99 do
+    begin
+      if S = 0 then
+        Aside := AsideName(Path, '{#HeldSuffix}', N)
+      else
+        Aside := AsideName(Path, '{#DoneSuffix}', N);
+      if not FileExists(Aside) then Continue;
+      Ours := False;
+      for I := 0 to GetArrayLength(HeldAt) - 1 do
+        if CompareText(HeldAt[I], Aside) = 0 then Ours := True;
+      if not Ours and DeleteFileW(Aside) then Log(Format('Deleted %s, left by an earlier setup.', [Aside]));
+    end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -449,9 +482,15 @@ begin
       else if not DeleteFileW(HeldAt[I]) then
       begin
         Log(Format('Could not delete %s: %s.', [HeldAt[I], SysErrorMessage(DLLGetLastError)]));
-        Done := RenameAside(HeldAt[I], '{#DoneSuffix}');
+        Done := RenameAside(HeldAt[I], HeldFrom[I], '{#DoneSuffix}');
         if Done <> '' then Log(Format('Renamed %s to %s, for the next start.', [HeldAt[I], Done]));
       end;
+    // Every file an earlier setup left under either name is from before this install,
+    // which has written each file anew, so none is needed. One still running stays.
+    DeleteLeftAside('InstallerClean.exe');
+    DeleteLeftAside('installerclean-cli.exe');
+    DeleteLeftAside('LICENSE.txt');
+    DeleteLeftAside('THIRD-PARTY-NOTICES.txt');
   end;
 end;
 

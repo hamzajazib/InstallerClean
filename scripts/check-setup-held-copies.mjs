@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Fails (exit 1) when the setup's HoldAllAside does not hold aside every file [Files]
-// writes to {app}, or does not stop at the first it cannot, or when the name the setup
-// gives an earlier file left once an install has completed drifts from the one the app
-// deletes, or the app names the held suffix.
+// writes to {app}, or does not stop at the first it cannot, or when the done name the
+// setup builds for a file it no longer needs drifts from the one the app deletes, or the
+// app names the held suffix, or the setup holds no mutex of its own to keep a second
+// setup from running meanwhile.
 //
 // Before any file is written, the setup renames each file it writes to {app} aside, and
 // moves each back where the install fails or where one cannot be renamed, so a file a
@@ -16,8 +17,8 @@
 // cannot read the C# constants, so this check holds them together.
 //
 // Both files are read with their comments blanked, through csharp-source.mjs and
-// iss-source.mjs. Each [Files] destination and each HoldAside call is printed with its
-// line.
+// iss-source.mjs. Each [Files] destination, each HoldAside call and each rename [Code]
+// builds a name for is printed with its line.
 //
 // Run from the repo root: node scripts/check-setup-held-copies.mjs
 import { readFileSync } from 'node:fs';
@@ -67,7 +68,7 @@ if (csDone !== undefined && issDone !== undefined && csDone !== issDone) {
   problems.push(`DoneSuffix is '${issDone}' in ${SETUP_FILE}, SetupDoneSuffix is '${csDone}' in ${CODE_FILE}`);
 }
 // A held file can be the only copy of an earlier one, so the app never deletes one.
-if (issHeld !== undefined && issDone !== undefined && (issHeld === issDone || issDone.startsWith(issHeld))) {
+if (issHeld !== undefined && issDone !== undefined && (issHeld === issDone || issDone.startsWith(issHeld) || issHeld.startsWith(issDone))) {
   problems.push(`${SETUP_FILE}: DoneSuffix '${issDone}' does not tell a done file from a held one ('${issHeld}')`);
 }
 if (issHeld !== undefined && code.includes(issHeld)) {
@@ -126,6 +127,28 @@ else {
     }
     held.set(m[1].toLowerCase(), line);
   }
+}
+
+// Each name [Code] renames a file to is built from the file's own name in {app}, which is
+// what the app matches: a held name from the path being held aside, a done name from the
+// path the file was held aside from.
+const renames = [...text.matchAll(/RenameAside\s*\(\s*([^,()]+?)\s*,\s*([^,()]+?)\s*,\s*'\{#(\w+)\}'\s*\)/g)];
+if (renames.length === 0) problems.push(`${SETUP_FILE}: no RenameAside(..., ..., '{#...}') call found; the check has read nothing`);
+for (const m of renames) {
+  const line = text.slice(0, m.index).split('\n').length;
+  console.log(`${SETUP_FILE}:${line}: renames ${m[1]} to a free ${m[3]} name of ${m[2]}`);
+  const base = m[2].replace(/\s+/g, '');
+  if (m[3] === 'HeldSuffix' && base !== m[1].replace(/\s+/g, '')) {
+    problems.push(`${SETUP_FILE}:${line}: a held name is built from ${m[2]}, not from the path being held aside`);
+  } else if (m[3] === 'DoneSuffix' && base !== 'HeldFrom[I]') {
+    problems.push(`${SETUP_FILE}:${line}: a done name is built from ${m[2]}, not from HeldFrom[I], the file's own name in {app}`);
+  } else if (m[3] !== 'HeldSuffix' && m[3] !== 'DoneSuffix') {
+    problems.push(`${SETUP_FILE}:${line}: renames to an unknown suffix {#${m[3]}}`);
+  }
+}
+const setupMutex = lines.filter((l) => /^SetupMutex\s*=/i.test(l.text));
+if (setupMutex.length !== 1 || setupMutex[0].text.replace(/\s+/g, '') !== 'SetupMutex={#SetupMutexName}') {
+  problems.push(`${SETUP_FILE}: expected one 'SetupMutex={#SetupMutexName}' line, so a second setup does not run while one is renaming`);
 }
 
 if (written.size === 0) problems.push(`${SETUP_FILE}: no [Files] entry writing to {app} found; the check has read nothing`);
