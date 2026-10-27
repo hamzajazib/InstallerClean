@@ -356,6 +356,44 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         Assert.False(File.Exists(gate + AppUpdater.GateReachedSuffix));
     }
 
+    [Fact]
+    public async Task A_download_after_an_earlier_downloads_gate_stops_at_its_own_gate_and_finishes_whole()
+    {
+        // A gate left by an earlier download would let this one straight through.
+        var (file, gate, bytes) = GatedLocalFile();
+        File.WriteAllText(gate, string.Empty);
+        var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, gate), TimeSpan.FromSeconds(30));
+
+        var download = service.DownloadAsync(ReleaseAddress, Destination, null, CancellationToken.None);
+        await UntilReached(gate, download);
+
+        Assert.False(download.IsCompleted);
+        Assert.False(File.Exists(gate));
+        Assert.Equal(AppUpdater.GatePoint(bytes.Length), WrittenSoFar());
+        File.WriteAllText(gate, string.Empty);
+        await download;
+
+        Assert.Equal(bytes, File.ReadAllBytes(Destination));
+    }
+
+    [Fact]
+    public async Task A_local_file_that_cannot_be_opened_leaves_the_gate_and_reached_file_where_they_are()
+    {
+        // The local file is opened before the gate is made ready, so a download that cannot
+        // start touches neither.
+        var (_, gate, _) = GatedLocalFile();
+        File.WriteAllText(gate, string.Empty);
+        File.WriteAllText(gate + AppUpdater.GateReachedSuffix, string.Empty);
+        using var client = new HttpClient(new AppUpdater.LocalFileAnswer(Path.Combine(_folder, "missing.exe"), gate));
+
+        var refused = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetAsync(ReleaseAddress, HttpCompletionOption.ResponseHeadersRead));
+
+        Assert.Contains("could not be opened", refused.Message);
+        Assert.True(File.Exists(gate));
+        Assert.True(File.Exists(gate + AppUpdater.GateReachedSuffix));
+    }
+
     /// <summary>The length of the file being written, read through a handle so it is current.</summary>
     private long WrittenSoFar()
     {
