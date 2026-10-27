@@ -189,8 +189,9 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreve
 Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
 
 [UninstallDelete]
-; A file [Code] held aside and left: one still running when the install
-; completed, or one a failed install could not move back.
+; A file [Code] renamed aside and left: an earlier one still running when the
+; install completed or a failed install could not move back, or a newer one
+; still running after a failed install.
 Type: files; Name: "{app}\*{#HeldSuffix}"
 Type: files; Name: "{app}\*{#HeldSuffix}-*"
 Type: files; Name: "{app}\*{#DoneSuffix}"
@@ -382,10 +383,8 @@ begin
 end;
 
 // Holds aside every file [Files] writes to {app}, stopping at the first that cannot be.
-// From the first rename until Setup has written the file, nothing is at that name: a
-// scheduled run of the command line starting then does not find it, and where the PC
-// loses power then, the earlier files stay under their held names until the setup runs
-// again.
+// Each name stays empty from its rename until Setup writes the file, and the earlier
+// file is under its held name all that time, where a setup run later finds it.
 function HoldAllAside: Boolean;
 begin
   Result := HoldAside('InstallerClean.exe');
@@ -427,7 +426,8 @@ begin
 end;
 
 // Deletes every file under a held or a done name for the file Name in {app}, other than
-// those this setup renamed aside and could not delete.
+// those this setup renamed aside and could not delete, where this install wrote a file
+// at that name. Where nothing is there, a held file may be the only copy, so all stay.
 procedure DeleteLeftAside(const Name: String);
 var
   Path, Aside: String;
@@ -435,6 +435,7 @@ var
   Ours: Boolean;
 begin
   Path := ExpandConstant('{app}\') + Name;
+  if not FileExists(Path) then Exit;
   for S := 0 to 1 do
     for N := 0 to 99 do
     begin
@@ -483,7 +484,11 @@ begin
       begin
         Log(Format('Could not delete %s: %s.', [HeldAt[I], SysErrorMessage(DLLGetLastError)]));
         Done := RenameAside(HeldAt[I], HeldFrom[I], '{#DoneSuffix}');
-        if Done <> '' then Log(Format('Renamed %s to %s, for the next start.', [HeldAt[I], Done]));
+        if Done <> '' then
+        begin
+          Log(Format('Renamed %s to %s, for the next start.', [HeldAt[I], Done]));
+          HeldAt[I] := Done;
+        end;
       end;
     // Every file an earlier setup left under either name is from before this install,
     // which has written each file anew, so none is needed. One still running stays.
@@ -504,7 +509,9 @@ begin
   PutHeldBack;
   // Update now closes the window before this setup starts, and the [Run] entry that
   // opens it again runs only after a completed install, so where the install did not
-  // complete the window is opened here, as whatever is now at its path.
+  // complete the window is opened here, as whatever is now at its path, with the
+  // switch that has it say the update failed (HandOverContract.UpdateFailedSwitch). A
+  // version that does not read the switch opens as it always does.
   if UpdatingFromApp then
   begin
     // {app} is set only once Setup has read the earlier install's folder, so a setup
@@ -518,7 +525,7 @@ begin
       Log('The install folder was not known yet, so the app was not opened.')
     else if not FileExists(App) then
       Log(Format('%s is not there, so the app was not opened.', [App]))
-    else if not ShellExec('', App, '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
+    else if not ShellExec('', App, '/updatefailed', '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
       Log(Format('Could not open %s: %s', [App, SysErrorMessage(ErrorCode)]));
   end;
 end;

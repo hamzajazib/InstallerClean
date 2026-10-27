@@ -697,9 +697,9 @@ internal static class ExeReplacement
     /// <summary>
     /// Deletes what a replace left beside <paramref name="exePath"/>: the newer version that
     /// waited there and the older version's second name, each only where it is a plain file,
-    /// and only while a file is at the path; and each earlier version of the exe a
-    /// completed setup left (<see cref="SetupDoneSuffix"/>). Where any of those or the file a replace holds
-    /// (<see cref="LockSuffix"/>) is beside the exe, it holds that file while it deletes, so
+    /// and only while a file is at the path; and each copy of the exe the setup renamed to
+    /// a done name, as not needed (<see cref="SetupDoneSuffix"/>). Where any of those or
+    /// the file a replace holds (<see cref="LockSuffix"/>) is beside the exe, it holds that file while it deletes, so
     /// it runs only where no replace of the exe is running, and no replace starts until it
     /// is done. It tries once, so a caller that is to ride out a replace's hold tries
     /// again. Answers whether nothing is left. Never throws.
@@ -744,8 +744,8 @@ internal static class ExeReplacement
     }
 
     /// <summary>
-    /// The names beside <paramref name="exePath"/> a completed setup left an earlier version
-    /// of it under: the exe's name with <see cref="SetupDoneSuffix"/> on the end, alone or
+    /// The names beside <paramref name="exePath"/> under which the setup left a copy of the
+    /// exe that is not needed: the exe's name with <see cref="SetupDoneSuffix"/> on the end, alone or
     /// followed by a hyphen and a number. Answers null where the folder cannot be listed.
     /// </summary>
     internal static List<string>? SetupDoneCopies(string exePath)

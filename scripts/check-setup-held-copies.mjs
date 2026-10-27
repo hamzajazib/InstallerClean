@@ -3,7 +3,8 @@
 // writes to {app}, or does not stop at the first it cannot, or when the done name the
 // setup builds for a file it no longer needs drifts from the one the app deletes, or the
 // app names the held suffix, or the setup holds no mutex of its own to keep a second
-// setup from running meanwhile.
+// setup from running meanwhile, or the clean-up after a completed install leaves out a
+// file, or the window opened after a failed Update now is not told it failed.
 //
 // Before any file is written, the setup renames each file it writes to {app} aside, and
 // moves each back where the install fails or where one cannot be renamed, so a file a
@@ -27,6 +28,7 @@ import { readIss } from './iss-source.mjs';
 
 const SETUP_FILE = 'installer/InstallerClean.iss';
 const CODE_FILE = 'src/InstallerClean.Core/Services/ExeReplacement.cs';
+const CONTRACT_FILE = 'src/InstallerClean.Core/Helpers/HandOverContract.cs';
 
 const read = (p) => {
   try {
@@ -149,6 +151,36 @@ for (const m of renames) {
 const setupMutex = lines.filter((l) => /^SetupMutex\s*=/i.test(l.text));
 if (setupMutex.length !== 1 || setupMutex[0].text.replace(/\s+/g, '') !== 'SetupMutex={#SetupMutexName}') {
   problems.push(`${SETUP_FILE}: expected one 'SetupMutex={#SetupMutexName}' line, so a second setup does not run while one is renaming`);
+}
+
+// After a completed install, DeleteLeftAside clears what earlier setups left for each
+// file [Files] writes to {app}, so its calls in CurStepChanged name the same files.
+const cleared = new Map();
+for (const m of text.matchAll(/^\s*DeleteLeftAside\s*\(\s*'([^']*)'\s*\)\s*;/gm)) {
+  const line = text.slice(0, m.index).split('\n').length;
+  console.log(`${SETUP_FILE}:${line}: clears what was left of ${m[1]}`);
+  cleared.set(m[1].toLowerCase(), line);
+}
+for (const [key, { name, line }] of written) {
+  if (!cleared.has(key)) problems.push(`${SETUP_FILE}:${line}: writes {app}\\${name}, whose leftovers DeleteLeftAside is never called for`);
+}
+for (const [key, line] of cleared) {
+  if (!written.has(key)) problems.push(`${SETUP_FILE}:${line}: DeleteLeftAside names ${key}, which [Files] does not write to {app}`);
+}
+
+// The window opened after an Update now whose install did not complete is told so with
+// the switch HandOverContract reads.
+const contract = readCSharp(read(CONTRACT_FILE)).code;
+const failedSwitch = contract.match(/const\s+string\s+UpdateFailedSwitch\s*=\s*"([^"]*)"/)?.[1];
+if (failedSwitch === undefined) problems.push(`${CONTRACT_FILE}: no 'const string UpdateFailedSwitch' found`);
+const opens = [...text.matchAll(/ShellExec\s*\(\s*'[^']*'\s*,\s*App\s*,\s*'([^']*)'/g)];
+if (opens.length !== 1) problems.push(`${SETUP_FILE}: expected one ShellExec('', App, '...', ...) opening the window, found ${opens.length}`);
+for (const m of opens) {
+  const line = text.slice(0, m.index).split('\n').length;
+  console.log(`${SETUP_FILE}:${line}: opens the window with '${m[1]}'`);
+  if (failedSwitch !== undefined && m[1] !== failedSwitch) {
+    problems.push(`${SETUP_FILE}:${line}: opens the window with '${m[1]}', HandOverContract.UpdateFailedSwitch is '${failedSwitch}'`);
+  }
 }
 
 if (written.size === 0) problems.push(`${SETUP_FILE}: no [Files] entry writing to {app} found; the check has read nothing`);
