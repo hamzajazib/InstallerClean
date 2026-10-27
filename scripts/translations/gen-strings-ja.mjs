@@ -665,7 +665,7 @@ const STRIPPED = new Set([
   'Cli.EventLogReason.MsiExecuteMutexAccessRefused',
   'Cli.EventLogReason.PendingRenameUnresolved',
   // And four that outlived their English, the first way. Two named Ctrl+C where
-  // the entry now covers a cancel however it arrives at the console; one spelled
+  // the entry now names no cause for a cancel; one spelled
   // the cache folder as a literal path where the entry names the folder; and the
   // last opened by stating a cause, which that entry deliberately no longer does
   // because the arm it reports carries several.

@@ -188,9 +188,9 @@ public class CliCancelledRunTests
     {
         // A run is cancelled by either control key, by its console closing or by
         // Task Scheduler ending its task, and the handler does not tell them all
-        // apart, so neither line names one. Composed here exactly as the two write sites compose them, so a
-        // slot the value stopped spelling would throw here rather than in the
-        // Application channel.
+        // apart, so neither line names one. Composed here exactly as the two write
+        // sites compose them, so a slot the value stopped spelling would throw here
+        // rather than in the Application channel.
         var partial = MachineContract.English(() => string.Format(
             Strings.Cli_EventLogCancelledPartial,
             "/m", 1, 2, DisplayHelpers.PluraliseFile(2)));
