@@ -96,14 +96,63 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task A_read_answers_null_for_a_404_after_a_redirect()
+    public async Task A_read_answers_null_for_a_404_at_the_address_asked_for()
     {
+        var handler = new RoutedHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var service = new UpdateDownloadService(handler, null);
+
+        Assert.Null(await service.ReadAsync(ManifestAddress, 1024, CancellationToken.None));
+        Assert.Equal([ManifestAddress], handler.Requested);
+    }
+
+    [Fact]
+    public async Task A_read_fails_as_a_download_for_a_404_from_the_host_it_is_redirected_to()
+    {
+        // github.com answers a file a release has by redirecting to the host that serves it,
+        // so a 404 from that host is a file that could not be fetched, not one the release lacks.
         var handler = new RoutedHandler(uri => uri == ManifestAddress
             ? Redirect(AssetAddress)
             : new HttpResponseMessage(HttpStatusCode.NotFound));
         var service = new UpdateDownloadService(handler, null);
 
+        var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+            () => service.ReadAsync(ManifestAddress, 1024, CancellationToken.None));
+
+        Assert.Equal(UpdateFailureStage.Download, failure.Stage);
+        Assert.Equal("The server answered 404.", failure.Message);
+        Assert.Equal([ManifestAddress, AssetAddress], handler.Requested);
+    }
+
+    [Fact]
+    public async Task A_read_fails_as_a_download_for_a_404_back_on_github_after_another_host()
+    {
+        var back = new Uri(ManifestAddress.GetLeftPart(UriPartial.Authority) + "/back/update.json");
+        var handler = new RoutedHandler(uri =>
+            uri == ManifestAddress ? Redirect(AssetAddress)
+            : uri == AssetAddress ? Redirect(back)
+            : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var service = new UpdateDownloadService(handler, null);
+
+        var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+            () => service.ReadAsync(ManifestAddress, 1024, CancellationToken.None));
+
+        Assert.Equal(UpdateFailureStage.Download, failure.Stage);
+        Assert.Equal([ManifestAddress, AssetAddress, back], handler.Requested);
+    }
+
+    [Fact]
+    public async Task A_read_answers_null_for_a_404_after_a_redirect_on_the_same_host()
+    {
+        // A repository that has moved is redirected on github.com itself, and a release there
+        // without the file still answers 404 from github.com.
+        var moved = new Uri(ManifestAddress.GetLeftPart(UriPartial.Authority) + "/moved/update.json");
+        var handler = new RoutedHandler(uri => uri == ManifestAddress
+            ? Redirect(moved)
+            : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var service = new UpdateDownloadService(handler, null);
+
         Assert.Null(await service.ReadAsync(ManifestAddress, 1024, CancellationToken.None));
+        Assert.Equal([ManifestAddress, moved], handler.Requested);
     }
 
     [Theory]

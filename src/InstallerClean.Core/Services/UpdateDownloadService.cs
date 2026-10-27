@@ -196,7 +196,11 @@ public sealed class UpdateDownloadService
     /// <summary>
     /// Reads <paramref name="address"/> into memory over the same https-only redirects
     /// as <see cref="DownloadAsync"/>, under the same stall timeout, and answers its
-    /// bytes, or null where the server answers 404 Not Found. Throws
+    /// bytes, or null where the host of the address asked for answers 404 Not Found with
+    /// every redirect on the way on that host, as github.com answers for a file a release
+    /// does not have, at the address or through a redirect it makes for a repository that
+    /// has moved. A 404 reached through another host is a failed read: github.com answers a
+    /// file a release has by redirecting to the host that serves it. Throws
     /// <see cref="UpdateFailedException"/> at the Download stage for every other failure,
     /// a body over <paramref name="maxBytes"/> included, and
     /// <see cref="OperationCanceledException"/> where <paramref name="cancellationToken"/>
@@ -230,14 +234,17 @@ public sealed class UpdateDownloadService
     /// Sends a GET for <paramref name="address"/> and follows each redirect to an https
     /// address, up to <see cref="MaxRedirects"/> of them, and answers with the first
     /// response that is not a redirect, which has to be a success, or null for a
-    /// 404 Not Found where <paramref name="notFoundIsAnswer"/> is set.
+    /// 404 Not Found where <paramref name="notFoundIsAnswer"/> is set and every address on
+    /// the way was on <paramref name="address"/>'s host.
     /// </summary>
     private async Task<HttpResponseMessage?> SendFollowingRedirectsAsync(
         Uri address, CancellationToken cancellationToken, bool notFoundIsAnswer = false)
     {
         var current = address;
+        var onFirstHost = true;
         for (var hop = 0; ; hop++)
         {
+            onFirstHost &= string.Equals(current.Host, address.Host, StringComparison.OrdinalIgnoreCase);
             if (!string.Equals(current.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
                 throw Download($"The download was sent to an address that is not https: {current.Scheme}.");
 
@@ -259,7 +266,7 @@ public sealed class UpdateDownloadService
                 continue;
             }
 
-            if (notFoundIsAnswer && response.StatusCode == HttpStatusCode.NotFound)
+            if (notFoundIsAnswer && onFirstHost && response.StatusCode == HttpStatusCode.NotFound)
             {
                 response.Dispose();
                 return null;
