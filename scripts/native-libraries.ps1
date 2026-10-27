@@ -1566,18 +1566,31 @@ function Get-StagingPrefix {
 }
 
 # Waits up to $seconds for every process started since $since running from a staging
-# folder, or whose path matches one of the regexes $alsoLike, to end. A second's margin
-# is taken off $since, since a process's start time is read off a coarser clock than
-# Get-Date's. Answers those still running then as "<id> <path>", and ends none: nothing
-# here can show that a process is one the run started rather than another given its ID.
-function Wait-StagingProcesses([int]$seconds, [datetime]$since, [string[]]$alsoLike = @()) {
+# folder, or with -SetupTemp from an is-*.tmp folder (Get-IsTmpFolder) straight inside
+# %TEMP% or %TMP%, to end. Each of those folders is taken in its short spelling and its
+# long, since a process's path can be in either. A process whose start time cannot be
+# read is counted, since it may be one the run started. A second's margin is taken off
+# $since, since a process's start time is read off a coarser clock than Get-Date's.
+# Answers those still running then as "<id> <path>", and ends none: nothing here can
+# show that a process is one the run started rather than another given its ID.
+function Wait-StagingProcesses([int]$seconds, [datetime]$since, [switch]$SetupTemp) {
   $prefix = Get-StagingPrefix
+  $temps = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+  if ($SetupTemp) {
+    foreach ($folder in @($env:TEMP, $env:TMP, [IO.Path]::GetTempPath()) | Where-Object { $_ }) {
+      foreach ($spelling in $folder, (Get-LongName $folder), (Get-ShortName $folder)) {
+        if ($spelling) { $null = $temps.Add($spelling.TrimEnd('\')) }
+      }
+    }
+  }
   $from = $since.AddSeconds(-1)
   $clock = [System.Diagnostics.Stopwatch]::StartNew()
   while ($true) {
     $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
       $path = $_.Path
-      $path -and ($path.StartsWith($prefix, 'OrdinalIgnoreCase') -or @($alsoLike | Where-Object { $path -match $_ }).Count) -and
+      if (-not $path) { return $false }
+      $isTmp = if ($temps.Count) { Get-IsTmpFolder $path }
+      ($path.StartsWith($prefix, 'OrdinalIgnoreCase') -or ($isTmp -and $temps.Contains((Split-Path $isTmp)))) -and
         $(try { $_.StartTime -ge $from } catch { $true }) })
     if (-not $running) { return , @() }
     if ($clock.Elapsed.TotalSeconds -ge $seconds) { break }

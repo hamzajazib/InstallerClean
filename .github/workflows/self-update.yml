@@ -244,12 +244,9 @@ jobs:
           # copies have ended, and on the setup's copy starts the setup, which starts its
           # setup.tmp from an is-*.tmp folder in %TEMP%. Each is waited for, so the
           # record and the checks see what they left. One still running after 300 s is named
-          # for the checks, which fail on it. %TEMP% is matched in both its spellings, short
-          # names and long, since a process's path can be in either.
+          # for the checks, which fail on it.
           . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
-          $temp = [IO.Path]::GetTempPath().TrimEnd('\\')
-          $isTmp = @($temp, (Get-FullPath $temp)) | Where-Object { $_ } | Sort-Object -Unique | ForEach-Object { '^' + [regex]::Escape($_) + '\\is-[^\\]+\.tmp\\' }
-          $left = Wait-StagingProcesses 300 $runStarted $isTmp
+          $left = Wait-StagingProcesses 300 $runStarted -SetupTemp:('${{ matrix.route }}' -eq 'setup')
           if ($watch) { Stop-TempWatch $watch $stop }
           if ($left) { "Still running 300 s after the update run ended: $($left -join ', ')" | Set-Content (Join-Path $env:RUNNER_TEMP 'update-stuck.txt') }
           else { '  nothing the update started is running' }
