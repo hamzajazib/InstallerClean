@@ -1489,6 +1489,17 @@ function New-StartedEvent {
   [pscustomobject]@{ Handle = $handle; Argument = "$(Read-SourceString 'src/InstallerClean.Core/Helpers/HandOverContract.cs' 'StartedEventSwitch')$id" }
 }
 
+# An event the run is told to watch for Ctrl+C, named as CliContract.CancelEventName
+# names one, with the argument that passes it. It is never set.
+function New-CancelEvent {
+  $id = [guid]::NewGuid().ToString('N')
+  $prefix = Read-SourceMatch 'src/InstallerClean.Core/Helpers/CliContract.cs' 'CancelEventName\(Guid id\) => @"([^"]+)" \+' 'CliContract.cs names no cancel event.'
+  $created = $false
+  $handle = [System.Threading.EventWaitHandle]::new($false, 'ManualReset', "$prefix$id", [ref]$created)
+  if (-not $created) { $handle.Dispose(); throw "An event named for $id exists already." }
+  [pscustomobject]@{ Handle = $handle; Argument = "$(Read-SourceString 'src/InstallerClean.Core/Helpers/CliContract.cs' 'CancelEventSwitch')$id" }
+}
+
 # The first group $pattern matches in the source file $path, read once a step; where it
 # matches nothing, the step stops with $missing.
 function Read-SourceMatch([string]$path, [string]$pattern, [string]$missing) {
@@ -1693,7 +1704,8 @@ function Read-RecordWithReplaces([string]$csv, $runs) {
 # with -LoadAlone, for a run with a library the apphost reads planted alone, which can
 # stop the build starting and is judged on what it loads.
 # A build whose Replace is 'command' is started with /s /noupdate beside the three
-# switches, working in a folder of its own outside both the staging folder and the
+# switches, and the Ctrl+C event's switch naming an event made here, as the older copy
+# starts it, working in a folder of its own outside both the staging folder and the
 # target's, as a scheduled task can start the older copy, and its run carries that folder
 # as WorkingFolder. It runs the scan standing for the copy at the path, so the stand-in for
 # that copy is left running until it has ended, and the replace it then starts, detached
@@ -1736,7 +1748,9 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
   $signal = New-StartedEvent
   $event = $signal.Handle
   $contract = 'src/InstallerClean.Core/Helpers/HandOverContract.cs'
-  $arguments = @(if ($command) { '/s', '/noupdate' }) + @(
+  $cancel = $null
+  if ($command) { $cancel = New-CancelEvent }
+  $arguments = @(if ($command) { '/s', '/noupdate', $cancel.Argument }) + @(
     "`"$(Read-SourceString $contract 'ReplaceCopySwitch')$target`"",
     "$(Read-SourceString $contract 'AfterProcessSwitch')$($standIn.Id)",
     $signal.Argument)
@@ -1765,6 +1779,7 @@ function Invoke-Replace($build, [string]$label, [string]$pass, $plants, [switch]
       if (-not $replace.WaitForExit(120000)) { Fail "$label's replace, process $($replace.Id), was still running 120 s after the copy it stood for ended." }
     }
   }
+  if ($cancel) { $cancel.Handle.Dispose() }
   $ended = Get-Date
   Write-Host "  ${label}: process $($replacer.Id), ended with $($replacer.ExitCode)"
 

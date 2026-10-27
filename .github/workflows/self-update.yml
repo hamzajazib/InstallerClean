@@ -12,14 +12,16 @@
 # Application-log entries can answer for the other's.
 #
 # What this covers is the half of an update the pushed code does: finding the
-# newer version, downloading it, putting it at the running copy's path and
-# handing over to it. The newer version is whichever release is current.
+# newer version, downloading it into a staging folder and handing the run over to
+# it there. The newer version, whichever release is current, then runs the command
+# and puts itself at the running copy's path once both have ended, and the checks
+# read what it left. A current release older than the first that can do that is
+# not updated to: the job says so and tests nothing.
 #
-# The builds are single-file Release builds, as shipped, and have to stay so.
-# Once the running exe has been renamed aside, a single-file build can load no
-# assembly it has not loaded already. A build from source loads its assemblies
-# from loose files beside the exe, so a load after the rename would succeed there
-# and this workflow would pass over code the shipped build cannot run.
+# The builds are single-file Release builds, as shipped, and have to stay so. A
+# build from source loads its assemblies from loose files beside the exe, which a
+# shipped build does not have, so this workflow would pass over loads the shipped
+# build cannot make.
 #
 # Process Monitor records the update, and the files the old copy looks for to load and
 # the images it loads are judged with the functions and the list in
@@ -91,20 +93,35 @@ jobs:
           }
           "  The current release is $latest; the build is numbered $env:OLD_VERSION."
           "LATEST=$latest" | Add-Content $env:GITHUB_ENV
+          # The old copy runs the command with the newer version from its download folder,
+          # passing it the switches that ask it to stand for this copy and take its place
+          # afterwards. A release before the first to read them refuses them as arguments it
+          # does not know, so against such a release the update cannot be made, and every
+          # step after this one is skipped with the reason said here and in the summary.
+          $first = '3.5.0'
+          if ([version]$latest -lt [version]$first) {
+            $said = "Nothing was tested: the current release, $latest, is older than $first, the first release that can run a command standing for an older copy, so the update from $env:OLD_VERSION was not made."
+            "::warning::$said"
+            "## Self-update: nothing tested`n`n$said" | Add-Content $env:GITHUB_STEP_SUMMARY
+            "STAGED=false" | Add-Content $env:GITHUB_ENV
+          } else {
+            "STAGED=true" | Add-Content $env:GITHUB_ENV
+          }
 
       - name: Publish the command line at the older version
+        if: env.STAGED == 'true'
         run: dotnet publish src/InstallerClean.Cli/InstallerClean.Cli.csproj -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:Version=${{ env.OLD_VERSION }} --nologo -o publish/cli
 
       - name: Publish the portable GUI at the older version
-        if: matrix.route == 'setup'
+        if: matrix.route == 'setup' && env.STAGED == 'true'
         run: dotnet publish src/InstallerClean/InstallerClean.csproj -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:Version=${{ env.OLD_VERSION }} --nologo -o publish/self-contained
 
       - name: Install Inno Setup
-        if: matrix.route == 'setup'
+        if: matrix.route == 'setup' && env.STAGED == 'true'
         run: choco install innosetup --version=6.7.1 --no-progress -y
 
       - name: Compile the setup at the older version
-        if: matrix.route == 'setup'
+        if: matrix.route == 'setup' && env.STAGED == 'true'
         run: |
           $iscc = Get-ChildItem "${env:ProgramFiles(x86)}" -Filter ISCC.exe -Recurse -Depth 1 -ErrorAction SilentlyContinue |
                   Select-Object -First 1 -ExpandProperty FullName
@@ -118,6 +135,7 @@ jobs:
       # stops for, so the step fails on one rather than letting the update fail
       # for a reason that is not the code.
       - name: Put the older version in place
+        if: env.STAGED == 'true'
         shell: pwsh
         run: |
           if ('${{ matrix.route }}' -eq 'setup') {
@@ -147,7 +165,7 @@ jobs:
       # log can show when the setup and every process it starts begin and end,
       # against when the command line reads what the setup left.
       - name: Audit process starts and exits
-        if: matrix.route == 'setup'
+        if: matrix.route == 'setup' && env.STAGED == 'true'
         run: |
           auditpol /set /subcategory:'{0CCE922B-69AE-11D9-BED3-505054503030}' /success:enable
           if ($LASTEXITCODE -ne 0) { throw "auditpol could not turn on Process Creation." }
@@ -160,6 +178,7 @@ jobs:
       # A failure of Process Monitor's own leaves the update and its checks to run, and
       # the judging step fails on the record that is missing.
       - name: Get Process Monitor and start recording
+        if: env.STAGED == 'true'
         continue-on-error: true
         shell: pwsh
         run: |
@@ -179,6 +198,7 @@ jobs:
       # and inherits the output, so it is read to the end of both. The function
       # is kept in a file for the second run the checks make.
       - name: Run the update
+        if: env.STAGED == 'true'
         shell: pwsh
         run: |
           $helper = Join-Path $env:RUNNER_TEMP 'run.ps1'
@@ -215,6 +235,20 @@ jobs:
           }
           "RUN_STARTED=$((Get-Date).ToUniversalTime().ToString('o'))" | Add-Content $env:GITHUB_ENV
           $run = Run $env:EXE
+          # The newer version's replace runs detached from the staging folder once both
+          # copies have ended, and on the setup's copy starts the setup, which starts its
+          # setup.tmp from an is-*.tmp folder under %TEMP%. Each is waited for, so the
+          # record and the checks see what they left.
+          $staging = Join-Path $env:ProgramData 'InstallerClean-update-'
+          $clock = [System.Diagnostics.Stopwatch]::StartNew()
+          do {
+            $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+              $_.Path -and ($_.Path.StartsWith($staging, 'OrdinalIgnoreCase') -or $_.Path -match '\\is-[^\\]+\.tmp\\') })
+            if (-not $running) { break }
+            Start-Sleep -Seconds 1
+          } while ($clock.Elapsed.TotalSeconds -lt 300)
+          if ($running) { throw "Still running 300 s after the update run ended: $(($running | ForEach-Object { "$($_.Id) $($_.Path)" }) -join ', ')" }
+          "  the replace had ended $([math]::Round($clock.Elapsed.TotalSeconds)) s after the update run"
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'update-run.txt') -Value $run.Output -NoNewline
           "UPDATE_EXIT=$($run.ExitCode)" | Add-Content $env:GITHUB_ENV
           "UPDATE_PID=$($run.Id)" | Add-Content $env:GITHUB_ENV
@@ -223,7 +257,7 @@ jobs:
           if ($watch) { Stop-TempWatch $watch $stop }
 
       - name: Stop recording
-        if: always() && env.PROCMON != ''
+        if: always() && env.PROCMON != '' && env.STAGED == 'true'
         continue-on-error: true
         shell: pwsh
         run: |
@@ -236,13 +270,13 @@ jobs:
       # whatever happened and never fails the job.
       #
       # Every file beside the exe is described with the release's own command
-      # line, so a file that is not the release's shows by its hash. A waiting
-      # .new is read twice, a few seconds apart, from this process; the command
-      # line read it from its own. On the setup's copy the Security log gives
-      # every process start and exit and the Application log its entries, each
-      # to the millisecond.
+      # line, so a file that is not the release's shows by its hash, and so is
+      # every file in a staging folder under %ProgramData%, which is what the
+      # newer version ran from. On the setup's copy the Security log gives every
+      # process start and exit and the Application log its entries, each to the
+      # millisecond.
       - name: Describe what the update left
-        if: always() && env.EXE != ''
+        if: always() && env.EXE != '' && env.STAGED == 'true'
         continue-on-error: true
         shell: pwsh
         env:
@@ -265,14 +299,9 @@ jobs:
           "The command line's files beside the exe, read at $(Stamp (Get-Date)) UTC:"
           Get-ChildItem -LiteralPath $folder -Filter 'installerclean-cli.exe*' | ForEach-Object { Describe $_.FullName }
 
-          if (Test-Path -LiteralPath "$exe.new") {
-            "The waiting file read again from this process:"
-            foreach ($pause in 0, 5) {
-              Start-Sleep -Seconds $pause
-              $info = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$exe.new")
-              "  at $(Stamp (Get-Date)) UTC: FileVersion $($info.FileVersion), parts $($info.FileMajorPart).$($info.FileMinorPart).$($info.FileBuildPart).$($info.FilePrivatePart)"
-            }
-          }
+          "The files in the staging folders under $env:ProgramData`:"
+          Get-ChildItem -LiteralPath $env:ProgramData -Directory -Filter 'InstallerClean-update-*' -ErrorAction SilentlyContinue |
+            ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -File } | ForEach-Object { Describe $_.FullName }
 
           $release = Join-Path $env:RUNNER_TEMP 'release'
           New-Item -ItemType Directory -Force -Path $release | Out-Null
@@ -313,6 +342,7 @@ jobs:
       # update's own work, written into the folder; on the setup's copy the setup
       # writes it, so there the check reads what the setup leaves.
       - name: Check the result
+        if: env.STAGED == 'true'
         shell: pwsh
         run: |
           $failures = [System.Collections.Generic.List[string]]::new()
@@ -346,14 +376,13 @@ jobs:
           foreach ($expected in @(
               ((Line 'UpdateNotice.Available') -f $latest),
               ((Line 'UpdateNotice.Downloading') -f $latest),
-              ((Line 'Cli.UpdateInstalled') -f $latest))) {
+              ((Line 'Cli.UpdateRunningNewer') -f '/s', $latest))) {
             if ($run.Output.Contains($expected)) { "  printed: $expected" } else { Fail "It did not print: $expected" }
           }
           foreach ($unexpected in @(
               (Line 'UpdateNotice.DownloadFailed'),
-              (Line 'UpdateNotice.InstallFailed'),
-              ((Line 'Cli.UpdateRunningInstead') -f '/s', $old),
-              ((Line 'Cli.UpdateNotStarted') -f $latest))) {
+              (Line 'Cli.UpdateNotRun'),
+              ((Line 'Cli.UpdateRunningInstead') -f '/s', $old))) {
             if ($run.Output.Contains($unexpected)) { Fail "It printed: $unexpected" } else { "  did not print: $unexpected" }
           }
 
@@ -368,9 +397,12 @@ jobs:
             $shown = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\InstallerClean_is1').DisplayVersion
             if (Same $shown $latest) { "  the uninstall key's DisplayVersion is $shown" } else { Fail "The uninstall key's DisplayVersion is $shown, not $latest." }
           }
-          if (Test-Path "$exe.new") { Fail "$exe.new is still there." } else { "  no $exe.new" }
-          $staged = @(Get-ChildItem $env:ProgramData -Directory -Filter 'InstallerClean-update-*' -ErrorAction SilentlyContinue)
-          if ($staged) { Fail "Download folders are left under ${env:ProgramData}: $($staged.Name -join ', ')" } else { "  no download folder under $env:ProgramData" }
+          $replaceSource = Get-Content -Raw src/InstallerClean.Core/Services/ExeReplacement.cs
+          foreach ($name in 'ReplacingSuffix', 'BackupSuffix', 'LockSuffix') {
+            if ($replaceSource -notmatch "const string $name = `"([^`"]+)`"") { throw "ExeReplacement.cs has no $name." }
+            $left = "$exe$($Matches[1])"
+            if (Test-Path -LiteralPath $left) { Fail "$left is still there." } else { "  no $left" }
+          }
 
           "The permissions:"
           $control = Join-Path $folder 'permissions-control.tmp'
@@ -388,6 +420,7 @@ jobs:
           foreach ($e in $events) { "  $($e.Id)  $($e.Message)" }
           $notices = @($events | Where-Object Id -eq 3005)
           $failed = @($events | Where-Object Id -eq 3006)
+          $notInstalled = @($events | Where-Object Id -eq 3007)
           $summaries = @($events | Where-Object { $_.Id -in 1000, 1002, 2000, 4000 })
           if ($notices.Count -ne 1) {
             $unavailable = $run.Output.Contains((Line 'Cli.EventLogUnavailable'))
@@ -396,6 +429,7 @@ jobs:
             Fail "The 3005 entry does not name the update from $old to $latest."
           }
           if ($failed) { Fail "$($failed.Count) entries with Event ID 3006." }
+          if ($notInstalled) { Fail "$($notInstalled.Count) entries with Event ID 3007." }
           if ($summaries.Count -ne 1) { Fail "$($summaries.Count) run summaries, where the newer version's was expected alone." }
           elseif ($summaries[0].Id -eq 4000) { Fail "The newer version's run ended in a hard error (4000)." }
 
@@ -422,6 +456,12 @@ jobs:
           "  the update run exited with $($run.ExitCode), the second run with $($again.ExitCode)"
           if ($run.ExitCode -ne 0) { Fail "The update run exited with $($run.ExitCode)." }
           if ($run.ExitCode -ne $again.ExitCode) { Fail "The update run's exit code is not the newer version's own." }
+
+          # The staging folder stays until a copy's next start takes it away, which the second
+          # run was.
+          "The download folders:"
+          $staged = @(Get-ChildItem $env:ProgramData -Directory -Filter 'InstallerClean-update-*' -ErrorAction SilentlyContinue)
+          if ($staged) { Fail "Download folders are left under ${env:ProgramData} after the second run: $($staged.Name -join ', ')" } else { "  no download folder under $env:ProgramData" }
 
           if ($failures.Count -gt 0) {
             "$($failures.Count) checks failed:"
@@ -450,7 +490,7 @@ jobs:
       # checks are run over a record made up for the purpose, and the job fails unless
       # each fails exactly where it must (Test-SetupControls in native-libraries.ps1).
       - name: Judge what the update looked for and loaded
-        if: ${{ !cancelled() && env.UPDATE_PID != '' }}
+        if: ${{ !cancelled() && env.UPDATE_PID != '' && env.STAGED == 'true' }}
         shell: pwsh
         run: |
           if (-not $env:UPDATE_RECORD -or -not (Test-Path -LiteralPath $env:UPDATE_RECORD)) { throw "Process Monitor saved no record of the update, so its looks were not judged." }
@@ -499,7 +539,7 @@ jobs:
       # found, gone or changed. Its exit code and output are the newer version's and are
       # not judged; the entries the crash log gains are printed.
       - name: Update again with the genuine files planted
-        if: ${{ !cancelled() && matrix.route == 'download' && env.UPDATE_PID != '' }}
+        if: ${{ !cancelled() && matrix.route == 'download' && env.UPDATE_PID != '' && env.STAGED == 'true' }}
         shell: pwsh
         run: |
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
@@ -517,7 +557,6 @@ jobs:
           New-Item -ItemType Directory -Force -Path $folder | Out-Null
           Copy-Item publish/cli/installerclean-cli.exe $folder
           $exe = Join-Path $folder 'installerclean-cli.exe'
-          foreach ($left in "$exe.old", "$exe.new") { if (Test-Path -LiteralPath $left) { throw "$left is there before the run." } }
           $placed = @(Add-Plants $folder @($plan.Plants))
           "  planted $($placed.Count): $(($placed | ForEach-Object Path) -join ', ')"
 
@@ -558,7 +597,7 @@ jobs:
       # Detail of each Process Start and Process Create row is emptied, since those carry
       # a process's environment and its command line. The artifact is public.
       - name: Keep the Process Monitor rows
-        if: always() && env.PROCMON != ''
+        if: always() && env.PROCMON != '' && env.STAGED == 'true'
         shell: pwsh
         run: |
           $kept = Join-Path $env:RUNNER_TEMP 'kept'
@@ -579,7 +618,7 @@ jobs:
           }
 
       - name: Upload the Process Monitor rows
-        if: always() && env.PROCMON != ''
+        if: always() && env.PROCMON != '' && env.STAGED == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: process-monitor-records-${{ matrix.route }}-${{ github.run_attempt }}
@@ -601,7 +640,7 @@ jobs:
             Sort-Object TimeCreated | ForEach-Object { "$($_.Id)  $($_.Message)" }
 
       - name: Print the setup's log
-        if: always() && matrix.route == 'setup'
+        if: always() && matrix.route == 'setup' && env.STAGED == 'true'
         shell: pwsh
         run: |
           $log = Join-Path $env:RUNNER_TEMP 'setup-install.log'
