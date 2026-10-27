@@ -357,13 +357,13 @@ public sealed class StagedDownloadTests : IDisposable
     }
 
     [Fact]
-    public async Task The_start_up_clean_up_leaves_every_file_a_prepared_update_holds()
+    public async Task The_start_up_clean_up_leaves_the_folder_a_prepared_update_holds()
     {
         var network = new ByName(new() { [SetupName] = Release(3), [AppCopy.CommandLineFileName] = Release(2) });
         var prepared = await Prepare(Updater(AppCopyKind.Setup, network));
         var folder = Path.GetDirectoryName(prepared.FileToStart)!;
         // The same two names written in a folder nothing holds, which the clean-up takes, so
-        // what keeps the prepared ones is the hold and not their names.
+        // what keeps the prepared ones is the folder's hold and not their names.
         var made = UpdateStagingFolder.Create(_stagingRoot, AdministratorsAndThisAccount);
         made.Handle.Dispose();
         var unheld = made.FullPath;

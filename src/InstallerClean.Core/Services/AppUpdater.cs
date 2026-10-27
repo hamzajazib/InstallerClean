@@ -486,9 +486,10 @@ public sealed class AppUpdater : IAppUpdater
         {
             // The setup comes first, so a setup that fails its check costs no download of the
             // command line. The folder is held throughout, so the start-up clean-up, which takes
-            // files of both names, cannot take the first while the second downloads. A Debug build's gate holds only the command line's download, the
-            // last, so a cancel there takes away a setup already checked and held as well as a
-            // file part written.
+            // files of both names, cannot take the first while the second downloads. A Debug
+            // build's download gate holds only the command line's download, the last, so a
+            // cancel there takes away a setup already checked and held as well as a file part
+            // written.
             if (Kind == AppCopyKind.Setup)
                 await StageHeldAsync(AppCopyKind.Setup, version, staging, null, gated: false, cancellationToken)
                     .ConfigureAwait(false);
