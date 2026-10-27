@@ -143,17 +143,19 @@ public class DeleteFilesServiceUnitTests
         var fs = new MockFileSystem();
         var files = new[] { "a.msi", "b.msi", "c.msi" }.Select(n => AddFile(fs, n)).ToArray();
         var cts = new CancellationTokenSource();
-        var progress = new SyncProgress<OperationProgress>(p => { if (p.CurrentFile == 1) cts.Cancel(); });
+        var progress = new SyncProgress<OperationProgress>(p => { if (p.CurrentFile == 2) cts.Cancel(); });
         var svc = new DeleteFilesService(fs);
 
         // No throw on a mid-batch cancel: the partial result comes back with
-        // Cancelled set and the tally of what was deleted before the stop.
+        // Cancelled set and the tally of what was deleted before the stop. The
+        // cancel comes during the second file's report, so that file is left alone.
         var result = await svc.DeleteFilesAsync(files, UnderLeaseClaims.None, progress: progress, cancellationToken: cts.Token);
 
         Assert.True(result.Cancelled);
         Assert.Equal(1, result.DeletedCount);
         Assert.Empty(result.Errors);
         Assert.False(fs.File.Exists(files[0]));
+        Assert.True(fs.File.Exists(files[1]));
         Assert.True(fs.File.Exists(files[2]));
     }
 

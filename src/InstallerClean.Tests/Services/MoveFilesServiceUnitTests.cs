@@ -248,12 +248,12 @@ public class MoveFilesServiceUnitTests
         foreach (var s in sources) fs.AddFile(s, new MockFileData("payload"));
         fs.AddDirectory(DestDir);
 
-        // Cancel after the first progress report so the second
-        // iteration's ThrowIfCancellationRequested fires.
+        // Cancel during the second progress report, so the token asked again after
+        // it leaves the second file alone.
         var cts = new CancellationTokenSource();
         var progress = new Helpers.SyncProgress<OperationProgress>(p =>
         {
-            if (p.CurrentFile == 1) cts.Cancel();
+            if (p.CurrentFile == 2) cts.Cancel();
         });
 
         var svc = new MoveFilesService(fs);
