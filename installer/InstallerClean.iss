@@ -57,7 +57,7 @@ AppVerName=InstallerClean {#AppVersion}
 ; be opened, which it can while the window or a command-line Delete or Move has it
 ; open, held or not. A command-line scan never opens it, so Setup can meet one
 ; running from {app}; [Code] holds each file aside before it is written for that
-; reason (HoldAside below). Started by an update, from the window or the
+; reason (HoldAllAside below). Started by an update, from the window or the
 ; command line, Setup first waits for the app to close (InitializeSetup below).
 AppMutex={#AppMutexName}
 SetupMutex={#SetupMutexName}
@@ -158,23 +158,23 @@ SignedUninstallerDir={#UninstallerSignatureDir}
 #include "InstallerClean_Languages.iss"
 
 [Files]
-Source: "{#PublishDir}\self-contained\InstallerClean.exe"; DestDir: "{app}"; Flags: ignoreversion; BeforeInstall: HoldAside('InstallerClean.exe')
+Source: "{#PublishDir}\self-contained\InstallerClean.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; CLI is a .NET console exe published from src/InstallerClean.Cli;
 ; ships alongside the GUI so PowerShell and cmd block on the process
 ; subsystem naturally.
-Source: "{#PublishDir}\cli\installerclean-cli.exe"; DestDir: "{app}"; Flags: ignoreversion; BeforeInstall: HoldAside('installerclean-cli.exe')
+Source: "{#PublishDir}\cli\installerclean-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; pad.xml's Distribution_Permissions requires the Apache 2.0 licence text to
 ; travel alongside any redistributed binary, so Setup installs it too.
 ; DestName gives the installed copy a .txt extension so a double-click opens it
 ; in Notepad; a bare "LICENSE" with no extension makes Windows show the "how do
 ; you want to open this file?" picker instead.
-Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion; BeforeInstall: HoldAside('LICENSE.txt')
+Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 ; Same argument, for what is redistributed rather than what is licensed: the GUI
 ; embeds the fonts and icons THIRD-PARTY-NOTICES names, each under its own
 ; licence, and this setup compiles in the wizard translations carried under
 ; installer\Languages. The DestName trick is the LICENSE one and is needed for
 ; the same reason.
-Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion; BeforeInstall: HoldAside('THIRD-PARTY-NOTICES.txt')
+Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
 
 [UninstallDelete]
 ; A file [Code] held aside and could not delete afterwards, its program still
@@ -250,27 +250,35 @@ begin
     Log(Format('Waited %d ms for InstallerClean to close.', [Waited]));
 end;
 
-// Each [Files] entry for {app} renames the file at its name aside just before Setup
-// writes it (BeforeInstall: HoldAside), so Setup writes every one as new. Inno Setup
-// replaces a file in place by deleting it and moving its own copy in, and Windows
-// refuses to delete a running program, such as a command-line scan, which holds no
-// mutex; it allows renaming one. A failed setup undoes only what it added, so a file
-// it had replaced in place would stay the newer version beside the older ones; a file
-// renamed aside is moved back instead. Where the install fails, Setup deletes what it
-// wrote and DeinitializeSetup moves each file back; where it completes, the files held
-// aside are deleted, and one still running is deleted at the next start of the copy
-// at that path, or by the uninstaller. scripts/check-setup-held-copies.mjs fails where
-// a [Files] entry for {app} does not hold its own file aside.
+// Before any file is written, HoldAllAside renames each file [Files] writes to {app}
+// aside, and Setup writes every one as new. Inno Setup replaces a file in place by
+// deleting it and moving its own copy in, and Windows refuses to delete a running
+// program, such as a command-line scan, which holds no mutex; it allows renaming one.
+// A failed setup undoes only what it added, so a file it had replaced in place would
+// stay the newer version beside the older ones; a file renamed aside is moved back
+// instead. Where one file cannot be renamed, the others are moved back and Setup stops
+// before writing anything. Where the install fails, Setup deletes what it wrote and
+// DeinitializeSetup moves each file back; where it completes, the files held aside
+// are deleted, and one still running is deleted at the next start of the copy at that
+// path, or by the uninstaller. scripts/check-setup-held-copies.mjs fails where
+// HoldAllAside leaves out a file [Files] writes to {app}.
 var
   HeldFrom: array of String;
   HeldAt: array of String;
+  HeldFailed: String;
   Installed: Boolean;
 
-// Windows' own calls, so DLLGetLastError answers the error each one set.
+// MoveFileW and DeleteFileW from kernel32.dll, so DLLGetLastError answers the error
+// each one set.
 function MoveFileW(ExistingName, NewName: String): Boolean;
   external 'MoveFileW@kernel32.dll stdcall';
 function DeleteFileW(Name: String): Boolean;
   external 'DeleteFileW@kernel32.dll stdcall';
+
+const
+  ERROR_ACCESS_DENIED = 5;
+  ERROR_SHARING_VIOLATION = 32;
+  ERROR_ALREADY_EXISTS = 183;
 
 // The Nth name a file at Path can be held aside under.
 function HeldName(const Path: String; N: Integer): String;
@@ -297,48 +305,57 @@ begin
     end;
 end;
 
-// Renames Path to a free held name, trying for up to 5 seconds while Windows refuses,
-// as it does while an antivirus has the file open without sharing its delete. Answers
-// the held name, or '' with the reason in the setup log.
+// Renames Path to a free held name and answers it, or '' with the reason in the setup
+// log. A rename refused while another program has the file open without sharing its
+// delete, as an antivirus can, is tried again for up to 5 seconds; a held name taken
+// meanwhile is passed over for the next free one.
 function RenameAside(const Path: String): String;
 var
   Held: String;
-  Tried: Integer;
+  Tried, Error: Integer;
 begin
   Result := '';
-  Held := FreeHeldName(Path);
-  if Held = '' then
-  begin
-    Log(Format('No free name to hold %s aside under.', [Path]));
-    Exit;
-  end;
   Tried := 0;
-  while not MoveFileW(Path, Held) do
+  while True do
   begin
-    if Tried >= 20 then
+    Held := FreeHeldName(Path);
+    if Held = '' then
     begin
-      Log(Format('Could not rename %s to %s: %s', [Path, Held, SysErrorMessage(DLLGetLastError)]));
+      Log(Format('No free name to hold %s aside under.', [Path]));
       Exit;
     end;
-    Sleep(250);
+    if MoveFileW(Path, Held) then
+    begin
+      Result := Held;
+      Exit;
+    end;
+    Error := DLLGetLastError;
+    if ((Error <> ERROR_SHARING_VIOLATION) and (Error <> ERROR_ACCESS_DENIED) and (Error <> ERROR_ALREADY_EXISTS))
+      or (Tried >= 20) then
+    begin
+      Log(Format('Could not rename %s to %s: %s', [Path, Held, SysErrorMessage(Error)]));
+      Exit;
+    end;
+    if Error <> ERROR_ALREADY_EXISTS then Sleep(250);
     Tried := Tried + 1;
   end;
-  Result := Held;
 end;
 
-// Renames the file Name in {app} aside where there is one, before Setup writes it.
-// Where it cannot be renamed it is left, and Setup replaces it in place.
-procedure HoldAside(const Name: String);
+// Renames the file Name in {app} aside, where there is one. Answers False where it is
+// there and could not be renamed.
+function HoldAside(const Name: String): Boolean;
 var
   Path, Held: String;
   I: Integer;
 begin
+  Result := True;
   Path := ExpandConstant('{app}\') + Name;
   if not FileExists(Path) then Exit;
   Held := RenameAside(Path);
   if Held = '' then
   begin
-    Log(Format('%s is replaced in place.', [Path]));
+    HeldFailed := Path;
+    Result := False;
     Exit;
   end;
   Log(Format('Held %s aside as %s.', [Path, Held]));
@@ -349,21 +366,36 @@ begin
   HeldAt[I] := Held;
 end;
 
+// Holds aside every file [Files] writes to {app}, stopping at the first that cannot be.
+function HoldAllAside: Boolean;
+begin
+  Result := HoldAside('InstallerClean.exe');
+  if Result then Result := HoldAside('installerclean-cli.exe');
+  if Result then Result := HoldAside('LICENSE.txt');
+  if Result then Result := HoldAside('THIRD-PARTY-NOTICES.txt');
+end;
+
 // Moves each file held aside back to its name. Whatever Setup left at the name is
-// deleted, or where it is running, renamed aside itself, since that name is free again
-// only once it moves. Every failure is written to the setup log.
+// deleted, or where it is running, renamed aside itself, since the name is free only
+// once it moves. Every failure is written to the setup log with the error Windows gave.
 procedure PutHeldBack;
 var
-  I: Integer;
+  I, Error: Integer;
   Left: String;
 begin
   for I := GetArrayLength(HeldAt) - 1 downto 0 do
   begin
     if FileExists(HeldFrom[I]) and not DeleteFileW(HeldFrom[I]) then
     begin
+      Error := DLLGetLastError;
       Left := RenameAside(HeldFrom[I]);
-      if Left <> '' then
-        Log(Format('Could not delete %s, so it was renamed to %s.', [HeldFrom[I], Left]));
+      if Left = '' then
+      begin
+        Log(Format('Could not delete %s: %s. The earlier file is left as %s.',
+          [HeldFrom[I], SysErrorMessage(Error), HeldAt[I]]));
+        Continue;
+      end;
+      Log(Format('Could not delete %s: %s. It was renamed to %s.', [HeldFrom[I], SysErrorMessage(Error), Left]));
     end;
     if MoveFileW(HeldAt[I], HeldFrom[I]) then
       Log(Format('Put %s back as %s.', [HeldAt[I], HeldFrom[I]]))
@@ -379,11 +411,31 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   I: Integer;
 begin
-  if CurStep = ssPostInstall then
+  if CurStep = ssInstall then
+  begin
+    if not HoldAllAside then
+    begin
+      // Nothing has been written yet, so putting back what moved leaves {app} as it was.
+      PutHeldBack;
+      // The message Setup shows where it cannot replace a file, in the wizard's language.
+      SuppressibleMsgBox(SetupMessage(msgErrorReplacingExistingFile) + #13#10 + HeldFailed, mbError, MB_OK, IDOK);
+      Abort;
+    end;
+  end
+  else if CurStep = ssPostInstall then
   begin
     Installed := True;
     for I := 0 to GetArrayLength(HeldAt) - 1 do
-      if not DeleteFileW(HeldAt[I]) then
+      // A file whose write was skipped, by Ignore in Setup's error box, has nothing
+      // newer at its name, so the earlier one goes back there.
+      if not FileExists(HeldFrom[I]) then
+      begin
+        if MoveFileW(HeldAt[I], HeldFrom[I]) then
+          Log(Format('Put %s back as %s: nothing was written in its place.', [HeldAt[I], HeldFrom[I]]))
+        else
+          Log(Format('Could not rename %s back to %s: %s.', [HeldAt[I], HeldFrom[I], SysErrorMessage(DLLGetLastError)]));
+      end
+      else if not DeleteFileW(HeldAt[I]) then
         Log(Format('Could not delete %s: %s. It is left for the next start.', [HeldAt[I], SysErrorMessage(DLLGetLastError)]));
   end;
 end;

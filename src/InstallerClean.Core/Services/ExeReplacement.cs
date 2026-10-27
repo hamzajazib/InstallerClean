@@ -724,11 +724,14 @@ internal static class ExeReplacement
             var backup = exePath + BackupSuffix;
             // Listed before the setup's mutex is asked: a setup that held a file aside
             // before the list was taken is either still running, and seen, or has ended.
+            // A folder that cannot be listed leaves what the setup held aside unknown, so
+            // the answer is that something may be left, and nothing is written to crash.log,
+            // since the window asks again many times at every start.
             var setupHeld = SetupHeldCopies(exePath);
-            var setupRunning = setupHeld.Count > 0 && SetupMayBeRunning();
-            if (setupRunning) setupHeld = [];
-            if (!File.Exists(replacing) && !File.Exists(backup) && !File.Exists(exePath + LockSuffix) && setupHeld.Count == 0)
-                return !setupRunning;
+            var setupLeft = setupHeld is null || (setupHeld.Count > 0 && SetupMayBeRunning());
+            if (setupLeft) setupHeld = [];
+            if (!File.Exists(replacing) && !File.Exists(backup) && !File.Exists(exePath + LockSuffix) && setupHeld!.Count == 0)
+                return !setupLeft;
             using var held = TryHold(exePath, TimeSpan.Zero, out _);
             if (held is null) return false;
             whileHeld?.Invoke();
@@ -736,8 +739,8 @@ internal static class ExeReplacement
             // that cannot delete it while leaving the read-only attribute alone clears that
             // attribute for the delete, so it is put back on the exe here.
             var readOnly = TryReadAttributes(exePath, out var attributes, out _) && (attributes & FileAttributes.ReadOnly) != 0;
-            var removed = TryDeletePlainFile(replacing) & TryDeletePlainFile(backup) & !setupRunning;
-            foreach (var setupCopy in setupHeld) removed &= TryDeletePlainFile(setupCopy);
+            var removed = TryDeletePlainFile(replacing) & TryDeletePlainFile(backup) & !setupLeft;
+            foreach (var setupCopy in setupHeld!) removed &= TryDeletePlainFile(setupCopy);
             if (readOnly && TryReadAttributes(exePath, out attributes, out _) && (attributes & FileAttributes.ReadOnly) == 0)
                 PutReadOnlyBack(exePath);
             return removed;
@@ -752,10 +755,9 @@ internal static class ExeReplacement
     /// <summary>
     /// The names beside <paramref name="exePath"/> the setup holds an earlier version of it
     /// under: the exe's name with <see cref="SetupHeldSuffix"/> on the end, alone or followed
-    /// by a hyphen and a number. A folder this process cannot list answers none, and the
-    /// rest of the clean-up goes ahead.
+    /// by a hyphen and a number. Answers null where the folder cannot be listed.
     /// </summary>
-    internal static List<string> SetupHeldCopies(string exePath)
+    internal static List<string>? SetupHeldCopies(string exePath)
     {
         var folder = Path.GetDirectoryName(exePath)!;
         var stem = Path.GetFileName(exePath) + SetupHeldSuffix;
@@ -771,7 +773,7 @@ internal static class ExeReplacement
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [];
+            return null;
         }
         return found;
     }

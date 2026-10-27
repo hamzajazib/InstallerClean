@@ -1,19 +1,21 @@
 #!/usr/bin/env node
-// Fails (exit 1) when the setup's [Code] does not hold aside every file [Files] writes to
-// {app}, or when the names the setup and the app use for a file held aside, or for the
-// mutex the setup holds while it runs, drift apart.
+// Fails (exit 1) when the setup's HoldAllAside does not hold aside every file [Files]
+// writes to {app}, or does not stop at the first it cannot, or when the names the setup
+// and the app use for a file held aside, or for the mutex the setup holds while it runs,
+// drift apart.
 //
-// Before writing, the setup renames each file it is about to write to {app} aside, and
-// moves it back where the install fails, so a file a running program holds open cannot
-// leave {app} part old and part new. A [Files] entry added without its HoldAside is
-// written over in place, which is not an error anywhere. The window and the command
-// line delete the earlier version the setup held aside of their own exe at their next
-// start, and leave it while the setup's mutex exists, so the suffix and the mutex name in
-// installer/InstallerClean.iss and in ExeReplacement must be the same. Inno Setup cannot
-// read the C# constants, so this check holds them together.
+// Before any file is written, the setup renames each file it writes to {app} aside, and
+// moves each back where the install fails or where one cannot be renamed, so a file a
+// running program holds open never leaves {app} part old and part new. A file left out
+// of HoldAllAside is written over in place, which is not an error anywhere. The window
+// and the command line delete the earlier version the setup held aside of their own exe
+// at their next start, and leave it while the setup's mutex exists, so the suffix and
+// the mutex name in installer/InstallerClean.iss and in ExeReplacement must be the same.
+// Inno Setup cannot read the C# constants, so this check holds them together.
 //
 // Both files are read with their comments blanked, through csharp-source.mjs and
-// iss-source.mjs. Each [Files] destination is printed with its line and its BeforeInstall.
+// iss-source.mjs. Each [Files] destination and each HoldAside call is printed with its
+// line.
 //
 // Run from the repo root: node scripts/check-setup-held-copies.mjs
 import { readFileSync } from 'node:fs';
@@ -77,11 +79,11 @@ if (setupMutex.length !== 1) {
   }
 }
 
-// Each [Files] entry writing under {app} must name, in its BeforeInstall, HoldAside with
-// the path it writes, relative to {app}. A field's value may be quoted or not, and {app}
-// is matched in any case, as Inno Setup reads them.
+// Each [Files] entry writing under {app}, by the path it writes relative to {app}. A
+// field's value may be quoted or not, and {app} is matched in any case, as Inno Setup
+// reads them.
 let section = '';
-let entries = 0;
+const written = new Map();
 for (const l of lines) {
   const heading = l.text.match(/^\[([^\]]+)\]$/);
   if (heading) {
@@ -100,20 +102,48 @@ for (const l of lines) {
   }
   const under = destDir.match(/^\{app\}(?:\\(.*))?$/i);
   if (!under) continue;
-  entries++;
-  const sub = (under[1] ?? '').replace(/\\+$/, '');
   const leaf = field('DestName') ?? field('Source')?.split('\\').pop();
+  if (!leaf) {
+    problems.push(`${SETUP_FILE}:${l.line}: a [Files] entry for {app} with no Source or DestName the check can read`);
+    continue;
+  }
+  const sub = (under[1] ?? '').replace(/\\+$/, '');
   const name = sub ? `${sub}\\${leaf}` : leaf;
-  const hold = field('BeforeInstall');
-  console.log(`${SETUP_FILE}:${l.line}: writes {app}\\${name}; BeforeInstall: ${hold ?? '(none)'}`);
-  const m = hold?.match(/^HoldAside\s*\(\s*'([^']*)'\s*\)$/);
-  if (!m) problems.push(`${SETUP_FILE}:${l.line}: writes {app}\\${name} without BeforeInstall: HoldAside('${name}')`);
-  else if (m[1].toLowerCase() !== name.toLowerCase()) problems.push(`${SETUP_FILE}:${l.line}: writes {app}\\${name} but holds aside '${m[1]}'`);
+  console.log(`${SETUP_FILE}:${l.line}: writes {app}\\${name}`);
+  written.set(name.toLowerCase(), { name, line: l.line });
 }
-if (entries === 0) problems.push(`${SETUP_FILE}: no [Files] entry writing to {app} found; the check has read nothing`);
+
+// The calls in HoldAllAside, each one's answer carried in Result, so the first file
+// that cannot be held aside stops the install.
+const text = lines.map((l) => l.text).join('\n');
+const body = text.match(/function\s+HoldAllAside\s*:\s*Boolean\s*;\s*begin([\s\S]*?)\nend;/i);
+const held = new Map();
+if (!body) problems.push(`${SETUP_FILE}: no 'function HoldAllAside: Boolean;' found`);
+else {
+  const startLine = text.slice(0, body.index).split('\n').length;
+  for (const m of body[1].matchAll(/HoldAside\s*\(\s*'([^']*)'\s*\)/g)) {
+    const line = startLine + body[0].slice(0, body[0].indexOf(body[1]) + m.index).split('\n').length - 1;
+    const statement = body[1].slice(0, m.index).split(';').pop() + m[0];
+    console.log(`${SETUP_FILE}:${line}: holds aside ${m[1]}`);
+    if (!/^\s*(?:if\s+Result\s+then\s+)?Result\s*:=\s*HoldAside/i.test(statement)) {
+      problems.push(`${SETUP_FILE}:${line}: HoldAside('${m[1]}') does not carry its answer in Result`);
+    }
+    held.set(m[1].toLowerCase(), line);
+  }
+}
+
+if (written.size === 0) problems.push(`${SETUP_FILE}: no [Files] entry writing to {app} found; the check has read nothing`);
+if (body && held.size === 0) problems.push(`${SETUP_FILE}: HoldAllAside holds nothing aside; the check has read nothing`);
+for (const [key, { name, line }] of written) {
+  if (!held.has(key)) problems.push(`${SETUP_FILE}:${line}: writes {app}\\${name}, which HoldAllAside does not hold aside`);
+}
+for (const [key, line] of held) {
+  if (!written.has(key)) problems.push(`${SETUP_FILE}:${line}: holds aside ${key}, which [Files] does not write to {app}`);
+}
+if (!/if\s+not\s+HoldAllAside\s+then/i.test(text)) problems.push(`${SETUP_FILE}: HoldAllAside's answer is never acted on`);
 
 if (problems.length > 0) {
   for (const p of problems) console.error(`check-setup-held-copies: ${p}`);
   process.exit(1);
 }
-console.log(`check-setup-held-copies: each of the ${entries} files the setup writes to {app} is held aside first, and its names match ExeReplacement`);
+console.log(`check-setup-held-copies: HoldAllAside holds aside each of the ${written.size} files the setup writes to {app}, and its names match ExeReplacement`);
