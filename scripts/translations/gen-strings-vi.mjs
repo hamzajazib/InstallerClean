@@ -657,6 +657,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `Chạy {0} bằng InstallerClean {1}. Khi chạy xong, phiên bản này sẽ thay thế bản hiện tại.`,
   'Cli.UpdateNotRun': `Không thể chạy phiên bản mới hơn.`,
   'UpdateNotice.CheckingDownload': `Đang kiểm tra bản tải về...`,
+  'Cli.MutexLostDelete': `Đã dừng sau khi xóa {0}/{1} {2}: InstallerClean không còn chắc chắn được rằng không có InstallerClean nào khác đang hoạt động. Hãy chạy lại cùng lệnh đó. Mã thoát 2 (một phần).`,
+  'Cli.MutexLostMove': `Đã dừng sau khi chuyển {0}/{1} {2} đến {3}: InstallerClean không còn chắc chắn được rằng không có InstallerClean nào khác đang hoạt động. Hãy chạy lại cùng lệnh đó. Mã thoát 2 (một phần).`,
+  'Cli.CoverLostNoWorkDelete': `Đã dừng trước khi xóa bất kỳ tệp nào: InstallerClean không còn chắc chắn được rằng không có InstallerClean nào khác đang hoạt động. Hãy chạy lại cùng lệnh đó. Mã thoát 75 (tạm thời).`,
+  'Cli.CoverLostNoWorkMove': `Đã dừng trước khi di chuyển bất kỳ tệp nào: InstallerClean không còn chắc chắn được rằng không có InstallerClean nào khác đang hoạt động. Hãy chạy lại cùng lệnh đó. Mã thoát 75 (tạm thời).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

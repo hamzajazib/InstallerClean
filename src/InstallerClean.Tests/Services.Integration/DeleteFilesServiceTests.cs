@@ -136,6 +136,110 @@ public class DeleteFilesServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteFilesAsync_stops_before_the_file_the_hosts_question_turns_down()
+    {
+        var files = new List<string>();
+        for (int i = 0; i < 3; i++)
+        {
+            var file = Path.Combine(_tempDir, $"test{i}.msi");
+            await File.WriteAllTextAsync(file, "content");
+            files.Add(file);
+        }
+
+        // Asked before each file's progress report and as the last thing before it is
+        // deleted, which is how the command line stops a run the single-instance mutex no
+        // longer covers. The file turned down gets no progress line.
+        var asked = new List<string>();
+        var reported = new List<string>();
+        var result = await NewService().DeleteFilesAsync(
+            files, UnderLeaseClaims.None,
+            progress: new SyncProgress<OperationProgress>(p => reported.Add(p.CurrentFileName)),
+            mayAct: path =>
+            {
+                asked.Add(path);
+                return path != files[1];
+            });
+
+        Assert.True(result.Cancelled);
+        Assert.Equal(1, result.DeletedCount);
+        Assert.Empty(result.Errors);
+        Assert.Equal([files[0], files[0], files[1]], asked);
+        Assert.Equal([Path.GetFileName(files[0])], reported);
+        Assert.False(File.Exists(files[0]));
+        Assert.True(File.Exists(files[1]));
+        Assert.True(File.Exists(files[2]));
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_stops_before_the_act_where_the_hosts_answer_turns_after_the_report()
+    {
+        var file = Path.Combine(_tempDir, "turned.msi");
+        await File.WriteAllTextAsync(file, "content");
+
+        // Yes before the report, no as the last thing before the delete.
+        var asks = 0;
+        var result = await NewService().DeleteFilesAsync(
+            new[] { file }, UnderLeaseClaims.None, mayAct: _ => ++asks == 1);
+
+        Assert.True(result.Cancelled);
+        Assert.Equal(0, result.DeletedCount);
+        Assert.Empty(result.Errors);
+        Assert.Equal(2, asks);
+        Assert.True(File.Exists(file));
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_leaves_a_read_only_file_the_hosts_answer_turns_on_before_the_retry()
+    {
+        // The first delete is refused for the read-only attribute; the question is asked
+        // again before the attribute is cleared, and a no there ends the batch with the
+        // file and its attribute as they were.
+        var file = Path.Combine(_tempDir, "readonly-turned.msi");
+        await File.WriteAllTextAsync(file, "content");
+        File.SetAttributes(file, File.GetAttributes(file) | FileAttributes.ReadOnly);
+        try
+        {
+            var asks = 0;
+            var result = await NewService().DeleteFilesAsync(
+                new[] { file }, UnderLeaseClaims.None, mayAct: _ => ++asks <= 2);
+
+            Assert.True(result.Cancelled);
+            Assert.Equal(0, result.DeletedCount);
+            Assert.Empty(result.Errors);
+            Assert.Equal(3, asks);
+            Assert.True(File.Exists(file));
+            Assert.True(File.GetAttributes(file).HasFlag(FileAttributes.ReadOnly));
+        }
+        finally
+        {
+            if (File.Exists(file)) File.SetAttributes(file, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_counts_a_cancellation_from_elsewhere_as_that_files_error_and_goes_on()
+    {
+        var files = new List<string>();
+        for (int i = 0; i < 2; i++)
+        {
+            var file = Path.Combine(_tempDir, $"other{i}.msi");
+            await File.WriteAllTextAsync(file, "content");
+            files.Add(file);
+        }
+
+        // Not the batch's own token: the batch is not stopped by it.
+        var result = await NewService().DeleteFilesAsync(
+            files, UnderLeaseClaims.None, mayAct: path =>
+                path == files[0] ? throw new OperationCanceledException() : true);
+
+        Assert.False(result.Cancelled);
+        Assert.Equal(1, result.DeletedCount);
+        Assert.Single(result.Errors);
+        Assert.True(File.Exists(files[0]));
+        Assert.False(File.Exists(files[1]));
+    }
+
+    [Fact]
     public async Task DeleteFilesAsync_deletes_a_read_only_file()
     {
         // Windows refuses File.Delete on a read-only file, and the shell delete

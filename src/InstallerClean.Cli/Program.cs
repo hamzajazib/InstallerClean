@@ -379,9 +379,12 @@ internal static class Program
         // Made before the take, so nothing between the take and the try that releases the
         // mutex can throw.
         var report = new RunReport(ConsoleCanAsk());
-        var take = TakeInstanceLock(arg, s_standsFor is not null, () => new InstanceLock(), update.RunningInstead, cts.Token);
+        var take = TakeInstanceLock(arg, s_standsFor is not null, () => new InstanceLock(), update.RunningInstead, cts.Token,
+            () => new StagedRunCover(InstanceLock.Name,
+                s_copyHeld ?? throw new InvalidOperationException("A run standing for a copy holds no handle on it.")));
         if (take.ExitCode is int blockedExitCode) return blockedExitCode;
         var instanceLock = take.Lock;
+        var cover = take.Cover;
         int exitCode;
         try
         {
@@ -395,7 +398,7 @@ internal static class Program
             // mutex. A console Main has no
             // SynchronizationContext, so GetResult here cannot deadlock
             // on captured-context resumption.
-            exitCode = RunWorkAsync(arg, invocation, cts.Token, output: output, report: report)
+            exitCode = RunWorkAsync(arg, invocation, cts.Token, output: output, report: report, cover: cover)
                 .GetAwaiter().GetResult();
         }
         finally
@@ -406,6 +409,7 @@ internal static class Program
             // writes a second, and one summary per run is what an RMM counts runs by.
             try
             {
+                (cover as IDisposable)?.Dispose();
                 instanceLock?.Release();
                 instanceLock?.Dispose();
             }
@@ -482,8 +486,10 @@ internal static class Program
     /// so a command-line run cannot race the GUI mid-delete or mid-move, and a second
     /// command-line run is turned away too. /s is read-only and takes none.
     /// For /d and /m the copy a run stands for (<paramref name="standsForCopy"/>) holds it until
-    /// this run has ended (HandOverContract.ReadReplaceRequest), so such a run goes on where it
-    /// cannot take it, and takes it where nothing holds it, as where that copy has ended.
+    /// this run has ended (HandOverContract.ReadReplaceRequest), so such a run takes no lock
+    /// here and is given the cover <paramref name="newCover"/> makes
+    /// (<see cref="StagedRunCover"/>), which answers whether that copy's hold or its own covers
+    /// the run before it acts, for the caller to dispose once the run has ended.
     /// Answers the lock for the caller to release on this same thread, or none where nothing
     /// was taken; or the exit code of a run the mutex turned away, which has said so and
     /// written its entry.
@@ -494,42 +500,24 @@ internal static class Program
     /// </summary>
     internal static LockTake TakeInstanceLock(
         string arg, bool standsForCopy, Func<InstanceLock> newLock, Func<string>? runningInstead,
-        CancellationToken token)
+        CancellationToken token, Func<IRunCover>? newCover = null)
     {
         InstanceLock? instanceLock = null;
-        if (arg is "/d" or "/m")
+        IRunCover? cover = null;
+        if (arg is "/d" or "/m" && standsForCopy)
+        {
+            // The cover's own thread makes the run's take (StagedRunCover). A Move or Delete
+            // standing for a copy never goes on without one.
+            cover = (newCover ?? throw new ArgumentNullException(nameof(newCover)))();
+        }
+        else if (arg is "/d" or "/m")
         {
             instanceLock = newLock();
-            if (!instanceLock.TryTake() && standsForCopy)
+            if (!instanceLock.TryTake())
             {
-                instanceLock.Dispose();
-                instanceLock = null;
-            }
-            else if (!instanceLock.IsHeld)
-            {
-                // Nothing on this path may reach Main's catch-all, and the two
-                // halves of it fail differently. A throw before the write costs
-                // the run its class: a 2000 TransientSkip and exit 75, the one
-                // code a scheduler retries on, become a 4000 HardError and exit
-                // 1. A throw after it produces that 4000 as this run's SECOND
-                // entry, which is what an RMM counts runs by. So every statement
-                // below is guarded where it stands, and the write is guarded
-                // inside EventLogWriter.Write, which builds the entry there so
-                // that no part of the call is evaluated in this frame.
-                try
-                {
-                    Console.WriteLine(Strings.Cli_MutexBlocked);
-                }
-                catch (Exception ex)
-                {
-                    Helpers.CrashLog.TryWrite(ex);
-                }
-                // RMM consumer polling the Application channel for
-                // InstallerClean entries needs an audit record on the
-                // skipped path to distinguish it from "the task never
-                // fired".
-                MachineContract.WriteEventLog(CliEventClass.TransientSkip,
-                    () => string.Format(Strings.Cli_EventLogMutexBlocked, arg));
+                // Nothing on this path may reach Main's catch-all (ReportMutexBlocked), and
+                // the dispose below is guarded where it stands for the same reason.
+                ReportMutexBlocked(arg);
                 NoteEventLogUnavailable();
                 try
                 {
@@ -554,14 +542,53 @@ internal static class Program
                 Helpers.CrashLog.TryWrite(ex);
             }
         }
-        return new LockTake(instanceLock, null);
+        return new LockTake(instanceLock, null, cover);
     }
 
     /// <summary>
     /// What <see cref="TakeInstanceLock"/> answers: the lock it took, or the exit code of a run
-    /// the mutex turned away.
+    /// the mutex turned away, and the cover of a run standing for a copy.
     /// </summary>
-    internal readonly record struct LockTake(InstanceLock? Lock, int? ExitCode);
+    internal readonly record struct LockTake(InstanceLock? Lock, int? ExitCode, IRunCover? Cover = null);
+
+    /// <summary>
+    /// Says a Move or Delete is not run because the single-instance mutex is held elsewhere,
+    /// and writes its entry, and answers <see cref="ExitTransient"/>.
+    /// </summary>
+    private static int ReportMutexBlocked(string arg)
+    {
+        // RMM consumer polling the Application channel for InstallerClean entries needs an
+        // audit record on the skipped path to distinguish it from "the task never fired".
+        ReportMutexStop(() => [Strings.Cli_MutexBlocked], CliEventClass.TransientSkip,
+            () => string.Format(Strings.Cli_EventLogMutexBlocked, arg));
+        return ExitTransient;
+    }
+
+    /// <summary>
+    /// Prints the lines <paramref name="lines"/> builds and writes the run's entry, of
+    /// <paramref name="eventClass"/> with <paramref name="entry"/>, for a Move or Delete the
+    /// single-instance mutex turned away or no longer covered. Never throws.
+    /// </summary>
+    private static void ReportMutexStop(
+        Func<IEnumerable<string>> lines, CliEventClass eventClass, Func<string> entry)
+    {
+        // Nothing here may reach Main's catch-all, and the two halves of it fail
+        // differently. A throw before the write costs the run its class: a 2000
+        // TransientSkip and exit 75, the one code a scheduler retries on, become a 4000
+        // HardError and exit 1. A throw after it produces that 4000 as this run's SECOND
+        // entry, which is what an RMM counts runs by. So the lines are guarded where they
+        // stand, and the write is guarded inside EventLogWriter.Write, which builds the
+        // entry there so that no part of the call is evaluated in this frame.
+        try
+        {
+            foreach (var line in lines()) Console.WriteLine(line);
+        }
+        catch (Exception ex)
+        {
+            Helpers.CrashLog.TryWrite(ex);
+        }
+        MachineContract.WriteEventLog(eventClass, entry);
+    }
 
     /// <summary>
     /// What the update made before a run ended in, as <see cref="RunUpdate"/> answers it: the
@@ -967,15 +994,21 @@ internal static class Program
     /// to answer for a write that failed. Null only where a caller installed no guard, and
     /// then no failed write is read.
     /// </param>
+    /// <param name="cover">
+    /// For a Move or Delete standing for an older copy, which goes on without its own hold
+    /// on the single-instance mutex: asked before the batch and before each file is moved or
+    /// deleted, so a run it does not cover stops there, saying how far it got and naming no
+    /// cause. Null for every other run.
+    /// </param>
     internal static async Task<int> RunWorkAsync(
         string arg, CliInvocation invocation, CancellationToken token,
         IServiceProvider? servicesOverride = null, Func<bool>? consoleWatched = null,
-        ConsoleGuard? output = null, RunReport? report = null)
+        ConsoleGuard? output = null, RunReport? report = null, IRunCover? cover = null)
     {
         // The note follows the run's entry wherever the work returns. Where an exception
         // escapes the work, thrown inside one of its catches, nothing here prints it: Main
         // reports the exception and prints the note after its own line and entry.
-        var exitCode = await DoWorkAsync(arg, invocation, token, servicesOverride, consoleWatched, output, report);
+        var exitCode = await DoWorkAsync(arg, invocation, token, servicesOverride, consoleWatched, output, report, cover);
         NoteEventLogUnavailable();
         return exitCode;
     }
@@ -989,7 +1022,7 @@ internal static class Program
     private static async Task<int> DoWorkAsync(
         string arg, CliInvocation invocation, CancellationToken token,
         IServiceProvider? servicesOverride, Func<bool>? consoleWatched, ConsoleGuard? output,
-        RunReport? report)
+        RunReport? report, IRunCover? cover)
     {
         consoleWatched ??= ConsoleIsWatched;
 
@@ -1007,6 +1040,29 @@ internal static class Program
         // committedCount is: moveDest is declared inside it and the catch cannot
         // see it. Empty on every other path, which is what gates the line.
         string cancelledMoveDestination = string.Empty;
+
+        // The scan and the re-verify stop on Ctrl+C and where the run's cover is lost. The
+        // batch asks the cover as the last thing before each file (mayAct), never waiting,
+        // since it holds the Windows Installer mutex meanwhile; where the run is not covered
+        // the batch stops before that file, and this is cancelled once the batch has
+        // returned, so the run ends in the catch for a stopped cover.
+        using var workSource = cover is null ? null : CancellationTokenSource.CreateLinkedTokenSource(token, cover.Lost);
+        var workToken = workSource?.Token ?? token;
+        var coverStopped = false;
+        Func<string, bool>? mayAct = cover is null ? null : _ =>
+        {
+            if (cover.Covers()) return true;
+            coverStopped = true;
+            return false;
+        };
+        // Asked before the batch, outside the Windows Installer mutex, so a run not covered
+        // by then ends with nothing done, in the same catch.
+        void StopWhereNotCovered()
+        {
+            if (cover is null || cover.Covers()) return;
+            workSource!.Cancel();
+            workSource.Token.ThrowIfCancellationRequested();
+        }
 
         try
         {
@@ -1093,7 +1149,7 @@ internal static class Program
 
             Console.WriteLine(Strings.Cli_ScanningInstaller);
             var scanTimer = Stopwatch.StartNew();
-            var scanResult = await scanService.ScanAsync(cancellationToken: token);
+            var scanResult = await scanService.ScanAsync(cancellationToken: workToken);
             var scanDurationMs = scanTimer.ElapsedMilliseconds;
 
             var count = scanResult.RemovableFiles.Count;
@@ -1316,7 +1372,7 @@ internal static class Program
             // naturally.
             var reverifier = services.GetRequiredService<IRemovableReverifier>();
             var reverify = await reverifier.ReverifyAsync(
-                scanResult.RemovableFiles.Select(f => f.FullPath).ToList(), token);
+                scanResult.RemovableFiles.Select(f => f.FullPath).ToList(), workToken);
 
             // THE DRIVES AND SHARES THIS CHECK STOPPED WAITING FOR WHILE FILES STILL HAD TO
             // BE CHECKED AGAINST THEM, read once. The action services' own re-read gives
@@ -1415,6 +1471,7 @@ internal static class Program
             if (arg == "/d")
             {
                 var deleteService = services.GetRequiredService<IDeleteFilesService>();
+                if (filePaths.Count > 0) StopWhereNotCovered();
                 // Silent when the re-verify just above took every file back. It
                 // prints nothing itself: the run's one held-back line below is
                 // what carries those files. Announcing a batch of none here and
@@ -1439,7 +1496,7 @@ internal static class Program
                         ? Task.FromResult(new DeleteResult(0, Array.Empty<FileOperationError>()))
                         : deleteService.DeleteFilesAsync(
                             filePaths, UnderLeaseClaims.From(reverify),
-                            progress: progress, cancellationToken: token),
+                            progress: progress, cancellationToken: workToken, mayAct: mayAct),
                     r => r.DeletedCount);
                 var operationDurationMs = operationTimer.ElapsedMilliseconds;
 
@@ -1530,7 +1587,8 @@ internal static class Program
                 if (result.Cancelled)
                 {
                     committedCount = result.DeletedCount;
-                    token.ThrowIfCancellationRequested();
+                    if (coverStopped) workSource!.Cancel();
+                    workToken.ThrowIfCancellationRequested();
                 }
 
                 // Bytes-recovered figure excludes the per-file error
@@ -1590,6 +1648,9 @@ internal static class Program
                 return ExitError;
             }
 
+            // Asked before the destination folder is made, which the move service does first.
+            if (filePaths.Count > 0) StopWhereNotCovered();
+
             // Silent at zero; see the /d branch.
             if (count > 0)
                 Console.WriteLine(string.Format(
@@ -1609,7 +1670,7 @@ internal static class Program
                     () => filePaths.Count == 0
                         ? Task.FromResult(new MoveResult(0, Array.Empty<FileOperationError>()))
                         : moveService.MoveFilesAsync(filePaths, moveDest,
-                            UnderLeaseClaims.From(reverify), progress, token),
+                            UnderLeaseClaims.From(reverify), progress, workToken, mayAct),
                     r => r.MovedCount);
             }
             catch (MoveAbortedException ex)
@@ -1717,7 +1778,8 @@ internal static class Program
                 // moved nothing has left nothing to put back, on the same
                 // silent-at-zero rule the run lines follow.
                 if (moveResult.MovedCount > 0) cancelledMoveDestination = moveDest;
-                token.ThrowIfCancellationRequested();
+                if (coverStopped) workSource!.Cancel();
+                workToken.ThrowIfCancellationRequested();
             }
 
             // Same per-file error exclusion as the /d branch.
@@ -1744,6 +1806,36 @@ internal static class Program
                     moveDest, DisplayHelpers.FormatSizeForMachine(actualMovedBytes), moveResult.Errors.Count,
                     DisplayHelpers.PluraliseError(moveResult.Errors.Count)));
             return moveOutcome.ExitCode;
+        }
+        catch (Exception ex) when (Classify(ex) == WorkFailure.Cancelled
+            && cover is not null && workSource is { IsCancellationRequested: true } && !token.IsCancellationRequested)
+        {
+            // The run stopped because the cover no longer covered it: before its next file, or
+            // in the scan or the re-verify. Nobody cancelled it, and why the cover stopped is
+            // not established, so the line names no cause, only how far the run got, and for
+            // a Move into which folder, and that the same command run again finishes it, with
+            // no undo, the run being one to finish rather than put back. With nothing moved
+            // or deleted it is a run to try again, as one turned away before it started is.
+            if (committedCount == 0)
+            {
+                ReportMutexStop(
+                    () => [arg == "/m" ? Strings.Cli_CoverLostNoWorkMove : Strings.Cli_CoverLostNoWorkDelete],
+                    CliEventClass.TransientSkip,
+                    () => string.Format(Strings.Cli_EventLogCoverLostNoWork, arg));
+                return ExitTransient;
+            }
+            ReportMutexStop(
+                () => [arg == "/m"
+                    ? string.Format(Strings.Cli_MutexLostMove,
+                        DisplayHelpers.FormatCount(committedCount), DisplayHelpers.FormatCount(totalToProcess),
+                        DisplayHelpers.PluraliseFile(totalToProcess), cancelledMoveDestination)
+                    : string.Format(Strings.Cli_MutexLostDelete,
+                        DisplayHelpers.FormatCount(committedCount), DisplayHelpers.FormatCount(totalToProcess),
+                        DisplayHelpers.PluraliseFile(totalToProcess))],
+                CliEventClass.Partial,
+                () => string.Format(Strings.Cli_EventLogMutexLostPartial,
+                    arg, committedCount, totalToProcess, DisplayHelpers.PluraliseFile(totalToProcess)));
+            return ExitPartial;
         }
         catch (Exception ex) when (Classify(ex) == WorkFailure.Cancelled)
         {

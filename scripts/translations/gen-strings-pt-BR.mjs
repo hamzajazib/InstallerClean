@@ -662,6 +662,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `{0} será executado com o InstallerClean {1}. Ao final da execução, ele substituirá esta cópia.`,
   'Cli.UpdateNotRun': `Não foi possível executar a versão mais recente.`,
   'UpdateNotice.CheckingDownload': `Verificando o download...`,
+  'Cli.MutexLostDelete': `Interrompido após excluir {0} de {1} {2}: o InstallerClean não podia mais ter certeza de que nenhum outro InstallerClean estava agindo. Execute o mesmo comando novamente. Código de saída 2 (parcial).`,
+  'Cli.MutexLostMove': `Interrompido após mover {0} de {1} {2} para {3}: o InstallerClean não podia mais ter certeza de que nenhum outro InstallerClean estava agindo. Execute o mesmo comando novamente. Código de saída 2 (parcial).`,
+  'Cli.CoverLostNoWorkDelete': `Interrompido antes de excluir qualquer arquivo: o InstallerClean não podia mais ter certeza de que nenhum outro InstallerClean estava agindo. Execute o mesmo comando novamente. Código de saída 75 (transitório).`,
+  'Cli.CoverLostNoWorkMove': `Interrompido antes de mover qualquer arquivo: o InstallerClean não podia mais ter certeza de que nenhum outro InstallerClean estava agindo. Execute o mesmo comando novamente. Código de saída 75 (transitório).`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

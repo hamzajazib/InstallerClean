@@ -562,6 +562,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `使用 InstallerClean {1} 运行 {0}。运行结束后，它将取代此副本。`,
   'Cli.UpdateNotRun': `无法运行较新的版本。`,
   'UpdateNotice.CheckingDownload': `正在检查下载的文件…`,
+  'Cli.MutexLostDelete': `在 {1} 个{2}中删除 {0} 个后已停止：InstallerClean 已无法确定没有其他 InstallerClean 正在操作。请再次运行同一命令。退出代码 2（部分完成）。`,
+  'Cli.MutexLostMove': `将 {1} 个{2}中的 {0} 个移动到 {3} 后已停止：InstallerClean 已无法确定没有其他 InstallerClean 正在操作。请再次运行同一命令。退出代码 2（部分完成）。`,
+  'Cli.CoverLostNoWorkDelete': `在删除任何文件之前已停止：InstallerClean 已无法确定没有其他 InstallerClean 正在操作。请再次运行同一命令。退出代码 75（暂时性）。`,
+  'Cli.CoverLostNoWorkMove': `在移动任何文件之前已停止：InstallerClean 已无法确定没有其他 InstallerClean 正在操作。请再次运行同一命令。退出代码 75（暂时性）。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

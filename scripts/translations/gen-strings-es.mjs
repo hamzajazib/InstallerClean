@@ -594,6 +594,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `Se ejecuta {0} con InstallerClean {1}. Ocupará el lugar de esta copia cuando termine la ejecución.`,
   'Cli.UpdateNotRun': `No se pudo ejecutar la versión más reciente.`,
   'UpdateNotice.CheckingDownload': `Comprobando la descarga...`,
+  'Cli.MutexLostDelete': `Detenido tras eliminar {0} de {1} {2}: InstallerClean ya no podía tener la certeza de que ningún otro InstallerClean estuviera actuando. Vuelve a ejecutar el mismo comando. Código de salida 2 (parcial).`,
+  'Cli.MutexLostMove': `Detenido tras mover {0} de {1} {2} a {3}: InstallerClean ya no podía tener la certeza de que ningún otro InstallerClean estuviera actuando. Vuelve a ejecutar el mismo comando. Código de salida 2 (parcial).`,
+  'Cli.CoverLostNoWorkDelete': `Detenido antes de eliminar ningún archivo: InstallerClean ya no podía tener la certeza de que ningún otro InstallerClean estuviera actuando. Vuelve a ejecutar el mismo comando. Código de salida 75 (transitorio).`,
+  'Cli.CoverLostNoWorkMove': `Detenido antes de mover ningún archivo: InstallerClean ya no podía tener la certeza de que ningún otro InstallerClean estuviera actuando. Vuelve a ejecutar el mismo comando. Código de salida 75 (transitorio).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

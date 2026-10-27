@@ -721,6 +721,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `Running {0} with InstallerClean {1}. It takes this copy's place once the run ends.`,
   'Cli.UpdateNotRun': `The newer version couldn't be run.`,
   'UpdateNotice.CheckingDownload': `Checking the download...`,
+  'Cli.MutexLostDelete': `Stopped after deleting {0} of {1} {2}: InstallerClean could no longer be sure that no other InstallerClean was acting. Run the same command again. Exit 2 (partial).`,
+  'Cli.MutexLostMove': `Stopped after moving {0} of {1} {2} to {3}: InstallerClean could no longer be sure that no other InstallerClean was acting. Run the same command again. Exit 2 (partial).`,
+  'Cli.CoverLostNoWorkDelete': `Stopped before deleting any file: InstallerClean could no longer be sure that no other InstallerClean was acting. Run the same command again. Exit 75 (transient).`,
+  'Cli.CoverLostNoWorkMove': `Stopped before moving any file: InstallerClean could no longer be sure that no other InstallerClean was acting. Run the same command again. Exit 75 (transient).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

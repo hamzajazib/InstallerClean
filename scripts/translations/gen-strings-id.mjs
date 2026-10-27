@@ -682,6 +682,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `Menjalankan {0} dengan InstallerClean {1}. Versi ini akan menggantikan salinan ini setelah proses selesai.`,
   'Cli.UpdateNotRun': `Versi yang lebih baru tidak dapat dijalankan.`,
   'UpdateNotice.CheckingDownload': `Memeriksa unduhan...`,
+  'Cli.MutexLostDelete': `Dihentikan setelah menghapus {0} dari {1} {2}: InstallerClean tidak bisa lagi memastikan bahwa tidak ada InstallerClean lain yang sedang bekerja. Jalankan perintah yang sama lagi. Kode keluar 2 (sebagian).`,
+  'Cli.MutexLostMove': `Dihentikan setelah memindahkan {0} dari {1} {2} ke {3}: InstallerClean tidak bisa lagi memastikan bahwa tidak ada InstallerClean lain yang sedang bekerja. Jalankan perintah yang sama lagi. Kode keluar 2 (sebagian).`,
+  'Cli.CoverLostNoWorkDelete': `Dihentikan sebelum menghapus file apa pun: InstallerClean tidak bisa lagi memastikan bahwa tidak ada InstallerClean lain yang sedang bekerja. Jalankan perintah yang sama lagi. Kode keluar 75 (sementara).`,
+  'Cli.CoverLostNoWorkMove': `Dihentikan sebelum memindahkan file apa pun: InstallerClean tidak bisa lagi memastikan bahwa tidak ada InstallerClean lain yang sedang bekerja. Jalankan perintah yang sama lagi. Kode keluar 75 (sementara).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

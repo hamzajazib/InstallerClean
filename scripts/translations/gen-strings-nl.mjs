@@ -641,6 +641,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `{0} wordt uitgevoerd met InstallerClean {1}. Na afloop neemt deze versie de plaats van deze kopie in.`,
   'Cli.UpdateNotRun': `De nieuwere versie kon niet worden uitgevoerd.`,
   'UpdateNotice.CheckingDownload': `Download controleren...`,
+  'Cli.MutexLostDelete': `Gestopt na het verwijderen van {0} van {1} {2}: InstallerClean kon niet langer zeker zijn dat geen andere InstallerClean bezig was. Voer dezelfde opdracht opnieuw uit. Exit 2 (gedeeltelijk).`,
+  'Cli.MutexLostMove': `Gestopt na het verplaatsen van {0} van {1} {2} naar {3}: InstallerClean kon niet langer zeker zijn dat geen andere InstallerClean bezig was. Voer dezelfde opdracht opnieuw uit. Exit 2 (gedeeltelijk).`,
+  'Cli.CoverLostNoWorkDelete': `Gestopt voordat er een bestand is verwijderd: InstallerClean kon niet langer zeker zijn dat geen andere InstallerClean bezig was. Voer dezelfde opdracht opnieuw uit. Exit 75 (tijdelijk).`,
+  'Cli.CoverLostNoWorkMove': `Gestopt voordat er een bestand is verplaatst: InstallerClean kon niet langer zeker zijn dat geen andere InstallerClean bezig was. Voer dezelfde opdracht opnieuw uit. Exit 75 (tijdelijk).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

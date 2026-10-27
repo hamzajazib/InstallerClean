@@ -101,22 +101,53 @@ public class CliInstanceLockTakeTests
         Release(take.Result.Lock);
     }
 
-    [Fact]
-    public void A_run_standing_for_a_copy_that_holds_the_mutex_goes_on_without_it()
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public void A_run_standing_for_a_copy_never_goes_on_without_a_cover(string arg)
     {
-        using var holding = new ManualResetEventSlim();
-        using var letGo = new ManualResetEventSlim();
-        var holder = HoldOnAnotherThread(holding, letGo);
+        var made = false;
 
-        var take = Captured(() => Program.TakeInstanceLock("/d", standsForCopy: true,
-            () => new InstanceLock(_name), null, CancellationToken.None));
+        Assert.Throws<ArgumentNullException>(() => Program.TakeInstanceLock(arg, standsForCopy: true,
+            () =>
+            {
+                made = true;
+                return new InstanceLock(_name);
+            },
+            null, CancellationToken.None));
 
-        letGo.Set();
-        holder.Join();
+        Assert.False(made);
+    }
+
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public void A_run_standing_for_a_copy_leaves_its_take_to_the_cover(string arg)
+    {
+        var made = false;
+        var cover = new NoCover();
+
+        var take = Captured(() => Program.TakeInstanceLock(arg, standsForCopy: true,
+            () =>
+            {
+                made = true;
+                return new InstanceLock(_name);
+            },
+            null, CancellationToken.None, () => cover));
+
+        Assert.False(made);
         Assert.Null(take.Result.ExitCode);
         Assert.Null(take.Result.Lock);
+        Assert.Same(cover, take.Result.Cover);
         Assert.Empty(take.Lines);
         Assert.Empty(take.Entries);
+    }
+
+    private sealed class NoCover : IRunCover
+    {
+        public bool Covers() => true;
+
+        public CancellationToken Lost => CancellationToken.None;
     }
 
     [Fact]

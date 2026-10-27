@@ -51,7 +51,8 @@ public sealed class DeleteFilesService : IDeleteFilesService
         IEnumerable<string> filePaths,
         UnderLeaseClaims underLeaseClaims,
         IProgress<OperationProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<string, bool>? mayAct = null)
     {
         return Task.Run(() =>
         {
@@ -179,16 +180,24 @@ public sealed class DeleteFilesService : IDeleteFilesService
 
                 try
                 {
-                    // First statement inside the per-file try, and both halves of
-                    // that are load-bearing. Before the skip check below, so a
-                    // missing file still advances the visible counter, matching
-                    // MoveFilesService. Inside the try, so a progress consumer
-                    // that throws costs this one file an UnknownError instead of
-                    // costing the batch: from outside the try the throw leaves the
-                    // loop altogether, and the files already deleted are never
-                    // reported, the result and the failure log's closing entry
+                    // The host's question is asked before the report as well as last before
+                    // the act, so a batch the host has stopped covering stops before this
+                    // file's progress line rather than after it.
+                    if (mayAct is not null && !mayAct(filePath)) throw new BatchStoppedException();
+                    // First statement inside the per-file try after that question,
+                    // and both halves of that are load-bearing. Before the skip check
+                    // below, so a missing file still advances the visible counter,
+                    // matching MoveFilesService. Inside the try, so a progress
+                    // consumer that throws costs this one file an UnknownError
+                    // instead of costing the batch: from outside the try the throw
+                    // leaves the loop altogether, and the files already deleted are
+                    // never reported, the result and the failure log's closing entry
                     // both being built past the loop.
                     progress?.Report(new OperationProgress(i + 1, total, _fs.Path.GetFileName(filePath)));
+                    // Asked again after the report, which can block on the console: a cancel
+                    // that came meanwhile leaves this file alone. The catch-all below lets the
+                    // batch's own cancellation through (BatchStop.EndsBatch).
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     if (!_fs.File.Exists(filePath))
                     {
@@ -261,6 +270,8 @@ public sealed class DeleteFilesService : IDeleteFilesService
                         continue;
                     }
 
+                    // The last thing before the act, after every check on the file.
+                    if (mayAct is not null && !mayAct(filePath)) throw new BatchStoppedException();
                     _fs.File.Delete(filePath);
                     deleted++;
                 }
@@ -285,6 +296,9 @@ public sealed class DeleteFilesService : IDeleteFilesService
                     // confirmed the deletion. Only the read-only attribute is
                     // cleared, only once, and any throw from clearing it or from
                     // the retry fails closed exactly as before.
+                    // The host's question is asked again before the attribute is cleared, the
+                    // clear and the retried delete being acts on the file as the first was.
+                    if (mayAct is not null && !mayAct(filePath)) throw new BatchStoppedException();
                     if (TryClearReadOnly(filePath, failureLog))
                     {
                         try
@@ -321,7 +335,7 @@ public sealed class DeleteFilesService : IDeleteFilesService
                         ? new FileInUse(filePath)
                         : new IOFailure(filePath));
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!BatchStop.EndsBatch(ex, cancellationToken))
                 {
                     failureLog.Record(ex);
                     errors.Add(new UnknownError(filePath));
@@ -331,9 +345,10 @@ public sealed class DeleteFilesService : IDeleteFilesService
             catch (OperationCanceledException)
             {
                 // Return what was deleted before the cancel rather than
-                // throwing the tally away. The loop's ThrowIfCancellationRequested
-                // is the only cancellation source and sits outside the inner
-                // per-file catch, so only a real cancel lands here.
+                // throwing the tally away. The loop's ThrowIfCancellationRequested and
+                // the host's mayAct answering no are the only sources, and the inner
+                // per-file catch-all lets only those through (BatchStop.EndsBatch), so
+                // only a real cancel or stop lands here.
                 cancelled = true;
             }
 

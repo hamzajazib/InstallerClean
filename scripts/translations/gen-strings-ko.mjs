@@ -658,6 +658,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `InstallerClean {1} 버전으로 {0} 명령을 실행합니다. 실행이 끝나면 이 사본을 대체합니다.`,
   'Cli.UpdateNotRun': `새 버전을 실행하지 못했습니다.`,
   'UpdateNotice.CheckingDownload': `내려받은 파일을 확인하는 중...`,
+  'Cli.MutexLostDelete': `{2} {1}개 중 {0}개를 삭제한 뒤 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 2(일부 완료).`,
+  'Cli.MutexLostMove': `{2} {1}개 중 {0}개를 {3}(으)로 이동한 뒤 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 2(일부 완료).`,
+  'Cli.CoverLostNoWorkDelete': `파일을 삭제하기 전에 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 75(일시적).`,
+  'Cli.CoverLostNoWorkMove': `파일을 이동하기 전에 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 75(일시적).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

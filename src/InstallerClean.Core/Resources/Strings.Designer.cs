@@ -168,6 +168,8 @@ public static class Strings
     public static string Cli_AdminRightsNeeded => Get("Cli.AdminRightsNeeded");
     public static string Cli_Cancelled => Get("Cli.Cancelled");
     public static string Cli_Cancelling => Get("Cli.Cancelling");
+    public static string Cli_CoverLostNoWorkDelete => Get("Cli.CoverLostNoWorkDelete");
+    public static string Cli_CoverLostNoWorkMove => Get("Cli.CoverLostNoWorkMove");
     public static string Cli_DeletedFiles => Get("Cli.DeletedFiles");
     public static string Cli_DeletingFiles => Get("Cli.DeletingFiles");
     public static string Cli_DestinationChangedMidBatch => Get("Cli.DestinationChangedMidBatch");
@@ -176,6 +178,7 @@ public static class Strings
     public static string Cli_EventLogBadArguments => Get("Cli.EventLogBadArguments");
     public static string Cli_EventLogCancelledNoWork => Get("Cli.EventLogCancelledNoWork");
     public static string Cli_EventLogCancelledPartial => Get("Cli.EventLogCancelledPartial");
+    public static string Cli_EventLogCoverLostNoWork => Get("Cli.EventLogCoverLostNoWork");
     public static string Cli_EventLogDeleteSummary => Get("Cli.EventLogDeleteSummary");
     public static string Cli_EventLogHardError => Get("Cli.EventLogHardError");
     public static string Cli_EventLogHardError_NoLog => Get("Cli.EventLogHardError.NoLog");
@@ -190,6 +193,7 @@ public static class Strings
     public static string Cli_EventLogMoveNotEnoughSpace => Get("Cli.EventLogMoveNotEnoughSpace");
     public static string Cli_EventLogMoveSummary => Get("Cli.EventLogMoveSummary");
     public static string Cli_EventLogMutexBlocked => Get("Cli.EventLogMutexBlocked");
+    public static string Cli_EventLogMutexLostPartial => Get("Cli.EventLogMutexLostPartial");
     public static string Cli_EventLogNoArguments => Get("Cli.EventLogNoArguments");
     public static string Cli_EventLogNothingOffered => Get("Cli.EventLogNothingOffered");
     public static string Cli_EventLogNothingOfferedNotice => Get("Cli.EventLogNothingOfferedNotice");
@@ -280,6 +284,8 @@ public static class Strings
     public static string Cli_MoveRestoreHint => Get("Cli.MoveRestoreHint");
     public static string Cli_MovingFiles => Get("Cli.MovingFiles");
     public static string Cli_MutexBlocked => Get("Cli.MutexBlocked");
+    public static string Cli_MutexLostDelete => Get("Cli.MutexLostDelete");
+    public static string Cli_MutexLostMove => Get("Cli.MutexLostMove");
     public static string Cli_NoMoveDestination => Get("Cli.NoMoveDestination");
     public static string Cli_NothingListedPerFile_Plural => Get("Cli.NothingListedPerFile.Plural");
     public static string Cli_NothingListedPerFile_Singular => Get("Cli.NothingListedPerFile.Singular");

@@ -58,12 +58,20 @@ public interface IMoveFilesService
     /// null rather than empty and the re-read throws on the first of them, which
     /// is loud and is meant to be.
     /// </param>
+    /// <param name="mayAct">
+    /// Asked with each file's path before that file's progress report, and again before each
+    /// act on that file, the last time immediately before it is deleted or moved, after every
+    /// check on it. False ends the batch as a cancellation does, with what was done so far and
+    /// that file untouched. Asked on the batch's own thread while it holds
+    /// the Windows Installer mutex, so it must answer at once. Null asks nothing.
+    /// </param>
     Task<MoveResult> MoveFilesAsync(
         IEnumerable<string> filePaths,
         string destinationFolder,
         UnderLeaseClaims underLeaseClaims,
         IProgress<OperationProgress>? progress = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<string, bool>? mayAct = null);
 }
 
 /// <summary>

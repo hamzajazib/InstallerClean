@@ -68,7 +68,8 @@ public sealed class MoveFilesService : IMoveFilesService
         string destinationFolder,
         UnderLeaseClaims underLeaseClaims,
         IProgress<OperationProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<string, bool>? mayAct = null)
     {
         return Task.Run(() =>
         {
@@ -325,16 +326,24 @@ public sealed class MoveFilesService : IMoveFilesService
 
                 try
                 {
-                    // First statement inside the per-file try, and both halves of
-                    // that are load-bearing. Before the skip checks below, so the
-                    // visible counter advances on missing and reparse-point
-                    // entries instead of jumping over them. Inside the try, so a
-                    // progress consumer that throws costs this one file a
+                    // The host's question is asked before the report as well as last before
+                    // the act, so a batch the host has stopped covering stops before this
+                    // file's progress line rather than after it.
+                    if (mayAct is not null && !mayAct(sourcePath)) throw new BatchStoppedException();
+                    // First statement inside the per-file try after that question,
+                    // and both halves of that are load-bearing. Before the skip
+                    // checks below, so the visible counter advances on missing and
+                    // reparse-point entries instead of jumping over them. Inside the
+                    // try, so a progress consumer that throws costs this one file a
                     // categorised error instead of costing the batch: from outside
                     // the try the throw leaves the loop altogether, and the files
                     // already moved are never reported, the result and the failure
                     // log's closing entry both being built past the loop.
                     progress?.Report(new OperationProgress(i + 1, total, _fs.Path.GetFileName(sourcePath)));
+                    // Asked again after the report, which can block on the console: a cancel
+                    // that came meanwhile leaves this file alone. The catch-all below lets the
+                    // batch's own cancellation through (BatchStop.EndsBatch).
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     // Re-resolve and compare to the canonical capture, AFTER the
                     // report and not before it. The report hands control to a
@@ -516,6 +525,9 @@ public sealed class MoveFilesService : IMoveFilesService
                     // move that follows a link out to somewhere sensitive. The check
                     // above is what makes the ordinary collision a stated refusal
                     // rather than that error; it is not what makes the move safe.
+                    // The host's question is the last thing before the act, after every
+                    // check on the file.
+                    if (mayAct is not null && !mayAct(sourcePath)) throw new BatchStoppedException();
                     _fs.File.Move(sourcePath, destPath);
 
                     // A move that returned without throwing has not necessarily
@@ -545,7 +557,7 @@ public sealed class MoveFilesService : IMoveFilesService
                 // collision does not come through here and is not logged: it is an
                 // ordinary per-file outcome refused in the loop above, and its error
                 // entry already states the whole cause.
-                catch (Exception ex)
+                catch (Exception ex) when (!BatchStop.EndsBatch(ex, cancellationToken))
                 {
                     failureLog.Record(ex);
                     errors.Add(Categorise(ex, sourcePath));
@@ -555,9 +567,10 @@ public sealed class MoveFilesService : IMoveFilesService
             catch (OperationCanceledException)
             {
                 // Return what moved before the cancel rather than throwing the
-                // tally away. The per-file loop's ThrowIfCancellationRequested is
-                // the only cancellation source and sits outside the inner
-                // per-file catch, so only a real cancel lands here; a genuine
+                // tally away. The per-file loop's ThrowIfCancellationRequested and the
+                // host's mayAct answering no are the only sources, and the inner
+                // per-file catch-all lets only those through (BatchStop.EndsBatch), so
+                // only a real cancel or stop lands here; a genuine
                 // mid-batch error (a destination junction swap) still propagates.
                 cancelled = true;
             }

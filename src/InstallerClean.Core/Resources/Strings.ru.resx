@@ -2440,10 +2440,32 @@ InstallerClean уже был запущен от имени администра
        names the contending parties (GUI or another CLI run) and
        points at exit code 75 so an RMM operator parsing stdout
        knows it is transient and safe to retry. -->
+  <!-- 0 = files deleted, 1 = files the run set out to delete, 2 = Plural.File for the
+       second. Stdout when a Delete run standing for an older copy stops before its next
+       file because neither the older copy's hold nor the run's own covers it any longer.
+       Why is not established, so the line names no cause. Nobody cancelled it: running
+       the same command again rescans and deletes the files left. Errors are listed above
+       it. -->
+  <!-- 0 = files moved, 1 = files the run set out to move, 2 = Plural.File for the second,
+       3 = the folder they were moved to. As Cli.MutexLostDelete, for a Move, naming the
+       folder the files already moved are in, since a second run may be given another. -->
+  <!-- Stdout when a Delete run standing for an older copy stops with nothing deleted, in
+       its scan, its re-verify or before its first file, because neither the older copy's
+       hold nor the run's own covers it any longer. As Cli.MutexLostDelete, it names no
+       cause, and it ends on the transient code a scheduler retries on. -->
+  <!-- As Cli.CoverLostNoWorkDelete, for a Move. -->
   <!-- 0 = mode arg ("/d" or "/m"). Audit entry written when the CLI
        can't acquire the single-instance mutex, so an RMM consumer of
        the Application channel sees a record of every scheduled-job
        firing whether or not it was able to run. -->
+  <!-- 0 = mode arg ("/d" or "/m"), 1 = processed count, 2 = total count, 3 = pluralised
+       noun. Audit entry for a run standing for an older copy whose Move or Delete stopped
+       before the next file, after some files were processed, because neither the older
+       copy's hold on the single-instance mutex nor the run's own covered it any longer.
+       Why is not established, so it names no cause. -->
+  <!-- 0 = mode arg ("/d" or "/m"). Audit entry for a run standing for an older copy that
+       stopped with nothing moved or deleted, files it reached and could not act on
+       included, as Cli.EventLogMutexLostPartial, naming no cause. -->
   <!-- Stdout when a /s, /d or /m run is refused because the process holds no
        administrator rights (AdministratorRights). Nothing has been scanned. The
        window says the same in Startup.AdminRightsNeededBody. -->
@@ -2668,4 +2690,8 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.ReportWaiting" xml:space="preserve"><value>Отправляется отчёт, ожидающий отправки ещё с более раннего запуска.</value></data>
   <data name="Cli.UpdateRunningNewer" xml:space="preserve"><value>Команда {0} будет выполнена в InstallerClean {1}. После завершения эта версия заменит текущую копию.</value></data>
   <data name="Cli.UpdateNotRun" xml:space="preserve"><value>Не удалось запустить более новую версию.</value></data>
+  <data name="Cli.MutexLostDelete" xml:space="preserve"><value>Остановлено после удаления {0}/{1} {2}: InstallerClean больше не мог быть уверен, что никакой другой InstallerClean не выполняет действий. Запустите ту же команду ещё раз. Код выхода 2 (частично).</value></data>
+  <data name="Cli.MutexLostMove" xml:space="preserve"><value>Остановлено после перемещения {0}/{1} {2} в {3}: InstallerClean больше не мог быть уверен, что никакой другой InstallerClean не выполняет действий. Запустите ту же команду ещё раз. Код выхода 2 (частично).</value></data>
+  <data name="Cli.CoverLostNoWorkDelete" xml:space="preserve"><value>Остановлено до удаления каких-либо файлов: InstallerClean больше не мог быть уверен, что никакой другой InstallerClean не выполняет действий. Запустите ту же команду ещё раз. Код выхода 75 (временное состояние).</value></data>
+  <data name="Cli.CoverLostNoWorkMove" xml:space="preserve"><value>Остановлено до перемещения каких-либо файлов: InstallerClean больше не мог быть уверен, что никакой другой InstallerClean не выполняет действий. Запустите ту же команду ещё раз. Код выхода 75 (временное состояние).</value></data>
 </root>

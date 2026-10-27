@@ -2528,10 +2528,36 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
        points at exit code 75 so an RMM operator parsing stdout
        knows it is transient and safe to retry. -->
   <data name="Cli.MutexBlocked" xml:space="preserve"><value>다른 InstallerClean 프로세스가 단일 인스턴스 잠금을 보유하고 있습니다(GUI 또는 다른 CLI 실행). 종료 코드 75(일시적); 나중에 다시 시도해도 안전합니다.</value></data>
+  <!-- 0 = files deleted, 1 = files the run set out to delete, 2 = Plural.File for the
+       second. Stdout when a Delete run standing for an older copy stops before its next
+       file because neither the older copy's hold nor the run's own covers it any longer.
+       Why is not established, so the line names no cause. Nobody cancelled it: running
+       the same command again rescans and deletes the files left. Errors are listed above
+       it. -->
+  <data name="Cli.MutexLostDelete" xml:space="preserve"><value>{2} {1}개 중 {0}개를 삭제한 뒤 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 2(일부 완료).</value></data>
+  <!-- 0 = files moved, 1 = files the run set out to move, 2 = Plural.File for the second,
+       3 = the folder they were moved to. As Cli.MutexLostDelete, for a Move, naming the
+       folder the files already moved are in, since a second run may be given another. -->
+  <data name="Cli.MutexLostMove" xml:space="preserve"><value>{2} {1}개 중 {0}개를 {3}(으)로 이동한 뒤 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 2(일부 완료).</value></data>
+  <!-- Stdout when a Delete run standing for an older copy stops with nothing deleted, in
+       its scan, its re-verify or before its first file, because neither the older copy's
+       hold nor the run's own covers it any longer. As Cli.MutexLostDelete, it names no
+       cause, and it ends on the transient code a scheduler retries on. -->
+  <data name="Cli.CoverLostNoWorkDelete" xml:space="preserve"><value>파일을 삭제하기 전에 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 75(일시적).</value></data>
+  <!-- As Cli.CoverLostNoWorkDelete, for a Move. -->
+  <data name="Cli.CoverLostNoWorkMove" xml:space="preserve"><value>파일을 이동하기 전에 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 75(일시적).</value></data>
   <!-- 0 = mode arg ("/d" or "/m"). Audit entry written when the CLI
        can't acquire the single-instance mutex, so an RMM consumer of
        the Application channel sees a record of every scheduled-job
        firing whether or not it was able to run. -->
+  <!-- 0 = mode arg ("/d" or "/m"), 1 = processed count, 2 = total count, 3 = pluralised
+       noun. Audit entry for a run standing for an older copy whose Move or Delete stopped
+       before the next file, after some files were processed, because neither the older
+       copy's hold on the single-instance mutex nor the run's own covered it any longer.
+       Why is not established, so it names no cause. -->
+  <!-- 0 = mode arg ("/d" or "/m"). Audit entry for a run standing for an older copy that
+       stopped with nothing moved or deleted, files it reached and could not act on
+       included, as Cli.EventLogMutexLostPartial, naming no cause. -->
   <!-- Stdout when a /s, /d or /m run is refused because the process holds no
        administrator rights (AdministratorRights). Nothing has been scanned. The
        window says the same in Startup.AdminRightsNeededBody. -->

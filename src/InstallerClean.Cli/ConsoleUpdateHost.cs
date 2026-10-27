@@ -11,9 +11,11 @@ namespace InstallerClean.Cli;
 /// The console, the single-instance mutex and the processes <see cref="CommandLineUpdate"/>
 /// works with, for one run.
 /// </summary>
-internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
+internal sealed class ConsoleUpdateHost(string arg, Func<InstanceLock>? newLock = null) : ICommandLineUpdateHost
 {
+    private readonly Func<InstanceLock> _newLock = newLock ?? (() => new InstanceLock());
     private InstanceLock? _instanceLock;
+    private bool _instanceLockLeftToProcessEnd;
     private readonly object _ctrlCGate = new();
     private bool _newerVersionAnswersCtrlC;
     private bool _cancellingHeldBack;
@@ -100,7 +102,7 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
 
     public bool TryTakeInstanceLock()
     {
-        _instanceLock = new InstanceLock();
+        _instanceLock = _newLock();
         if (_instanceLock.TryTake()) return true;
         _instanceLock.Dispose();
         _instanceLock = null;
@@ -109,10 +111,23 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
 
     public void ReleaseInstanceLock()
     {
+        if (_instanceLockLeftToProcessEnd) return;
         _instanceLock?.Release();
         _instanceLock?.Dispose();
         _instanceLock = null;
     }
+
+    /// <summary>
+    /// Keeps the single-instance mutex this run holds until its process ends, where it stops
+    /// waiting for a newer version that may still be running a Move or Delete for it:
+    /// <see cref="ReleaseInstanceLock"/> then lets go of nothing. Do not release the mutex
+    /// on these paths. The newer version's cover (StagedRunCover) counts this process
+    /// running as the mutex held, so a release while it runs leaves the newer version acting
+    /// while the window or another run may hold the mutex. Ending with the process, the
+    /// mutex is the abandoned one, which the newer version's cover takes or, taken by another
+    /// process first, stops that version's batch before its next file.
+    /// </summary>
+    internal void LeaveInstanceLockToProcessEnd() => _instanceLockLeftToProcessEnd = true;
 
     public int? RunNewerVersion(
         string file, IReadOnlyList<string> arguments, string replaces, string fromVersion, string toVersion,
@@ -195,9 +210,11 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
             CrashLog.TryWrite(ex);
         }
         // A newer version this run could neither end nor wait for answers the error code, and
-        // may still be running in this console.
+        // may still be running in this console. It may be running a Move or Delete, so this
+        // run's mutex is left to its process end (LeaveInstanceLockToProcessEnd).
         if (seen == StartSeen.NotWaitedFor)
         {
+            LeaveInstanceLockToProcessEnd();
             Program.LeaveConsoleToNewerVersion();
             return CliExitCode.Error;
         }
@@ -208,6 +225,7 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         catch (Exception ex)
         {
             CrashLog.TryWrite(ex);
+            LeaveInstanceLockToProcessEnd();
             Program.LeaveConsoleToNewerVersion();
             return CliExitCode.Error;
         }

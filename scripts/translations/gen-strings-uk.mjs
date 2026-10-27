@@ -677,6 +677,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `Команду {0} буде виконано в InstallerClean {1}. Після завершення ця версія замінить поточну копію.`,
   'Cli.UpdateNotRun': `Не вдалося запустити новішу версію.`,
   'UpdateNotice.CheckingDownload': `Перевірка завантаженого файлу...`,
+  'Cli.MutexLostDelete': `Зупинено після видалення {0} з {1} {2}: InstallerClean більше не міг бути певним, що жоден інший InstallerClean не виконує дій. Запустіть ту саму команду ще раз. Вихід 2 (частково).`,
+  'Cli.MutexLostMove': `Зупинено після переміщення {0} з {1} {2} до {3}: InstallerClean більше не міг бути певним, що жоден інший InstallerClean не виконує дій. Запустіть ту саму команду ще раз. Вихід 2 (частково).`,
+  'Cli.CoverLostNoWorkDelete': `Зупинено до видалення будь-якого файлу: InstallerClean більше не міг бути певним, що жоден інший InstallerClean не виконує дій. Запустіть ту саму команду ще раз. Вихід 75 (тимчасовий).`,
+  'Cli.CoverLostNoWorkMove': `Зупинено до переміщення будь-якого файлу: InstallerClean більше не міг бути певним, що жоден інший InstallerClean не виконує дій. Запустіть ту саму команду ще раз. Вихід 75 (тимчасовий).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

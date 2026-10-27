@@ -675,6 +675,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `{0} wird mit InstallerClean {1} ausgeführt. Sobald der Lauf beendet ist, ersetzt diese Version diese Kopie.`,
   'Cli.UpdateNotRun': `Die neuere Version konnte nicht ausgeführt werden.`,
   'UpdateNotice.CheckingDownload': `Download wird geprüft...`,
+  'Cli.MutexLostDelete': `Angehalten nach dem Löschen von {0} von {1} {2}: InstallerClean konnte nicht mehr sicher sein, dass keine andere InstallerClean-Instanz tätig war. Führe denselben Befehl erneut aus. Exit-Code 2 (teilweise).`,
+  'Cli.MutexLostMove': `Angehalten nach dem Verschieben von {0} von {1} {2} nach {3}: InstallerClean konnte nicht mehr sicher sein, dass keine andere InstallerClean-Instanz tätig war. Führe denselben Befehl erneut aus. Exit-Code 2 (teilweise).`,
+  'Cli.CoverLostNoWorkDelete': `Angehalten, bevor eine Datei gelöscht wurde: InstallerClean konnte nicht mehr sicher sein, dass keine andere InstallerClean-Instanz tätig war. Führe denselben Befehl erneut aus. Exit-Code 75 (vorübergehend).`,
+  'Cli.CoverLostNoWorkMove': `Angehalten, bevor eine Datei verschoben wurde: InstallerClean konnte nicht mehr sicher sein, dass keine andere InstallerClean-Instanz tätig war. Führe denselben Befehl erneut aus. Exit-Code 75 (vorübergehend).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

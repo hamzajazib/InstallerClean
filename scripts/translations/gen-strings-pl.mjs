@@ -699,6 +699,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `Polecenie {0} zostanie uruchomione w wersji InstallerClean {1}. Po zakończeniu ta wersja zastąpi tę kopię.`,
   'Cli.UpdateNotRun': `Nie udało się uruchomić nowszej wersji.`,
   'UpdateNotice.CheckingDownload': `Sprawdzanie pobranego pliku...`,
+  'Cli.MutexLostDelete': `Zatrzymano po usunięciu {0}/{1} {2}: InstallerClean nie mógł już mieć pewności, że żaden inny InstallerClean nie działa. Uruchom to samo polecenie ponownie. Kod zakończenia 2 (częściowo).`,
+  'Cli.MutexLostMove': `Zatrzymano po przeniesieniu {0}/{1} {2} do {3}: InstallerClean nie mógł już mieć pewności, że żaden inny InstallerClean nie działa. Uruchom to samo polecenie ponownie. Kod zakończenia 2 (częściowo).`,
+  'Cli.CoverLostNoWorkDelete': `Zatrzymano przed usunięciem jakiegokolwiek pliku: InstallerClean nie mógł już mieć pewności, że żaden inny InstallerClean nie działa. Uruchom to samo polecenie ponownie. Kod zakończenia 75 (stan przejściowy).`,
+  'Cli.CoverLostNoWorkMove': `Zatrzymano przed przeniesieniem jakiegokolwiek pliku: InstallerClean nie mógł już mieć pewności, że żaden inny InstallerClean nie działa. Uruchom to samo polecenie ponownie. Kod zakończenia 75 (stan przejściowy).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

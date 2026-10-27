@@ -2528,10 +2528,36 @@ InstallerClean 本來就是以系統管理員身分執行，所以再用這種�
        points at exit code 75 so an RMM operator parsing stdout
        knows it is transient and safe to retry. -->
   <data name="Cli.MutexBlocked" xml:space="preserve"><value>另一個 InstallerClean 處理程序正持有單一執行個體鎖定（圖形介面或另一次 CLI 執行）。結束代碼 75（暫時性）；稍後可安全地重試。</value></data>
+  <!-- 0 = files deleted, 1 = files the run set out to delete, 2 = Plural.File for the
+       second. Stdout when a Delete run standing for an older copy stops before its next
+       file because neither the older copy's hold nor the run's own covers it any longer.
+       Why is not established, so the line names no cause. Nobody cancelled it: running
+       the same command again rescans and deletes the files left. Errors are listed above
+       it. -->
+  <data name="Cli.MutexLostDelete" xml:space="preserve"><value>已刪除 {1} 個{2}中的 {0} 個後停止：InstallerClean 已無法確定沒有其他 InstallerClean 正在執行操作。請再次執行同一命令。結束代碼 2（部分完成）。</value></data>
+  <!-- 0 = files moved, 1 = files the run set out to move, 2 = Plural.File for the second,
+       3 = the folder they were moved to. As Cli.MutexLostDelete, for a Move, naming the
+       folder the files already moved are in, since a second run may be given another. -->
+  <data name="Cli.MutexLostMove" xml:space="preserve"><value>已將 {1} 個{2}中的 {0} 個移動到 {3} 後停止：InstallerClean 已無法確定沒有其他 InstallerClean 正在執行操作。請再次執行同一命令。結束代碼 2（部分完成）。</value></data>
+  <!-- Stdout when a Delete run standing for an older copy stops with nothing deleted, in
+       its scan, its re-verify or before its first file, because neither the older copy's
+       hold nor the run's own covers it any longer. As Cli.MutexLostDelete, it names no
+       cause, and it ends on the transient code a scheduler retries on. -->
+  <data name="Cli.CoverLostNoWorkDelete" xml:space="preserve"><value>在刪除任何檔案之前已停止：InstallerClean 已無法確定沒有其他 InstallerClean 正在執行操作。請再次執行同一命令。結束代碼 75（暫時性）。</value></data>
+  <!-- As Cli.CoverLostNoWorkDelete, for a Move. -->
+  <data name="Cli.CoverLostNoWorkMove" xml:space="preserve"><value>在移動任何檔案之前已停止：InstallerClean 已無法確定沒有其他 InstallerClean 正在執行操作。請再次執行同一命令。結束代碼 75（暫時性）。</value></data>
   <!-- 0 = mode arg ("/d" or "/m"). Audit entry written when the CLI
        can't acquire the single-instance mutex, so an RMM consumer of
        the Application channel sees a record of every scheduled-job
        firing whether or not it was able to run. -->
+  <!-- 0 = mode arg ("/d" or "/m"), 1 = processed count, 2 = total count, 3 = pluralised
+       noun. Audit entry for a run standing for an older copy whose Move or Delete stopped
+       before the next file, after some files were processed, because neither the older
+       copy's hold on the single-instance mutex nor the run's own covered it any longer.
+       Why is not established, so it names no cause. -->
+  <!-- 0 = mode arg ("/d" or "/m"). Audit entry for a run standing for an older copy that
+       stopped with nothing moved or deleted, files it reached and could not act on
+       included, as Cli.EventLogMutexLostPartial, naming no cause. -->
   <!-- Stdout when a /s, /d or /m run is refused because the process holds no
        administrator rights (AdministratorRights). Nothing has been scanned. The
        window says the same in Startup.AdminRightsNeededBody. -->

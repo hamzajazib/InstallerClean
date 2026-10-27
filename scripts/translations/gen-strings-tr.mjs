@@ -583,6 +583,10 @@ Ayrıntılar şuraya yazıldı:
   'Cli.UpdateRunningNewer': `{0} komutu InstallerClean {1} ile çalıştırılıyor. Çalışma bitince bu kopyanın yerini alacak.`,
   'Cli.UpdateNotRun': `Daha yeni sürüm çalıştırılamadı.`,
   'UpdateNotice.CheckingDownload': `İndirilen dosya denetleniyor...`,
+  'Cli.MutexLostDelete': `{1} {2} içinden {0} tanesi silindikten sonra durduruldu: InstallerClean, başka hiçbir InstallerClean'in işlem yapmadığından artık emin olamadı. Aynı komutu yeniden çalıştırın. Çıkış 2 (kısmi).`,
+  'Cli.MutexLostMove': `{1} {2} içinden {0} tanesi {3} konumuna taşındıktan sonra durduruldu: InstallerClean, başka hiçbir InstallerClean'in işlem yapmadığından artık emin olamadı. Aynı komutu yeniden çalıştırın. Çıkış 2 (kısmi).`,
+  'Cli.CoverLostNoWorkDelete': `Herhangi bir dosya silinmeden önce durduruldu: InstallerClean, başka hiçbir InstallerClean'in işlem yapmadığından artık emin olamadı. Aynı komutu yeniden çalıştırın. Çıkış 75 (geçici).`,
+  'Cli.CoverLostNoWorkMove': `Herhangi bir dosya taşınmadan önce durduruldu: InstallerClean, başka hiçbir InstallerClean'in işlem yapmadığından artık emin olamadı. Aynı komutu yeniden çalıştırın. Çıkış 75 (geçici).`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -313,28 +313,13 @@ internal static class NewerVersionProcess
     /// </summary>
     private static int Wait(List<SafeHandle> handles, TimeSpan bound, out int error)
     {
-        error = 0;
-        var raw = new IntPtr[handles.Count];
-        var added = new bool[handles.Count];
-        try
-        {
-            for (var i = 0; i < handles.Count; i++)
-            {
-                handles[i].DangerousAddRef(ref added[i]);
-                raw[i] = handles[i].DangerousGetHandle();
-            }
-            var milliseconds = (uint)Math.Clamp(bound.TotalMilliseconds, 0, uint.MaxValue - 1);
-            var result = Kernel32.WaitForMultipleObjects((uint)raw.Length, raw, bWaitAll: false, milliseconds);
-            if (result < Kernel32.WAIT_OBJECT_0 + (uint)raw.Length) return (int)(result - Kernel32.WAIT_OBJECT_0);
-            if (result == Kernel32.WAIT_TIMEOUT) return TimedOutWait;
-            error = Marshal.GetLastPInvokeError();
-            return FailedWait;
-        }
-        finally
-        {
-            for (var i = 0; i < handles.Count; i++)
-                if (added[i]) handles[i].DangerousRelease();
-        }
+        var milliseconds = (uint)Math.Clamp(bound.TotalMilliseconds, 0, uint.MaxValue - 1);
+        var result = HandleWait.Raw(handles, milliseconds, out error);
+        if (result < Kernel32.WAIT_OBJECT_0 + (uint)handles.Count) return (int)(result - Kernel32.WAIT_OBJECT_0);
+        if (result == Kernel32.WAIT_TIMEOUT) return TimedOutWait;
+        // No mutex is among these handles, so nothing answers abandoned, and any other answer
+        // is Windows refusing the wait, whose error code Raw has read.
+        return FailedWait;
     }
 }
 

@@ -582,6 +582,10 @@ const MAP = {
   'Cli.UpdateRunningNewer': `InstallerClean {1} で {0} を実行します。実行が終わると、このコピーと置き換わります。`,
   'Cli.UpdateNotRun': `新しいバージョンを実行できませんでした。`,
   'UpdateNotice.CheckingDownload': `ダウンロードしたファイルを確認中...`,
+  'Cli.MutexLostDelete': `{1} 個中 {0} 個の {2} を削除した時点で停止しました: InstallerClean は、ほかの InstallerClean が動作していないことを確認できなくなりました。同じコマンドをもう一度実行してください。終了コード2 (一部完了)。`,
+  'Cli.MutexLostMove': `{1} 個中 {0} 個の {2} を {3} に移動した時点で停止しました: InstallerClean は、ほかの InstallerClean が動作していないことを確認できなくなりました。同じコマンドをもう一度実行してください。終了コード2 (一部完了)。`,
+  'Cli.CoverLostNoWorkDelete': `ファイルを削除する前に停止しました: InstallerClean は、ほかの InstallerClean が動作していないことを確認できなくなりました。同じコマンドをもう一度実行してください。終了コード75 (一時的)。`,
+  'Cli.CoverLostNoWorkMove': `ファイルを移動する前に停止しました: InstallerClean は、ほかの InstallerClean が動作していないことを確認できなくなりました。同じコマンドをもう一度実行してください。終了コード75 (一時的)。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
@@ -681,6 +685,10 @@ const STRIPPED = new Set([
   // Two more machine Cli keys that postdate the PR, by the same rule.
   'Cli.EventLogReason.MsiExecuteMutexUnreadable',
   'Cli.EventLogWindowsError',
+  // The entries for a Move or Delete that stopped where the single-instance mutex no longer
+  // covered it, by the same rule.
+  'Cli.EventLogMutexLostPartial',
+  'Cli.EventLogCoverLostNoWork',
   // The update notices' machine Cli keys, which postdate the PR, by the same rule: the 3005,
   // and the 3006 for each reason an update was not made, with its Ctrl+C twin.
   'Cli.EventLogUpdated',

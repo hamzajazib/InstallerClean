@@ -1,4 +1,6 @@
+using InstallerClean.Models;
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 
 namespace InstallerClean.Tests.Services.Integration;
 
@@ -36,6 +38,32 @@ public class MoveFilesServiceTests : IDisposable
         Assert.Empty(results.Errors);
         Assert.False(File.Exists(file));
         Assert.True(File.Exists(Path.Combine(_destDir, "test.msi")));
+    }
+
+    [Fact]
+    public async Task MoveFilesAsync_stops_before_the_file_the_hosts_question_turns_down()
+    {
+        var first = Path.Combine(_sourceDir, "first.msi");
+        var second = Path.Combine(_sourceDir, "second.msi");
+        await File.WriteAllTextAsync(first, "content");
+        await File.WriteAllTextAsync(second, "content");
+
+        // Asked before each file's progress report and as the last thing before it is
+        // moved, which is how the command line stops a run the single-instance mutex no
+        // longer covers. The file turned down gets no progress line.
+        var reported = new List<string>();
+        var svc = new MoveFilesService(new System.IO.Abstractions.FileSystem(), _sourceDir);
+        var result = await svc.MoveFilesAsync(new[] { first, second }, _destDir, UnderLeaseClaims.None,
+            new SyncProgress<OperationProgress>(p => reported.Add(p.CurrentFileName)),
+            mayAct: path => path != second);
+
+        Assert.True(result.Cancelled);
+        Assert.Equal(1, result.MovedCount);
+        Assert.Empty(result.Errors);
+        Assert.True(File.Exists(Path.Combine(_destDir, "first.msi")));
+        Assert.True(File.Exists(second));
+        Assert.False(File.Exists(Path.Combine(_destDir, "second.msi")));
+        Assert.Equal(["first.msi"], reported);
     }
 
     [Fact]
