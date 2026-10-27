@@ -11,13 +11,10 @@ namespace InstallerClean.Helpers;
 /// The file at the path is opened through the file system and read, so the answer is
 /// always about whatever file is there now. The version read Windows itself provides,
 /// given the path a running program was started from, answers with that program's own
-/// version, even once its file has been renamed and another put at the path. The command line's
-/// update reads its own path at exactly that point.
+/// version, even once its file has been renamed and another put at the path.
 ///
 /// It reads the PE headers, the resource directory and VS_VERSIONINFO as Microsoft's
-/// PE format and VS_VERSIONINFO pages lay them out, and uses nothing outside CoreLib,
-/// so it can run after the running exe has been renamed aside
-/// (<see cref="Services.SelfReplacement"/>).
+/// PE format and VS_VERSIONINFO pages lay them out, and uses nothing outside CoreLib.
 /// </remarks>
 internal static class FileVersionResource
 {

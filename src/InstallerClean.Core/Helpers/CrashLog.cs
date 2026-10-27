@@ -65,8 +65,8 @@ public static class CrashLog
     /// Works out the folder the log is written to, which settles the app's folder on its
     /// first use, and builds the header and keeps it, so a write after this needs neither.
     /// The header is built in the calling thread's language, and every fresh log after
-    /// this is headed in it, so this is called where that is the display language: before
-    /// the running exe is renamed aside, and never inside a machine line's en-GB scope.
+    /// this is headed in it, so this is called where that is the display language, and
+    /// never inside a machine line's en-GB scope.
     /// Throws where either cannot be done, for the caller to log.
     /// </summary>
     internal static void Prepare()

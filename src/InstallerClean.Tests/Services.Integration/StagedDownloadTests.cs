@@ -86,7 +86,7 @@ public sealed class StagedDownloadTests : IDisposable
         AppCopyKind kind, HttpMessageHandler network, IRegistryReader? registry = null,
         TimeSpan? holdRetryBound = null, Action<string>? beforeHold = null) =>
         new(kind, _exe, new UpdateDownloadService(network, null), _stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, registry ?? NoRegistry, _gate,
+            CommandLineUpdate.SetupArguments, AdministratorsAndThisAccount, registry ?? NoRegistry, _gate,
             holdRetryBound, beforeHold);
 
     private async Task<PreparedUpdate> Prepare(AppUpdater updater, CancellationToken cancellationToken = default)
@@ -132,7 +132,7 @@ public sealed class StagedDownloadTests : IDisposable
     [InlineData(AppCopyKind.Portable)]
     [InlineData(AppCopyKind.Slim)]
     [InlineData(AppCopyKind.CommandLineDownload)]
-    public async Task A_prepared_download_is_held_from_its_check_until_it_is_deleted(AppCopyKind kind)
+    public async Task A_prepared_download_is_held_from_its_check_until_its_undo(AppCopyKind kind)
     {
         var name = AppCopy.DownloadFileName(kind, CoreRelease)!;
         var network = new ByName(new() { [name] = Release(2) });
@@ -145,11 +145,9 @@ public sealed class StagedDownloadTests : IDisposable
         AssertHeld(prepared.FileToStart);
         Assert.False(_gate.TryRunPass(() => { }));
 
-        prepared.DeleteDownload();
+        prepared.Undo();
 
         Assert.Empty(Directory.EnumerateFileSystemEntries(_stagingRoot));
-        Assert.False(_gate.TryRunPass(() => { }));
-        prepared.Undo();
         Assert.True(_gate.TryRunPass(() => { }));
     }
 

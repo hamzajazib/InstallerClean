@@ -2,65 +2,22 @@ namespace InstallerClean.Helpers;
 
 /// <summary>
 /// What a copy that updates itself passes the newer version it starts, and what every
-/// version from <see cref="FirstVersionTakingHandOverSwitches"/> on takes in return: the
-/// window and the command line alike. The newer version says through
-/// <see cref="StartedEventSwitch"/> that its own code is running, and the copy that
-/// started it waits for that before it ends (<see cref="Services.SelfReplacement"/>).
-/// A newer version a copy has downloaded is asked through <see cref="ReplaceCopySwitch"/>,
+/// version from 3.5.0 on takes in return: the window and the command line alike. A newer
+/// version a copy has downloaded is asked through <see cref="ReplaceCopySwitch"/>,
 /// <see cref="AfterProcessSwitch"/> and <see cref="StartedEventSwitch"/> to put itself at
-/// that copy's path once the copy has ended (<see cref="Services.ExeReplacement"/>), and a
-/// copy it puts back after a failure is started with <see cref="UpdateFailedSwitch"/>.
+/// that copy's path once the copy has ended (<see cref="Services.ExeReplacement"/>), and
+/// says through <see cref="StartedEventSwitch"/> that its own code is running. A copy it
+/// puts back after a failure is started with <see cref="UpdateFailedSwitch"/>.
 /// </summary>
 /// <remarks>
-/// Every version from <see cref="FirstVersionTakingHandOverSwitches"/> on passes
-/// <see cref="StartedEventSwitch"/> to whichever version it updates to and puts itself
-/// back where that version does not set the event in time. So every later version has to
-/// go on taking the switch and setting the event, or every update to that version from
-/// one of these is put back and says it could not be installed. A version given the
-/// switch that cannot set the event ends at once without running anything, so the copy
-/// that started it puts itself back straight away rather than after a version that has
-/// already run. A switch added to the hand-over later is one an earlier version does not
-/// know, so it needs a first version of its own.
+/// Every version from 3.5.0 on starts the version it updates to with these switches and
+/// waits for the event <see cref="StartedEventSwitch"/> names. So every later version has
+/// to go on taking the switches and setting the event, or an update to it from one of these
+/// fails. A switch added to the hand-over later is one an earlier version does not know, so
+/// it needs a first version of its own.
 /// </remarks>
 internal static class HandOverContract
 {
-    /// <summary>
-    /// The first version that takes the switches a copy updating itself adds to the
-    /// command it starts the newer version with: <see cref="StartedEventSwitch"/>, and
-    /// the command line's <see cref="CliContract.CancelEventSwitch"/> and
-    /// <see cref="CliContract.NoUpdateSwitch"/>. A command line before it refuses any of
-    /// the three as an argument it does not know and runs nothing, and a window before it
-    /// never sets the event, so none of them is passed to one.
-    /// </summary>
-    internal static readonly Version FirstVersionTakingHandOverSwitches = new(3, 5, 0);
-
-    /// <summary>
-    /// Whether <paramref name="version"/> is <see cref="FirstVersionTakingHandOverSwitches"/>
-    /// or later, its first three parts compared. A version that does not parse answers false.
-    /// </summary>
-    internal static bool TakesHandOverSwitches(string version) =>
-        Version.TryParse(version, out var parsed)
-        && Services.UpdateCheckService.NormaliseToBuild(parsed) >= FirstVersionTakingHandOverSwitches;
-
-    /// <summary>
-    /// The arguments a command line starts the newer version <paramref name="toVersion"/>
-    /// with: <paramref name="arguments"/> as given, then the cancel event and the started
-    /// event where an id is given for each, then <see cref="CliContract.NoUpdateSwitch"/>,
-    /// so the newer version goes straight to the command without checking for updates
-    /// again. Only a version <see cref="TakesHandOverSwitches"/> answers true for is given
-    /// <see cref="CliContract.NoUpdateSwitch"/>; an earlier command line refuses it as an
-    /// argument it does not know.
-    /// </summary>
-    internal static List<string> CommandLineArguments(
-        IReadOnlyList<string> arguments, string toVersion, Guid? cancelEventId, Guid? startedEventId)
-    {
-        List<string> passed = [.. arguments];
-        if (cancelEventId is { } cancelId) passed.Add(CliContract.CancelEventArgument(cancelId));
-        if (startedEventId is { } startedId) passed.Add(StartedEventArgument(startedId));
-        if (TakesHandOverSwitches(toVersion)) passed.Add(CliContract.NoUpdateSwitch);
-        return passed;
-    }
-
     /// <summary>
     /// The switch through which the copy that started this one passes, after the colon,
     /// the id of an event this one sets once its own code is running. Only a copy updating
@@ -156,9 +113,8 @@ internal static class HandOverContract
     /// installed. It carries nothing; what failed is in crash.log.
     /// </summary>
     /// <remarks>
-    /// The copy given it is the older one, so what a window from
-    /// <see cref="FirstVersionTakingHandOverSwitches"/> on reads it as has to stay the same in
-    /// every later version, and a later version starts a copy it has put back with this
+    /// The copy given it is the older one, so what a window from 3.5.0 on reads it as has
+    /// to stay the same in every later version, and a later version starts a copy it has put back with this
     /// switch and no other: a window given a switch it does not know opens without saying
     /// the update failed.
     /// </remarks>
@@ -195,8 +151,7 @@ internal static class HandOverContract
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Do not change what this reads. A copy from <see cref="FirstVersionTakingHandOverSwitches"/>
-    /// on is to start the newer version it updates to with these three, and on the command
+    /// Do not change what this reads. A copy from 3.5.0 on is to start the newer version it updates to with these three, and on the command
     /// line with the command as typed, <see cref="CliContract.CancelEventSwitch"/> and
     /// <see cref="CliContract.NoUpdateSwitch"/> beside them, for every newer version it ever
     /// updates to. A later version reading them another way is one no such copy can update to.

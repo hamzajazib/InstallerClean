@@ -437,11 +437,10 @@ public partial class App : Application
                 return;
             }
 
-            // What an update left behind, in the background: the copy it renamed aside, what
-            // a replace left beside this exe, and the folder a newer setup ran from. After the
-            // signal, so the copy renamed aside is ending as the tries to delete it begin, and
-            // only once this version's own code is running, so a newer version that never
-            // starts never deletes the older one kept beside it.
+            // What an update left behind, in the background: what a replace left beside this
+            // exe, and the folder a newer setup ran from. After the signal, and only once this
+            // version's own code is running, so a newer version that never starts never
+            // deletes the older one kept beside it.
             _ = Task.Run(RemoveUpdateLeftoversAsync);
 
             // Started before the startup scan, so it runs beside it and has usually
@@ -963,8 +962,7 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Deletes the copy an update renamed aside, the newer version an update left beside
-    /// this exe and what a replace left beside it (<see cref="ExeReplacement.TryRemoveLeftovers(string)"/>),
+    /// Deletes what a replace left beside this exe (<see cref="ExeReplacement.TryRemoveLeftovers(string)"/>),
     /// and removes the folders earlier updates downloaded into. It tries for ten
     /// seconds, because what put each there may still be closing as this copy starts: the
     /// newer version that put this copy at its path, which runs from the staging folder
@@ -975,20 +973,13 @@ public partial class App : Application
     /// Whatever will not go by then is tried again at the next start. While an update of
     /// this copy's own holds the gate, its files carrying the same names
     /// (<see cref="UpdateLeftoverGate"/>), no pass runs and the ten seconds wait until it
-    /// lets go. First, in the setup's folder, it puts back the command line an update
-    /// renamed aside where nothing took its place
-    /// (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
+    /// lets go. Never throws.
     /// </summary>
     private static async Task RemoveUpdateLeftoversAsync()
     {
         try
         {
             var exePath = Environment.ProcessPath;
-            if (_services?.GetService<IRegistryReader>() is { } registry
-                && RunningCopy.Kind(registry) == AppCopyKind.Setup
-                && Path.GetDirectoryName(exePath) is { Length: > 0 } folder)
-                SelfReplacement.TryPutBackMissing(
-                    Path.Combine(folder, AppCopy.CommandLineFileName), SelfReplacement.SetupRunning);
             var foldersGone = false;
             var oldCopyGone = exePath is null;
             for (var attempt = 0; attempt < 20;)
@@ -997,7 +988,7 @@ public partial class App : Application
                 {
                     foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
                     oldCopyGone = oldCopyGone
-                        || (SelfReplacement.TryRemoveOldCopy(exePath!) & ExeReplacement.TryRemoveLeftovers(exePath!));
+                        || ExeReplacement.TryRemoveLeftovers(exePath!);
                 });
                 if (!ran)
                 {

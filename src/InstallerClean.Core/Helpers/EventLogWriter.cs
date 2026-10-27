@@ -207,29 +207,6 @@ internal static class EventLogWriter
     }
 
     /// <summary>
-    /// Makes the source check a write makes, without writing, so what a later write runs
-    /// is compiled and the assemblies it reaches are loaded while the running exe's file
-    /// is still whole (<see cref="Services.SelfReplacement.PrepareToMoveAside"/>). Registers
-    /// the source where a write would. Never throws, and does nothing where
-    /// <see cref="Sink"/> is set.
-    /// </summary>
-    internal static void PrepareForWrites()
-    {
-        if (Sink is not null) return;
-        try
-        {
-            var step = string.Empty;
-            EnsureSourceMappedToApplicationLog(ref step, out _);
-            WriteRetryingAfterRegistration(() => { }, SettleTimeLeft(), RegistrationSettleInterval, Thread.Sleep);
-        }
-        catch
-        {
-            // The write that follows makes the same check, and marks the log unavailable
-            // where it fails.
-        }
-    }
-
-    /// <summary>
     /// Ensures the InstallerClean event source exists and is registered
     /// against the Application log. Returns false if the source is
     /// pre-registered against a different log (e.g. an older install

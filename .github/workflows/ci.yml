@@ -638,10 +638,10 @@ jobs:
   # whether it came after the first act of the build's own code that Process Monitor
   # can see. Each build names that act: in the slim, its module initializer loading the
   # first assembly on its list from the installed runtime's folder; in the command line,
-  # Main's look for the exe's old copy beside it; in the portable, its look for the
-  # app's folder under %LOCALAPPDATA%. The first pass fails where a build shows another
-  # first, or none, and where a build started with nothing planted writes to its crash
-  # log.
+  # Main's look for the names a replace leaves beside the exe; in the portable, its look
+  # for the app's folder under %LOCALAPPDATA%. The first pass fails where a build shows
+  # another first, or none, and where a build started with nothing planted writes to its
+  # crash log.
   #
   # It refuses to pass on a run that saw nothing: Process Monitor has to have started
   # and recorded each build's process, the command line has to have loaded msi.dll
@@ -789,8 +789,8 @@ jobs:
 
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'native.ps1') -Value @'
           $builds = @(
-            [pscustomobject]@{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; Arguments = @('/s', '/noupdate'); Wait = 60; MustLoad = @('msi.dll'); Marker = 'old copy' },
-            [pscustomobject]@{ Label = 'command line, checking for updates'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; Arguments = @('/s'); Wait = 60; MustLoad = @('msi.dll', 'winhttp.dll'); UpdateCheck = $true; Marker = 'old copy' },
+            [pscustomobject]@{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; Arguments = @('/s', '/noupdate'); Wait = 60; MustLoad = @('msi.dll'); Marker = 'replace leftovers' },
+            [pscustomobject]@{ Label = 'command line, checking for updates'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; Arguments = @('/s'); Wait = 60; MustLoad = @('msi.dll', 'winhttp.dll'); UpdateCheck = $true; Marker = 'replace leftovers' },
             [pscustomobject]@{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Source = 'src/InstallerClean/LibrarySearch.cs'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll'); Marker = 'app folder' },
             [pscustomobject]@{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Source = 'src/InstallerClean/LibrarySearch.cs'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll'); Marker = 'module initializer' }
           )
@@ -1923,7 +1923,7 @@ jobs:
           if (@($define).Count -ne 1) { throw "installer/InstallerClean.iss has no single AppMutexName define." }
           $mutexName = $define.Matches[0].Groups[1].Value
           # The switches the command line starts the setup with, read from where it builds them.
-          $built = Select-String -LiteralPath src/InstallerClean.Core/Services/CommandLineUpdate.cs -Pattern '"/VERYSILENT"\) \+ "([^"]+)";'
+          $built = Select-String -LiteralPath src/InstallerClean.Core/Services/CommandLineUpdate.cs -Pattern '^\s*"/VERYSILENT ([^"]+)";'
           if (@($built).Count -ne 1) { throw "CommandLineUpdate.SetupArguments' switches could not be read." }
           $cli = @($built.Matches[0].Groups[1].Value.Trim() -split '\s+')
           if ('/UPDATEFROMCLI' -notin $cli) { throw "CommandLineUpdate.SetupArguments does not pass /UPDATEFROMCLI: $($cli -join ' ')" }

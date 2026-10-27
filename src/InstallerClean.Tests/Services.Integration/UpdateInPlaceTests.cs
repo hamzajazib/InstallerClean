@@ -1,7 +1,5 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using InstallerClean.Helpers;
@@ -13,10 +11,9 @@ namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
 /// The parts of the update from inside the app that touch the disk: the folder the
-/// download is written to, the newer version written beside the running exe, the swap
-/// that puts it at the exe's path and putting it back, the leftovers a later start
-/// removes, and the whole of each route through <see cref="AppUpdater"/>, against a
-/// temporary folder standing in for %ProgramData%.
+/// download is written to, the leftovers a later start removes, and the whole of each
+/// route through <see cref="AppUpdater"/>, against a temporary folder standing in for
+/// %ProgramData%.
 /// </summary>
 public sealed class UpdateInPlaceTests : IDisposable
 {
@@ -251,626 +248,6 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.True(File.Exists(decoy));
     }
 
-    /// <summary>The exe and, beside it, the newer version written as an update writes it.</summary>
-    private async Task<string> StagedBesideAsync(string exe, byte fill)
-    {
-        var download = Path.Combine(_root, "download-" + Guid.NewGuid().ToString("N") + ".exe");
-        File.WriteAllBytes(download, Program(fill));
-        return await SelfReplacement.StageAsync(exe, download, CancellationToken.None);
-    }
-
-    [Fact]
-    public async Task The_newer_version_is_written_beside_the_exe_as_a_file_made_in_that_folder()
-    {
-        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
-        var exe = Path.Combine(exeFolder, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        var madeThere = Path.Combine(exeFolder, "control.exe");
-        File.WriteAllBytes(madeThere, Program(3));
-
-        var staged = await StagedBesideAsync(exe, 2);
-
-        Assert.Equal(exe + SelfReplacement.NewSuffix, staged);
-        Assert.Equal(Program(2), File.ReadAllBytes(staged));
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        var security = new FileInfo(staged).GetAccessControl();
-        Assert.False(security.AreAccessRulesProtected);
-        Assert.Empty(security.GetAccessRules(includeExplicit: true, includeInherited: false, typeof(SecurityIdentifier)));
-        Assert.Equal(
-            new FileInfo(madeThere).GetAccessControl().GetSecurityDescriptorSddlForm(AccessControlSections.Access),
-            security.GetSecurityDescriptorSddlForm(AccessControlSections.Access));
-    }
-
-    [Fact]
-    public async Task Writing_the_newer_version_replaces_a_plain_file_an_earlier_update_left_there()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        File.WriteAllBytes(exe + SelfReplacement.NewSuffix, Program(9));
-
-        var staged = await StagedBesideAsync(exe, 2);
-
-        Assert.Equal(Program(2), File.ReadAllBytes(staged));
-    }
-
-    [Fact]
-    public async Task Writing_the_newer_version_fails_where_something_other_than_a_file_is_in_the_way()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        Directory.CreateDirectory(exe + SelfReplacement.NewSuffix);
-
-        var failure = await Assert.ThrowsAsync<UpdateFailedException>(() => StagedBesideAsync(exe, 2));
-
-        Assert.Equal(UpdateFailureStage.Install, failure.Stage);
-        Assert.True(Directory.Exists(exe + SelfReplacement.NewSuffix));
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-    }
-
-    [Fact]
-    public async Task The_swap_puts_the_newer_file_at_the_exe_path_and_putting_back_restores_it()
-    {
-        // A portable saved under the versioned name 3.4.0 gave it: the update puts the
-        // newer file at this path and does not rename it.
-        var exe = Path.Combine(_root, "InstallerClean-3.4.0-portable.exe");
-        File.WriteAllBytes(exe, Program(1));
-        await StagedBesideAsync(exe, 2);
-
-        var putBack = SelfReplacement.SwapIn(exe);
-
-        Assert.Equal(Program(2), File.ReadAllBytes(exe));
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-
-        Assert.True(putBack());
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-    }
-
-    [Fact]
-    public async Task The_swap_clears_a_copy_an_earlier_update_left_aside()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(9));
-        await StagedBesideAsync(exe, 2);
-
-        SelfReplacement.SwapIn(exe);
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-        Assert.True(SelfReplacement.TryRemoveOldCopy(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void A_swap_with_nothing_written_beside_the_exe_puts_the_running_exe_back()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-
-        var failure = Assert.Throws<UpdateFailedException>(() => SelfReplacement.SwapIn(exe));
-
-        Assert.Equal(UpdateFailureStage.Install, failure.Stage);
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public async Task A_swap_that_can_put_neither_file_at_the_exe_path_keeps_both_beside_it_until_one_can_go()
-    {
-        // A folder at the exe's path refuses every rename to it.
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        await StagedBesideAsync(exe, 2);
-
-        var failure = Assert.Throws<UpdateFailedException>(() =>
-            SelfReplacement.SwapInRunning(exe, CancellationToken.None, () => Directory.CreateDirectory(exe)));
-
-        Assert.Equal(UpdateFailureStage.Install, failure.Stage);
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-        Assert.False(SelfReplacement.TryRefillPath(exe));
-
-        Directory.Delete(exe);
-        Assert.True(SelfReplacement.TryRefillPath(exe));
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-    }
-
-    [Fact]
-    public void A_swap_with_nothing_at_the_exe_path_fails_and_deletes_nothing()
-    {
-        // An earlier update in this process that did not hand over left this exe at the old
-        // name and nothing at the path.
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
-        File.WriteAllBytes(exe + SelfReplacement.NewSuffix, Program(2));
-
-        Assert.Throws<UpdateFailedException>(() => SelfReplacement.SwapIn(exe));
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-    }
-
-    [Fact]
-    public void A_swap_with_a_folder_at_the_exe_path_deletes_nothing()
-    {
-        // File.Exists does not see the folder, so the copy at the old name is kept.
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        Directory.CreateDirectory(exe);
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
-        File.WriteAllBytes(exe + SelfReplacement.NewSuffix, Program(2));
-
-        Assert.Throws<UpdateFailedException>(() => SelfReplacement.SwapIn(exe));
-
-        Assert.True(Directory.Exists(exe));
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-    }
-
-    [Fact]
-    public async Task A_swap_whose_running_exe_will_not_go_back_puts_the_newer_version_at_the_exe_path()
-    {
-        // The newer version is held open past the first rename's wait and let go during the
-        // last, and a folder in place of the renamed exe refuses the rename back.
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        var staged = await StagedBesideAsync(exe, 2);
-        var held = new FileStream(staged, FileMode.Open, FileAccess.Read, FileShare.None);
-        var letGo = Task.CompletedTask;
-        var aside = Path.Combine(_root, "aside.exe");
-
-        Func<bool> putBack;
-        try
-        {
-            putBack = SelfReplacement.SwapInRunning(exe, CancellationToken.None, () =>
-            {
-                File.Move(exe + SelfReplacement.OldSuffix, aside);
-                Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
-                letGo = Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ => held.Dispose());
-            });
-        }
-        finally
-        {
-            await letGo;
-            held.Dispose();
-        }
-
-        Assert.NotNull(putBack);
-        Assert.Equal(Program(2), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-        // The first rename's wait ran out and was written to crash.log, and the rename back of
-        // the running exe was tried and refused, before the swap went ahead all the same.
-        Assert.Equal(1, EntriesInCrashLog<FileHeldOpenException>(staged));
-        Assert.Equal(1, EntriesInCrashLog<FileNotFoundException>(exe + SelfReplacement.OldSuffix));
-    }
-
-    /// <summary>
-    /// How many entries in the crash log are a <typeparamref name="T"/> whose message names
-    /// <paramref name="path"/>, on the entry's first line.
-    /// </summary>
-    private static int EntriesInCrashLog<T>(string path) where T : Exception =>
-        TestCrashLog.Text().Split('\n').Count(line =>
-            line.StartsWith(typeof(T).FullName + ":", StringComparison.Ordinal)
-            && line.Contains($"'{path}'", StringComparison.OrdinalIgnoreCase));
-
-    [Fact]
-    public async Task A_put_back_whose_running_exe_will_not_go_back_leaves_the_newer_version_at_the_exe_path()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        await StagedBesideAsync(exe, 2);
-        var putBack = SelfReplacement.SwapIn(exe);
-        File.Delete(exe + SelfReplacement.OldSuffix);
-        Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
-
-        Assert.False(putBack());
-
-        Assert.Equal(Program(2), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-    }
-
-    [Fact]
-    public void Refilling_an_exe_path_puts_the_newer_version_there_where_no_copy_was_moved_aside()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe + SelfReplacement.NewSuffix, Program(2));
-
-        Assert.True(SelfReplacement.TryRefillPath(exe));
-
-        Assert.Equal(Program(2), File.ReadAllBytes(exe));
-    }
-
-    [Fact]
-    public void Refilling_an_exe_path_that_holds_a_file_changes_nothing()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(9));
-
-        Assert.True(SelfReplacement.TryRefillPath(exe));
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.Equal(Program(9), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void A_file_held_against_renaming_cannot_be_moved_aside_until_it_is_let_go()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe, Program(1));
-
-        using (var held = SelfReplacement.HoldAgainstRenaming(exe))
-        {
-            Assert.NotNull(held);
-            var failure = Assert.Throws<UpdateFailedException>(() => SelfReplacement.MoveAside(exe));
-            // The Restart Manager answers, and its list leaves this process out.
-            var holders = Assert.IsType<FileHeldOpenException>(failure.InnerException).Message;
-            Assert.StartsWith($"The file '{exe}' stayed held open. The Restart Manager names ", holders);
-            Assert.DoesNotContain($"(process {Environment.ProcessId}", holders);
-            Assert.Equal(Program(1), File.ReadAllBytes(exe));
-            Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        }
-
-        SelfReplacement.MoveAside(exe);
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void A_file_let_go_while_the_rename_waits_is_moved_aside()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe, Program(1));
-        using var held = SelfReplacement.HoldAgainstRenaming(exe);
-        Assert.NotNull(held);
-        using var letGo = new Timer(_ => held.Dispose(), null, TimeSpan.FromMilliseconds(300), Timeout.InfiniteTimeSpan);
-
-        SelfReplacement.MoveAside(exe);
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-        Assert.False(File.Exists(exe));
-    }
-
-    [Fact]
-    public void Ctrl_C_while_the_rename_waits_ends_the_wait_with_nothing_moved()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe, Program(1));
-        using var held = SelfReplacement.HoldAgainstRenaming(exe);
-        Assert.NotNull(held);
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
-        var clock = Stopwatch.StartNew();
-
-        Assert.Throws<OperationCanceledException>(() => SelfReplacement.MoveAside(exe, cts.Token));
-
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1.5), $"The wait took {clock.Elapsed}.");
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public async Task Ctrl_C_does_not_end_the_wait_for_the_newer_version_once_this_exe_is_aside()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        var staged = await StagedBesideAsync(exe, 2);
-        using var held = SelfReplacement.HoldAgainstRenaming(staged);
-        Assert.NotNull(held);
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
-        var clock = Stopwatch.StartNew();
-
-        var failure = Assert.Throws<UpdateFailedException>(() => SelfReplacement.SwapIn(exe, cts.Token));
-
-        Assert.True(clock.Elapsed >= TimeSpan.FromSeconds(1.5), $"The wait took {clock.Elapsed}.");
-        Assert.IsType<FileHeldOpenException>(failure.InnerException);
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        Assert.True(File.Exists(staged));
-    }
-
-    [Fact]
-    public void A_process_started_from_the_file_is_found_and_one_started_from_another_file_of_its_name_is_not()
-    {
-        // A copy of a program under a name no other process has, and a second copy of the
-        // same name in another folder that is never started.
-        var name = $"ic-run-{Guid.NewGuid():N}.exe";
-        var running = Path.Combine(_root, name);
-        var elsewhere = Path.Combine(Directory.CreateDirectory(Path.Combine(_root, "elsewhere")).FullName, name);
-        File.Copy(Path.Combine(Environment.SystemDirectory, "ping.exe"), running);
-        File.Copy(running, elsewhere);
-
-        Assert.False(SelfReplacement.AnotherProcessMayRunFrom(running));
-
-        using (SuspendedProcess.Start(running))
-        {
-            Assert.True(SelfReplacement.AnotherProcessMayRunFrom(running));
-            Assert.False(SelfReplacement.AnotherProcessMayRunFrom(elsewhere));
-        }
-
-        Assert.False(SelfReplacement.AnotherProcessMayRunFrom(running));
-    }
-
-    /// <summary>
-    /// A process started suspended, so it runs none of its own code and stays until it is
-    /// ended. Disposing it ends it, waits for that and closes both of its handles, after
-    /// which Windows no longer lists it.
-    /// </summary>
-    private sealed class SuspendedProcess : IDisposable
-    {
-        private const uint CreateSuspended = 0x00000004;
-        private readonly IntPtr _process;
-        private readonly IntPtr _thread;
-
-        private SuspendedProcess(IntPtr process, IntPtr thread)
-        {
-            _process = process;
-            _thread = thread;
-        }
-
-        public static SuspendedProcess Start(string path)
-        {
-            var startup = new StartupInfo { cb = Marshal.SizeOf<StartupInfo>() };
-            if (!CreateProcess(path, null, IntPtr.Zero, IntPtr.Zero, false, CreateSuspended,
-                    IntPtr.Zero, null, ref startup, out var started))
-                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
-            return new SuspendedProcess(started.hProcess, started.hThread);
-        }
-
-        public void Dispose()
-        {
-            TerminateProcess(_process, 1);
-            WaitForSingleObject(_process, 10_000);
-            CloseHandle(_thread);
-            CloseHandle(_process);
-        }
-
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private struct StartupInfo
-        {
-            public int cb;
-            public string? lpReserved;
-            public string? lpDesktop;
-            public string? lpTitle;
-            public int dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags;
-            public short wShowWindow, cbReserved2;
-            public IntPtr lpReserved2, hStdInput, hStdOutput, hStdError;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct ProcessInformation
-        {
-            public IntPtr hProcess, hThread;
-            public int dwProcessId, dwThreadId;
-        }
-
-        [DllImport("kernel32.dll", EntryPoint = "CreateProcessW", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern bool CreateProcess(
-            string lpApplicationName, string? lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes,
-            bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string? lpCurrentDirectory,
-            ref StartupInfo lpStartupInfo, out ProcessInformation lpProcessInformation);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool CloseHandle(IntPtr hObject);
-    }
-
-    [Fact]
-    public async Task Putting_back_answers_false_where_the_newer_file_cannot_move_out_of_the_way()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        await StagedBesideAsync(exe, 2);
-        var putBack = SelfReplacement.SwapIn(exe);
-        Directory.CreateDirectory(exe + SelfReplacement.NewSuffix);
-
-        Assert.False(putBack());
-
-        Assert.Equal(Program(2), File.ReadAllBytes(exe));
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void Putting_back_after_the_setup_moves_whatever_it_left_at_the_path_aside()
-    {
-        var exe = Path.Combine(_root, "installerclean-cli.exe");
-        File.WriteAllBytes(exe, Program(1));
-        var putBack = SelfReplacement.MoveAside(exe);
-        File.WriteAllBytes(exe, Program(4));
-
-        Assert.True(putBack());
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.Equal(Program(4), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void The_leftovers_beside_the_exe_go_and_a_folder_in_their_place_is_left_alone()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(8));
-        File.WriteAllBytes(exe + SelfReplacement.NewSuffix, Program(9));
-
-        Assert.True(SelfReplacement.TryRemoveOldCopy(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-
-        Directory.CreateDirectory(exe + SelfReplacement.NewSuffix);
-        Assert.True(SelfReplacement.TryRemoveOldCopy(exe));
-        Assert.True(Directory.Exists(exe + SelfReplacement.NewSuffix));
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-    }
-
-    [Fact]
-    public void A_command_line_moved_aside_with_nothing_in_its_place_is_put_back()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
-
-        Assert.True(SelfReplacement.TryPutBackMissing(exe, () => false));
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void A_newer_command_line_at_the_path_stays_and_the_copy_beside_it_is_left()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe, Program(2));
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
-
-        Assert.False(SelfReplacement.TryPutBackMissing(exe, () => false));
-
-        Assert.Equal(Program(2), File.ReadAllBytes(exe));
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void Nothing_is_put_back_while_a_setup_is_running()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
-
-        Assert.False(SelfReplacement.TryPutBackMissing(exe, () => true));
-
-        Assert.False(File.Exists(exe));
-        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void A_copy_a_program_holds_open_is_not_put_back()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
-
-        using (new FileStream(exe + SelfReplacement.OldSuffix, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete))
-            Assert.False(SelfReplacement.TryPutBackMissing(exe, () => false));
-
-        Assert.False(File.Exists(exe));
-        Assert.True(SelfReplacement.TryPutBackMissing(exe, () => false));
-    }
-
-    [Fact]
-    public void A_folder_in_place_of_the_copy_is_not_put_back()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
-
-        Assert.False(SelfReplacement.TryPutBackMissing(exe, () => false));
-
-        Assert.False(File.Exists(exe));
-        Assert.False(Directory.Exists(exe));
-    }
-
-    [Fact]
-    public void With_neither_copy_there_nothing_is_put_back_and_the_setup_is_not_asked()
-    {
-        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
-        var asked = false;
-
-        Assert.False(SelfReplacement.TryPutBackMissing(exe, () => asked = true));
-
-        Assert.False(asked);
-        Assert.False(File.Exists(exe));
-    }
-
-    [Fact]
-    public void A_setup_is_seen_as_running_while_its_mutex_exists()
-    {
-        var name = $@"Local\InstallerClean_SetupMutexTest_{Guid.NewGuid():N}";
-
-        Assert.False(SelfReplacement.SetupRunning(name));
-        using (new Mutex(false, name))
-            Assert.True(SelfReplacement.SetupRunning(name));
-        Assert.False(SelfReplacement.SetupRunning(name));
-    }
-
-    [Fact]
-    public async Task A_hand_over_whose_newer_version_will_not_start_puts_everything_back_and_answers_false()
-    {
-        // Program() writes no runnable image, so every start fails and the process is never ended.
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-        await StagedBesideAsync(exe, 2);
-
-        Assert.False(SelfReplacement.HandOverAndEnd(exe, "9.9.9"));
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-        // One entry for each try: each but the last as it fails, the last once the exe is back.
-        Assert.Equal(ProcessStartRetry.Attempts, TestCrashLog.FailedStartsOf(exe));
-    }
-
-    [Fact]
-    public void A_hand_over_with_nothing_written_beside_the_exe_changes_nothing_and_answers_false()
-    {
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        File.WriteAllBytes(exe, Program(1));
-
-        Assert.False(SelfReplacement.HandOverAndEnd(exe, "9.9.9"));
-
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-    }
-
-    [Fact]
-    public void Everything_the_named_assemblies_reference_is_loaded_before_a_rename()
-    {
-        SelfReplacement.PrepareToMoveAside(typeof(System.Diagnostics.EventLog).Assembly);
-        // The walk readies the crash log too, which keeps a header for every later write.
-        InstallerClean.Helpers.CrashLog.ForgetPreparedHeader();
-
-        var loaded = AppDomain.CurrentDomain.GetAssemblies()
-            .Select(a => a.GetName().Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var roots = new[]
-        {
-            typeof(SelfReplacement).Assembly,
-            typeof(System.Diagnostics.Process).Assembly,
-            typeof(System.Diagnostics.EventLog).Assembly,
-        };
-        var missing = roots
-            .SelectMany(root => root.GetReferencedAssemblies().Select(reference => $"{root.GetName().Name} -> {reference.Name}"))
-            .Where(pair => !loaded.Contains(pair[(pair.IndexOf("-> ", StringComparison.Ordinal) + 3)..]))
-            .ToList();
-        Assert.Empty(missing);
-        Assert.Contains("System.Diagnostics.StackTrace", loaded);
-    }
-
-    [Fact]
-    public void An_assembly_the_build_does_not_carry_is_passed_over_without_a_crash_log_entry()
-    {
-        var loaded = SelfReplacement.TryLoad(new System.Reflection.AssemblyName("Ic.Not.In.This.Build, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"));
-
-        Assert.Null(loaded);
-        Assert.Empty(TestCrashLog.Text());
-    }
-
-    [Fact]
-    public void A_file_not_found_error_counts_as_absence_only_where_it_names_the_assembly_asked_for()
-    {
-        var asked = new System.Reflection.AssemblyName("Ic.Asked, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-
-        Assert.True(SelfReplacement.NamesTheAssemblyAsked(
-            new FileNotFoundException("m", "Ic.Asked, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"), asked));
-        Assert.False(SelfReplacement.NamesTheAssemblyAsked(
-            new FileNotFoundException("m", "Ic.Dependency, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"), asked));
-        Assert.False(SelfReplacement.NamesTheAssemblyAsked(new FileNotFoundException("m"), asked));
-        Assert.False(SelfReplacement.NamesTheAssemblyAsked(new FileNotFoundException("m", "not an assembly name,,,"), asked));
-    }
-
     [Fact]
     public async Task The_portable_route_keeps_the_download_in_its_staging_folder_to_put_at_the_exe_path()
     {
@@ -971,11 +348,11 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(new OneAnswer(Release(3)), null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry, _leftovers);
+            CommandLineUpdate.SetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
-        Assert.Equal(CommandLineUpdate.SetupArguments(canAsk: false), prepared.Arguments);
+        Assert.Equal(CommandLineUpdate.SetupArguments, prepared.Arguments);
         Assert.DoesNotContain("/UPDATEFROMAPP", prepared.Arguments);
 
         prepared.Undo();
@@ -991,7 +368,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
             new UpdateDownloadService(network, null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry, gate ?? _leftovers);
+            CommandLineUpdate.SetupArguments, AdministratorsAndThisAccount, NoRegistry, gate ?? _leftovers);
         return (updater, exe, stagingRoot);
     }
 
@@ -1070,7 +447,7 @@ public sealed class UpdateInPlaceTests : IDisposable
 
             Assert.Equal(UpdateFailureStage.Download, failure.Stage);
             Assert.Equal(0, network.Requests);
-            Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+            NothingBeside(exe);
             Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
         });
     }
@@ -1116,7 +493,7 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         Assert.False(AppCopy.CanUpdateItself(updater.Kind));
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        NothingBeside(exe);
         Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
     }
 
@@ -1135,9 +512,8 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         Assert.Equal(UpdateFailureStage.Download, failure.Stage);
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+            NothingBeside(exe);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
     }
 
     [Theory]
@@ -1163,7 +539,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.Equal(1, network.ManifestRequests);
         Assert.Equal(0, network.Requests);
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        NothingBeside(exe);
         Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
     }
 
@@ -1265,8 +641,18 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         Assert.Equal(UpdateFailureStage.Install, failure.Stage);
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+            NothingBeside(exe);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+    }
+
+    /// <summary>
+    /// Asserts that nothing is beside <paramref name="exe"/> under its name with more on the
+    /// end, as a file written beside it or a name a replace leaves would be.
+    /// </summary>
+    private static void NothingBeside(string exe)
+    {
+        var name = Path.GetFileName(exe) + ".";
+        Assert.DoesNotContain(Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(exe)!),
+            entry => Path.GetFileName(entry).StartsWith(name, StringComparison.OrdinalIgnoreCase));
     }
 }

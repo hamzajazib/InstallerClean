@@ -325,9 +325,9 @@ $dataExtensions = [System.Collections.Generic.HashSet[string]]::new([string[]]@(
 # Every look for a file in a run's own folder, in $workingFolder where the run was started
 # in a folder of its own, or under %TEMP%\.net, where a single-file build extracts its own
 # libraries, and every image it loaded from anywhere but its own exe. A look is left out
-# where it is for data, by $dataExtensions; where it is for the run's own exe, the exe's
-# .old or .new copy beside it, or a name a replace leaves beside it (Get-ReplaceSuffixes),
-# which a start of the command line or the window clears, the exclusion going by name
+# where it is for data, by $dataExtensions; where it is for the run's own exe or a name a
+# replace leaves beside it (Get-ReplaceSuffixes), which a start of the command line or the
+# window clears, the exclusion going by name
 # whatever the run; and where it is at a path the run opens as a folder or has rows under,
 # as the folders a bundle extracts into. The working folder itself, which Windows opens for
 # the run as it starts, is not in it, so it is left out too.
@@ -335,7 +335,7 @@ function Get-Libraries($rows, [string]$folder, [string]$exe, [string]$workingFol
   $own = $folder.TrimEnd('\') + '\'
   $working = if ($workingFolder) { $workingFolder.TrimEnd('\') + '\' }
   $self = $own + $exe
-  $neighbours = @($self, "$self.old", "$self.new") + @(Get-ReplaceSuffixes | ForEach-Object { "$self$_" })
+  $neighbours = @($self) + @(Get-ReplaceSuffixes | ForEach-Object { "$self$_" })
   # A path the run opens as a directory, or one another of its rows lies under.
   $folders = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
   foreach ($row in $rows) {
@@ -367,7 +367,7 @@ function Get-Libraries($rows, [string]$folder, [string]$exe, [string]$workingFol
 # runtime's folder, the row on which Process Monitor shows the image loaded. A
 # self-contained single-file build reads every assembly from its own bundle, so nothing
 # names its module initializer's loads, and its first act seen is in Main. Main and
-# later make the others: the look for the exe's old or new copy beside it, the app's
+# later make the others: the look for the names a replace leaves beside the exe, the app's
 # folder under %LOCALAPPDATA% or the NoFaff one earlier versions use, a file under
 # C:\Windows\Installer, and the load of msi.dll. A build started in replace mode makes
 # one more, the replaced copy: its first row on the exe it puts itself at, or a name a
@@ -377,11 +377,12 @@ function Get-Marker($rows, $run) {
   $first = @(Read-SourceList $run.Build.Source 'ImportingAssemblies')[0]
   $exe = $run.Folder.TrimEnd('\') + '\' + $run.Exe
   $replaced = if ($run.PSObject.Properties['Target'] -and $run.Target) { @($run.Target) + @(Get-ReplaceSuffixes | ForEach-Object { "$($run.Target)$_" }) } else { @() }
+  $leftovers = @(Get-ReplaceSuffixes | ForEach-Object { "$exe$_" })
   $initializer = $null
   for ($i = 0; $i -lt $rows.Count; $i++) {
     $row = $rows[$i]
     $kind = if ($replaced -contains $row.Path) { 'replaced copy' }
-      elseif ($row.Path -eq "$exe.old" -or $row.Path -eq "$exe.new") { 'old copy' }
+      elseif ($leftovers -contains $row.Path) { 'replace leftovers' }
       elseif ($row.Path -match '\\AppData\\Local\\((NoFaff\\)?InstallerClean(\\|$)|NoFaff$)') { 'app folder' }
       elseif ($row.Path -match '^C:\\Windows\\Installer(\\|$)') { 'Installer folder' }
       elseif ($row.Operation -eq 'Load Image' -and (Split-Path $row.Path -Leaf) -eq 'msi.dll') { 'msi.dll' }
@@ -1186,8 +1187,8 @@ function Test-SetupControls {
 # Runs Get-Libraries, Get-RunPlants and Test-PlantedRun over records made up for the
 # purpose. The first pass looks beside the exe for a .dll, an upper-case .OCX, a .drv, an
 # .exe and a dotted name with no extension Windows knows, each of which must be planted
-# for, and for each data name $dataExtensions holds, the exe itself, its .old and .new,
-# the names a replace leaves beside it, and a folder it creates, none of which may be. The
+# for, and for each data name $dataExtensions holds, the exe itself, the names a replace
+# leaves beside it, and a folder it creates, none of which may be. The
 # second pass must fail where it loads the planted .drv and where it loads a file from
 # beside itself that the first pass did not look for, and pass the load of its own exe.
 function Test-ImageNameControls {
@@ -1202,7 +1203,7 @@ function Test-ImageNameControls {
   $planted = 'control.dll', 'control.ocx', 'helper.exe', 'system.io.compression.native', 'winspool.drv'
   $looked = 'control.dll', 'CONTROL.OCX', 'winspool.drv', 'helper.exe', 'System.IO.Compression.Native',
     'control.runtimeconfig.json', 'control.pdb', 'control.dll.config', 'control.en', 'control.ENU', 'control.en-US',
-    'control.exe', 'control.exe.old', 'control.exe.new', 'work'
+    'control.exe', 'work'
   $looked = @($looked) + @(Get-ReplaceSuffixes | ForEach-Object { "control.exe$_" })
   try {
     New-Item -ItemType Directory -Force -Path $first, $second | Out-Null
@@ -1995,6 +1996,18 @@ function Test-ReplaceControls {
   $marker = Get-Marker $rows $run
   if ($marker -and $marker.First.Kind -eq 'replaced copy') { Fail "The control on a replace's first act answered the replaced copy for a run with no target." }
   else { Write-Host "  answered no replaced copy for a run with no target, as it must" }
+
+  Write-Host "== Control: the first act of a start that clears what a replace left"
+  $own = "C:\Control\staging\InstallerClean.exe$((Get-ReplaceSuffixes)[0])"
+  $rows = @(
+    [pscustomobject]@{ Operation = 'QueryOpen'; Path = "C:\Control\other\InstallerClean.exe$((Get-ReplaceSuffixes)[0])"; Detail = '' },
+    [pscustomobject]@{ Operation = 'QueryOpen'; Path = 'C:\Control\staging\InstallerClean.exe.other'; Detail = '' },
+    [pscustomobject]@{ Operation = 'QueryOpen'; Path = $own; Detail = '' })
+  $marker = Get-Marker $rows $run
+  if (-not $marker -or $marker.First.Kind -ne 'replace leftovers' -or $marker.First.Index -ne 3) {
+    Fail "The control on a start's first act answered $(if ($marker) { "the $($marker.First.Kind) at row $($marker.First.Index)" } else { 'nothing' }), where it should answer the replace leftovers at row 3."
+  }
+  else { Write-Host "  answered the replace leftovers at row 3, and nothing for a neighbour's name, as it must" }
 }
 
 # Fails unless the run, a start of the slim, loaded each assembly on

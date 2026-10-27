@@ -5,8 +5,7 @@ namespace InstallerClean.Interop.Native;
 /// <summary>
 /// P/Invoke surface for rstrtmgr.dll, the Restart Manager, which names the processes that
 /// have a file open. Source-generated <see cref="LibraryImportAttribute"/> stubs over
-/// blittable arguments, as in <see cref="Kernel32"/>, so a call made after the running exe
-/// has been renamed aside reaches no assembly that is not loaded already.
+/// blittable arguments, as in <see cref="Kernel32"/>.
 /// </summary>
 internal static partial class Rstrtmgr
 {

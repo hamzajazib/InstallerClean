@@ -10,8 +10,7 @@ namespace InstallerClean.Services;
 public readonly record struct UpdateProgress(double? Fraction, bool Checking = false);
 
 /// <summary>
-/// Gets a newer version ready to start: downloaded, and where the copy replaces its
-/// own file, written beside it to take its place.
+/// Gets a newer version ready to start: downloaded into a staging folder and checked.
 /// </summary>
 public interface IAppUpdater
 {
@@ -58,8 +57,8 @@ public interface IAppUpdater
     /// Downloads <paramref name="version"/> as the same kind of copy, where its release
     /// allows it (<see cref="CheckRequirementsAsync"/>), checks that the file carries that
     /// version, and answers with what to start. The check reads the file through a handle
-    /// that shares only reading, kept open until <see cref="PreparedUpdate.DeleteDownload"/>,
-    /// <see cref="PreparedUpdate.Undo"/> or the end of the process, so the file started is the
+    /// that shares only reading, kept open until <see cref="PreparedUpdate.Undo"/> or the
+    /// end of the process, so the file started is the
     /// file checked. Reports the fraction downloaded, or null where the length is not known,
     /// and then that the download is being checked, which can take a while where another
     /// process, an antivirus say, is looking at the new file. Throws
@@ -107,18 +106,14 @@ public interface IAppUpdater
 public sealed class PreparedUpdate
 {
     private Action? _undo;
-    private readonly Action? _deleteDownload;
 
-    public PreparedUpdate(
-        string version, string fileToStart, string arguments, Action undo, string? replaces = null,
-        Action? deleteDownload = null)
+    public PreparedUpdate(string version, string fileToStart, string arguments, Action undo, string? replaces = null)
     {
         Version = version;
         FileToStart = fileToStart;
         Arguments = arguments;
         Replaces = replaces;
         _undo = undo;
-        _deleteDownload = deleteDownload;
     }
 
     /// <summary>The version this is, as the update check gave it.</summary>
@@ -150,23 +145,6 @@ public sealed class PreparedUpdate
     public void Undo()
     {
         try { Interlocked.Exchange(ref _undo, null)?.Invoke(); }
-        catch (Exception ex) { Helpers.CrashLog.TryWrite(ex); }
-    }
-
-    /// <summary>
-    /// Closes the handle holding the download and deletes the download, and the folder it
-    /// was saved in where nothing else is in it, once what was downloaded has been written
-    /// elsewhere. The start-up clean-up stays held off until <see cref="Undo"/> or the end of
-    /// the process. Once the
-    /// folder has gone, neither this nor <see cref="Undo"/> reaches into its path again.
-    /// Does nothing where the update was not downloaded to a folder of its own, or was
-    /// prepared for the command line to run from that folder
-    /// (<see cref="IAppUpdater.PrepareStagedRunAsync"/>), whose files are used where they are.
-    /// Never throws.
-    /// </summary>
-    public void DeleteDownload()
-    {
-        try { _deleteDownload?.Invoke(); }
         catch (Exception ex) { Helpers.CrashLog.TryWrite(ex); }
     }
 }
@@ -463,16 +441,14 @@ public sealed class AppUpdater : IAppUpdater
             // the file stays held and the gate stays out until the update is undone or this
             // process ends. The handle is kept in a list that lives as long as the process, as
             // a staged run's are.
-            // The download is deleted by its path, by DeleteDownload or Undo, which first let go
-            // of the hold, until its folder has gone. Once the folder is gone its name is free,
+            // The download is deleted by its path, by Undo, which first lets go of the hold, until its folder has gone. Once the folder is gone its name is free,
             // and anybody who can write to the root can make a folder or a link under it, so
             // nothing here reaches into that path again. A download held open by another
             // process, an antivirus looking at it say, keeps the folder, which stays this
             // update's own: an undo tries it again, and otherwise a later start's clean-up takes it.
             var isSetup = Kind == AppCopyKind.Setup;
             return staging.Prepared(
-                version, download, isSetup ? _setupArguments : string.Empty, isSetup ? null : _exePath,
-                offersDeleteDownload: true);
+                version, download, isSetup ? _setupArguments : string.Empty, isSetup ? null : _exePath);
         }
         catch
         {
@@ -530,7 +506,7 @@ public sealed class AppUpdater : IAppUpdater
             // puts itself, or on the setup's copy its setup, in this copy's place from there.
             // So once the run has started nothing is undone: the files stay held and the
             // gate stays out until this process ends.
-            return staging.Prepared(version, commandLine, string.Empty, _exePath, offersDeleteDownload: false);
+            return staging.Prepared(version, commandLine, string.Empty, _exePath);
         }
         catch
         {
@@ -613,16 +589,12 @@ public sealed class AppUpdater : IAppUpdater
         /// The update to start, holding its downloads until <see cref="PreparedUpdate.Undo"/>
         /// or the end of the process. The handles are kept in a list that lives as long as the
         /// process, since a handle nothing references is closed by its finalizer, whatever the
-        /// caller keeps. Its undo takes the downloads away and releases the gate;
-        /// <paramref name="offersDeleteDownload"/> gives it a
-        /// <see cref="PreparedUpdate.DeleteDownload"/> that does the first alone.
+        /// caller keeps. Its undo takes the downloads away and releases the gate.
         /// </summary>
-        public PreparedUpdate Prepared(
-            string version, string fileToStart, string arguments, string? replaces, bool offersDeleteDownload)
+        public PreparedUpdate Prepared(string version, string fileToStart, string arguments, string? replaces)
         {
             lock (HeldForTheProcess) HeldForTheProcess.AddRange(_holds);
-            return new PreparedUpdate(
-                version, fileToStart, arguments, Abandon, replaces, offersDeleteDownload ? DeleteDownloads : null);
+            return new PreparedUpdate(version, fileToStart, arguments, Abandon, replaces);
         }
 
         /// <summary>Takes away everything staged and releases the gate.</summary>

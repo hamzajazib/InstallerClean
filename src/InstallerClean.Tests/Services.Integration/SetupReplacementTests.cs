@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 using InstallerClean.Services;
@@ -98,7 +99,7 @@ public sealed class SetupReplacementTests : IDisposable
         Assert.True(_started.WaitOne(0));
         var start = Assert.Single(_starts);
         Assert.Equal(_setup, start.File);
-        Assert.Equal(CommandLineUpdate.SetupArguments(canAsk: false).Split(' '), start.Arguments);
+        Assert.Equal(CommandLineUpdate.SetupArguments.Split(' '), start.Arguments);
         Assert.Equal(_staging, start.Folder);
         Assert.Empty(TestCrashLog.Entries());
     }
@@ -290,5 +291,96 @@ public sealed class SetupReplacementTests : IDisposable
         Assert.Equal(SetupReplaceOutcome.SetupFailed, SetupReplacement.Run(_request, after, out var afterCode));
         Assert.Null(afterCode);
         Assert.Equal(SetupReplaceOutcome.NotStarted, SetupReplacement.Run(_request, before, out _));
+    }
+
+    [Fact]
+    public void A_process_started_from_the_file_is_found_and_one_started_from_another_file_of_its_name_is_not()
+    {
+        // A copy of a program under a name no other process has, and a second copy of the
+        // same name in another folder that is never started.
+        var name = $"ic-run-{Guid.NewGuid():N}.exe";
+        var running = Path.Combine(_root, name);
+        var elsewhere = Path.Combine(Directory.CreateDirectory(Path.Combine(_root, "elsewhere")).FullName, name);
+        File.Copy(Path.Combine(Environment.SystemDirectory, "ping.exe"), running);
+        File.Copy(running, elsewhere);
+
+        Assert.False(SetupReplacement.AnotherProcessMayRunFrom(running));
+
+        using (SuspendedProcess.Start(running))
+        {
+            Assert.True(SetupReplacement.AnotherProcessMayRunFrom(running));
+            Assert.False(SetupReplacement.AnotherProcessMayRunFrom(elsewhere));
+        }
+
+        Assert.False(SetupReplacement.AnotherProcessMayRunFrom(running));
+    }
+
+    /// <summary>
+    /// A process started suspended, so it runs none of its own code and stays until it is
+    /// ended. Disposing it ends it, waits for that and closes both of its handles, after
+    /// which Windows no longer lists it.
+    /// </summary>
+    private sealed class SuspendedProcess : IDisposable
+    {
+        private const uint CreateSuspended = 0x00000004;
+        private readonly IntPtr _process;
+        private readonly IntPtr _thread;
+
+        private SuspendedProcess(IntPtr process, IntPtr thread)
+        {
+            _process = process;
+            _thread = thread;
+        }
+
+        public static SuspendedProcess Start(string path)
+        {
+            var startup = new StartupInfo { cb = Marshal.SizeOf<StartupInfo>() };
+            if (!CreateProcess(path, null, IntPtr.Zero, IntPtr.Zero, false, CreateSuspended,
+                    IntPtr.Zero, null, ref startup, out var started))
+                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            return new SuspendedProcess(started.hProcess, started.hThread);
+        }
+
+        public void Dispose()
+        {
+            TerminateProcess(_process, 1);
+            WaitForSingleObject(_process, 10_000);
+            CloseHandle(_thread);
+            CloseHandle(_process);
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct StartupInfo
+        {
+            public int cb;
+            public string? lpReserved;
+            public string? lpDesktop;
+            public string? lpTitle;
+            public int dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags;
+            public short wShowWindow, cbReserved2;
+            public IntPtr lpReserved2, hStdInput, hStdOutput, hStdError;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct ProcessInformation
+        {
+            public IntPtr hProcess, hThread;
+            public int dwProcessId, dwThreadId;
+        }
+
+        [DllImport("kernel32.dll", EntryPoint = "CreateProcessW", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool CreateProcess(
+            string lpApplicationName, string? lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes,
+            bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string? lpCurrentDirectory,
+            ref StartupInfo lpStartupInfo, out ProcessInformation lpProcessInformation);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
     }
 }

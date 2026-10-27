@@ -351,16 +351,12 @@ internal static class Program
             }
         }
 
-        // What an earlier update left beside this exe: the copy it renamed aside, which
-        // could not be deleted while it was still running, a newer version written beside
-        // it that never took its place, and what a replace left beside it. Then the staging
-        // folders earlier updates left in %ProgramData%; a file a running update holds is
-        // left where it is, its handle sharing no delete. A run standing for another copy
-        // runs from the staging folder and leaves that copy's folder, and the staging
-        // folders, to the copy itself.
+        // What a replace left beside this exe, then the staging folders earlier updates left
+        // in %ProgramData%; a file a running update holds is left where it is, its handle
+        // sharing no delete. A run standing for another copy runs from the staging folder
+        // and leaves that copy's folder, and the staging folders, to the copy itself.
         if (s_standsFor is null && Environment.ProcessPath is { Length: > 0 } ownPath)
         {
-            SelfReplacement.TryRemoveOldCopy(ownPath);
             ExeReplacement.TryRemoveLeftovers(ownPath);
             UpdateLeftoverGate.ForThisProcess.TryRunPass(
                 () => UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot));
@@ -629,7 +625,7 @@ internal static class Program
                 exePath,
                 new UpdateDownloadService(),
                 UpdateStagingFolder.DefaultRoot,
-                CommandLineUpdate.SetupArguments(canAsk));
+                CommandLineUpdate.SetupArguments);
             var checker = new UpdateCheckService();
             result = new CommandLineUpdate(
                     ct => checker.CheckAsync(UpdateCheckOrigin.Automatic, ct), updater, host)

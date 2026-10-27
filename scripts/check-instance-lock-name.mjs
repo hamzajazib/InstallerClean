@@ -10,11 +10,6 @@
 // name itself, once, in a #define that AppMutex and [Code] both use, and this check holds
 // that define and the constant together.
 //
-// It holds the setup's own mutex the same way: SelfReplacement.SetupMutexName against the
-// SetupMutexName define, which the CreateMutex call in [Code] names. The window opens that name to leave alone a
-// command line the setup is about to write, so a drift there lets the window put an old copy
-// where the setup is writing.
-//
 // The C# is read with its comments blanked, through csharp-source.mjs, so a comment
 // naming the mutex is not counted as a spelling of it. The setup is read with its
 // comments blanked the same way, through iss-source.mjs.
@@ -92,46 +87,6 @@ for (const l of setupLines) {
 }
 if (name !== undefined) console.log(`${LOCK_FILE}: InstanceLock.Name = ${name}`);
 
-// The setup's own mutex: one constant, one define, and the [Code] call creating it naming the define.
-const SETUP_MUTEX_FILE = 'src/InstallerClean.Core/Services/SelfReplacement.cs';
-const setupDeclared = [...readCSharp(read(SETUP_MUTEX_FILE)).code.matchAll(/const\s+string\s+SetupMutexName\s*=\s*@"([^"]*)"/g)]
-  .map((m) => m[1]);
-if (setupDeclared.length !== 1) {
-  problems.push(`${SETUP_MUTEX_FILE}: expected one 'const string SetupMutexName = @"..."', found ${setupDeclared.length}`);
-}
-const setupDefines = setupLines.filter((l) => /^#define\s+SetupMutexName\b/.test(l.text));
-if (setupDefines.length !== 1) {
-  problems.push(`${SETUP_FILE}: expected one #define SetupMutexName, found ${setupDefines.length}`);
-} else {
-  const m = setupDefines[0].text.match(/^#define\s+SetupMutexName\s+"([^"]*)"\s*$/);
-  console.log(`${SETUP_FILE}:${setupDefines[0].line}: ${setupDefines[0].text}`);
-  if (!m) problems.push(`${SETUP_FILE}:${setupDefines[0].line}: SetupMutexName is not a plain quoted string`);
-  else if (setupDeclared.length === 1 && m[1] !== setupDeclared[0]) {
-    problems.push(`${SETUP_FILE}:${setupDefines[0].line}: SetupMutexName is '${m[1]}', SelfReplacement.SetupMutexName is '${setupDeclared[0]}'`);
-  }
-}
-const creates = setupLines.filter((l) => /CreateMutex\s*\(/.test(l.text));
-if (creates.length !== 1 || creates[0].text.replace(/\s+/g, '') !== "CreateMutex('{#SetupMutexName}');") {
-  problems.push(`${SETUP_FILE}: expected one "CreateMutex('{#SetupMutexName}');", found ${creates.map((l) => l.text).join(' | ') || 'none'}`);
-} else {
-  console.log(`${SETUP_FILE}:${creates[0].line}: ${creates[0].text}`);
-}
-if (setupDeclared.length === 1) console.log(`${SETUP_MUTEX_FILE}: SelfReplacement.SetupMutexName = ${setupDeclared[0]}`);
-// The setup's mutex is spelled once in the source and once in the setup, in its define.
-const SETUP_MARK = 'InstallerClean_Setup"';
-for (const l of setupLines) {
-  if (l.text.includes(SETUP_MARK) && !/^#define\s+SetupMutexName\b/.test(l.text)) {
-    problems.push(`${SETUP_FILE}:${l.line}: names the setup's mutex; use {#SetupMutexName}`);
-  }
-}
-for (const path of sourceFiles('src', '.cs')) {
-  const code = readCSharp(read(path)).code;
-  const lineOf = lineIndex(code);
-  for (let at = code.indexOf(SETUP_MARK); at !== -1; at = code.indexOf(SETUP_MARK, at + SETUP_MARK.length)) {
-    if (path !== SETUP_MUTEX_FILE) problems.push(`${path}:${lineOf(at)}: names the setup's mutex; use SelfReplacement.SetupMutexName`);
-  }
-}
-
 // Every spelling of the name in source code outside the constant itself.
 for (const path of sourceFiles('src', '.cs')) {
   const code = readCSharp(read(path)).code;
@@ -147,4 +102,4 @@ if (problems.length > 0) {
   for (const p of problems) console.error(`check-instance-lock-name: ${p}`);
   process.exit(1);
 }
-console.log('check-instance-lock-name: one name for each mutex, and the setup names both');
+console.log('check-instance-lock-name: one name for the mutex, and the setup names it through its define');

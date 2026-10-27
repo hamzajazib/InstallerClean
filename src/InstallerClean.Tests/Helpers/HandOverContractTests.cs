@@ -17,24 +17,6 @@ public sealed class HandOverContractTests : IDisposable
     public void Dispose() => _crashLog.Dispose();
 
     [Theory]
-    [InlineData("3.5.0", true)]
-    [InlineData("3.5", true)]
-    [InlineData("3.5.0.0", true)]
-    [InlineData("3.5.1", true)]
-    [InlineData("3.10.0", true)]
-    [InlineData("4.0", true)]
-    [InlineData("3.4.0", false)]
-    [InlineData("3.4.9", false)]
-    [InlineData("3.4.0.9", false)]
-    [InlineData("", false)]
-    [InlineData("x", false)]
-    [InlineData("3.5.0-beta", false)]
-    public void A_version_takes_the_hand_over_switches_from_3_5_0_on(string version, bool takes)
-    {
-        Assert.Equal(takes, HandOverContract.TakesHandOverSwitches(version));
-    }
-
-    [Theory]
     [InlineData(new[] { "/startedevent:" + EventId, "/d" }, new[] { "/d" }, EventId)]
     [InlineData(new[] { "/m", "D:\\Backup", "/StartedEvent:" + EventId }, new[] { "/m", "D:\\Backup" }, EventId)]
     [InlineData(new[] { "/s", "/startedevent:" + EventId, "/startedevent:" + OtherEventId }, new[] { "/s" }, EventId)]
@@ -84,69 +66,6 @@ public sealed class HandOverContractTests : IDisposable
 
         Assert.Equal(CliCommand.UnknownArgument, invocation.Command);
         Assert.Equal(offending, invocation.OffendingArgument);
-    }
-
-    [Theory]
-    [InlineData("3.5.0", true)]
-    [InlineData("3.5.1", true)]
-    [InlineData("9.9.9", true)]
-    [InlineData("3.4.0", false)]
-    [InlineData("3.4.9", false)]
-    [InlineData("x", false)]
-    public void A_command_line_starts_the_newer_version_with_the_no_update_switch_only_where_it_takes_the_switches(
-        string toVersion, bool passed)
-    {
-        var list = HandOverContract.CommandLineArguments(["/s"], toVersion, Guid.NewGuid(), Guid.NewGuid());
-
-        Assert.Equal(passed ? 1 : 0, list.Count(a => a == CliContract.NoUpdateSwitch));
-    }
-
-    [Fact]
-    public void The_list_a_command_line_starts_the_newer_version_with_keeps_the_arguments_in_order_and_ends_with_the_events_and_the_switch()
-    {
-        var cancel = Guid.NewGuid();
-        var started = Guid.NewGuid();
-
-        var list = HandOverContract.CommandLineArguments(["/m", @"D:\Backup"], "9.9.9", cancel, started);
-
-        Assert.Equal(
-            ["/m", @"D:\Backup", CliContract.CancelEventArgument(cancel), HandOverContract.StartedEventArgument(started),
-                CliContract.NoUpdateSwitch],
-            list);
-    }
-
-    [Theory]
-    [InlineData("3.5.0", new[] { "/s", "/noupdate" })]
-    [InlineData("3.4.0", new[] { "/s" })]
-    public void An_event_given_no_id_is_not_in_the_list(string toVersion, string[] expected)
-    {
-        Assert.Equal(expected, HandOverContract.CommandLineArguments(["/s"], toVersion, null, null));
-    }
-
-    [Theory]
-    [InlineData("/s", null)]
-    [InlineData("/d", null)]
-    [InlineData("/m", null)]
-    [InlineData("/m", @"D:\Backup")]
-    public void A_newer_version_given_that_list_runs_the_same_command_without_the_update_check(
-        string command, string? destination)
-    {
-        string[] original = destination is null ? [command] : [command, destination];
-        var list = HandOverContract.CommandLineArguments(
-            original, "9.9.9", Guid.NewGuid(), Guid.NewGuid()).ToArray();
-
-        var rest = CliContract.TakeCancelEvent(list, out var cancelEvent);
-        rest = HandOverContract.TakeStartedEvent(rest, out var startedEvent);
-        var invocation = CliContract.ParseArguments(rest);
-        var asTyped = CliContract.ParseArguments(original);
-
-        Assert.NotNull(cancelEvent);
-        Assert.NotNull(startedEvent);
-        Assert.True(invocation.SkipUpdate);
-        Assert.False(asTyped.SkipUpdate);
-        Assert.Equal(asTyped.Command, invocation.Command);
-        Assert.Equal(asTyped.MoveDestination, invocation.MoveDestination);
-        Assert.Null(invocation.OffendingArgument);
     }
 
     [Fact]

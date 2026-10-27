@@ -213,26 +213,6 @@ public sealed class NewerVersionStartTests : IDisposable
         Assert.True(NewerVersionProcess.EndNewerVersion(newer));
     }
 
-    [Fact]
-    public void A_hand_over_whose_newer_version_ends_without_saying_it_started_puts_everything_back()
-    {
-        // hostname.exe stands in for a newer version that starts and cannot run: it takes the
-        // switch as an argument it does not know and ends at once.
-        var exe = Path.Combine(_root, "InstallerClean.exe");
-        var original = new byte[] { (byte)'M', (byte)'Z', 1, 1 };
-        File.WriteAllBytes(exe, original);
-        var newer = Path.Combine(Environment.SystemDirectory, "HOSTNAME.EXE");
-        File.Copy(newer, exe + SelfReplacement.NewSuffix);
-        var clock = Stopwatch.StartNew();
-
-        Assert.False(SelfReplacement.HandOverAndEnd(exe, "9.9.9", TimeSpan.FromSeconds(60)));
-
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(30), $"The hand-over took {clock.Elapsed}.");
-        Assert.Equal(original, File.ReadAllBytes(exe));
-        Assert.Equal(File.ReadAllBytes(newer), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-    }
-
     /// <summary>
     /// A PowerShell script standing in for a staged newer version: it writes the arguments
     /// it was given to <paramref name="argumentsFile"/>, one to a line, where that is not

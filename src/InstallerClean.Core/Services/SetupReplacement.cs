@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
@@ -102,7 +103,7 @@ internal static class SetupReplacement
                     $"InstallerClean was still in use {(seams.InUseBound ?? InUseBound).TotalSeconds:0} seconds after the copy to be replaced had ended, so the setup was not run.");
 
             using var started = (seams.Start ?? DetachedProcess.Start)(
-                setupPath, CommandLineUpdate.SetupArguments(canAsk: false).Split(' ', StringSplitOptions.RemoveEmptyEntries),
+                setupPath, CommandLineUpdate.SetupArguments.Split(' ', StringSplitOptions.RemoveEmptyEntries),
                 Path.GetDirectoryName(setupPath)!);
             // The setup has its own handle on its file once it runs, so this one goes.
             setup.Dispose();
@@ -143,7 +144,7 @@ internal static class SetupReplacement
     /// <summary>
     /// Waits up to <paramref name="bound"/> for InstallerClean to be closed: the
     /// single-instance mutex let go, and no process running from the window or the command
-    /// line in <paramref name="folder"/> (<see cref="SelfReplacement.AnotherProcessMayRunFrom"/>).
+    /// line in <paramref name="folder"/> (<see cref="AnotherProcessMayRunFrom"/>).
     /// The mutex is taken for the look and let go again, its handle closed, before this
     /// answers, since the setup stops while any process has it open. Answers whether
     /// InstallerClean was found closed.
@@ -160,8 +161,8 @@ internal static class SetupReplacement
                 if (!instance.TryTake(left > TimeSpan.Zero ? left : TimeSpan.Zero)) return false;
                 try
                 {
-                    busy = SelfReplacement.AnotherProcessMayRunFrom(Path.Combine(folder, AppCopy.CommandLineFileName))
-                        || SelfReplacement.AnotherProcessMayRunFrom(Path.Combine(folder, WindowFileName));
+                    busy = AnotherProcessMayRunFrom(Path.Combine(folder, AppCopy.CommandLineFileName))
+                        || AnotherProcessMayRunFrom(Path.Combine(folder, WindowFileName));
                 }
                 finally
                 {
@@ -220,6 +221,108 @@ internal static class SetupReplacement
                 unread = ex;
                 return false;
             }
+        }
+    }
+
+    /// <summary>
+    /// Whether a process other than this one may be running from <paramref name="exePath"/>.
+    /// Only processes whose image has the exe's file name are asked, Windows giving no path
+    /// for its own (System, Registry and the like). Each one answers no only where it has
+    /// ended since the list was taken, or where its image path opens to a file known to be
+    /// another: by the two files' identities, or where a volume gives none, by the two
+    /// files being on volumes with different serial numbers. Anything that cannot be read
+    /// answers yes. Never throws.
+    /// </summary>
+    /// <remarks>
+    /// This finds a copy that is still starting, which holds no mutex yet, as well as one
+    /// that runs without it.
+    /// </remarks>
+    internal static bool AnotherProcessMayRunFrom(string exePath)
+    {
+        Process[] named;
+        try
+        {
+            named = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exePath));
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return true;
+        }
+        try
+        {
+            var self = Environment.ProcessId;
+            var ours = FileOnDisk.At(exePath);
+            var buffer = new char[MaxImagePathLength];
+            foreach (var process in named)
+            {
+                if (process.Id != self && !RunsFromAnotherFile(process.Id, ours, buffer))
+                    return true;
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return true;
+        }
+        finally
+        {
+            foreach (var process in named) process.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Whether the process <paramref name="processId"/> has ended, or runs from a file
+    /// known to be another than <paramref name="ours"/>. <paramref name="buffer"/> takes
+    /// its image path.
+    /// </summary>
+    private static bool RunsFromAnotherFile(int processId, FileOnDisk ours, char[] buffer)
+    {
+        using var process = Kernel32.OpenProcess(
+            Kernel32.PROCESS_QUERY_LIMITED_INFORMATION, bInheritHandle: false, (uint)processId);
+        if (process.IsInvalid)
+            return Marshal.GetLastPInvokeError() == Kernel32.ERROR_INVALID_PARAMETER;
+
+        var length = (uint)buffer.Length;
+        if (!Kernel32.QueryFullProcessImageName(process, 0, buffer, ref length)) return false;
+        return FileOnDisk.At(new string(buffer, 0, (int)length)).IsKnownToBeAnotherThan(ours);
+    }
+
+    /// <summary>The longest path Windows gives for a process's image, in characters.</summary>
+    private const int MaxImagePathLength = 32768;
+
+    /// <summary>
+    /// What tells two files apart: the file's identity, where its volume gives one, and
+    /// otherwise the serial number of the volume it is on, read when a comparison needs it.
+    /// </summary>
+    private readonly record struct FileOnDisk(string Path, FileIdentity? Identity)
+    {
+        public static FileOnDisk At(string path) =>
+            new(path, new FileIdentityReader().ReadOutcome(path, out var identity) == FileIdentityRead.Read
+                ? identity
+                : null);
+
+        /// <summary>
+        /// Whether this is known to be a different file from <paramref name="other"/>: both
+        /// identities read and different, or, where either identity is missing, both volume
+        /// serial numbers read and different.
+        /// </summary>
+        public bool IsKnownToBeAnotherThan(FileOnDisk other)
+        {
+            if (Identity is { } mine && other.Identity is { } theirs) return mine != theirs;
+            return VolumeSerialOf(Path) is { } myVolume
+                && VolumeSerialOf(other.Path) is { } theirVolume
+                && myVolume != theirVolume;
+        }
+
+        private static uint? VolumeSerialOf(string path)
+        {
+            using var handle = StorageHelpers.OpenForMetadata(path, out _);
+            return !handle.IsInvalid && Kernel32.GetVolumeSerialNumberByHandle(
+                    handle, IntPtr.Zero, 0, out var serial, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0)
+                ? serial
+                : null;
         }
     }
 }

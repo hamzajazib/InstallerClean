@@ -204,14 +204,13 @@ internal sealed class CommandLineUpdate
     /// the page asking whether to install, /NORESTART keeps Setup from restarting Windows, and
     /// /SUPPRESSMSGBOXES answers any box Setup would show with its default, so it never
     /// waits on one; a box it would have shown fails the setup. /NOCLOSEAPPLICATIONS keeps
-    /// Setup from closing programs holding files it replaces. /SILENT shows Setup's progress
-    /// where a person is watching, and /VERYSILENT shows nothing where nobody is.
+    /// Setup from closing programs holding files it replaces. /VERYSILENT shows nothing.
     /// /UPDATEFROMCLI has Setup wait up to 30 seconds for every copy to let the
     /// single-instance mutex go before it checks it, and opens nothing afterwards.
     /// /UPDATEFROMAPP is left out: it is what opens the window afterwards.
     /// </summary>
-    internal static string SetupArguments(bool canAsk) =>
-        (canAsk ? "/SILENT" : "/VERYSILENT") + " /SP- /NORESTART /SUPPRESSMSGBOXES /NOCLOSEAPPLICATIONS /UPDATEFROMCLI";
+    internal const string SetupArguments =
+        "/VERYSILENT /SP- /NORESTART /SUPPRESSMSGBOXES /NOCLOSEAPPLICATIONS /UPDATEFROMCLI";
 
     /// <summary>
     /// Runs the update for a run of <paramref name="command"/> given

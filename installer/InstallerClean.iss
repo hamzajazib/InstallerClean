@@ -32,10 +32,7 @@
 ; InstanceLock.Name in src/InstallerClean.Core/Services/InstanceLock.cs, and
 ; scripts/check-instance-lock-name.mjs holds the two together.
 #define AppMutexName "Global\InstallerClean_SingleInstance"
-; The mutex Setup holds while it runs, created first thing in InitializeSetup. It matches
-; SelfReplacement.SetupMutexName in src/InstallerClean.Core/Services/SelfReplacement.cs,
-; which the app opens to leave alone a command line Setup is about to write, and
-; scripts/check-instance-lock-name.mjs holds the two together.
+; The mutex Setup holds while it runs, created first thing in InitializeSetup.
 #define SetupMutexName "Global\InstallerClean_Setup"
 AppId=InstallerClean
 AppName=InstallerClean
@@ -170,16 +167,6 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreve
 ; the same reason.
 Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
 
-[UninstallDelete]
-; The command line updates itself by renaming its running file to the first of
-; these names before this setup writes the newer version, and where this setup
-; leaves a file that does not carry the newer version, it renames that file to
-; the second and puts its own file back. The next run deletes both. Setup's
-; uninstall log knows neither name, so without these an uninstall in between
-; leaves them, and the folder, behind.
-Type: files; Name: "{app}\installerclean-cli.exe.old"
-Type: files; Name: "{app}\installerclean-cli.exe.new"
-
 [Icons]
 Name: "{group}\InstallerClean"; Filename: "{app}\InstallerClean.exe"; IconFilename: "{app}\InstallerClean.exe"
 Name: "{group}\{cm:UninstallApp}"; Filename: "{uninstallexe}"
@@ -232,8 +219,7 @@ end;
 // closes it as it exits. Setup calls InitializeSetup before its own AppMutex check,
 // which then asks for InstallerClean to be closed where the mutex is still open, and
 // fails the setup with nothing written where /SUPPRESSMSGBOXES answers that box.
-// Setup first creates the mutex it holds while it runs, which the app opens to tell
-// that a setup is running.
+// Setup first creates the mutex it holds while it runs.
 function InitializeSetup: Boolean;
 var
   Waited: Integer;

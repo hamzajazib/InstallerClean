@@ -184,7 +184,7 @@ jobs:
         run: |
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'native.ps1') -Value @'
           $builds = @(
-            [pscustomobject]@{ Label = 'command line, checking for updates'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; MustLoad = @('winhttp.dll'); Marker = 'old copy' }
+            [pscustomobject]@{ Label = 'command line, checking for updates'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; MustLoad = @('winhttp.dll'); Marker = 'replace leftovers' }
           )
           . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
           '@
