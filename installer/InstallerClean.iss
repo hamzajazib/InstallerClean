@@ -282,6 +282,8 @@ var
   HeldFrom: array of String;
   HeldAt: array of String;
   HeldFailed: String;
+  NotWritten: String;
+  CancelClicked: Boolean;
   Installed: Boolean;
 
 // MoveFileW and DeleteFileW from kernel32.dll, so DLLGetLastError answers the error
@@ -383,8 +385,9 @@ begin
 end;
 
 // Holds aside every file [Files] writes to {app}, stopping at the first that cannot be.
-// Each name stays empty from its rename until Setup writes the file, and the earlier
-// file is under its held name all that time, where a setup run later finds it.
+// Each name stays empty from its rename until Setup writes the file: a command-line run
+// started then finds no exe there, and the earlier file waits under its held name,
+// which a setup run later moves back or replaces where this one is cut off.
 function HoldAllAside: Boolean;
 begin
   Result := HoldAside('InstallerClean.exe');
@@ -427,7 +430,7 @@ end;
 
 // Deletes every file under a held or a done name for the file Name in {app}, other than
 // those this setup renamed aside and could not delete, where this install wrote a file
-// at that name. Where nothing is there, a held file may be the only copy, so all stay.
+// at that name. Where it wrote none there, a held file may be the only copy, so all stay.
 procedure DeleteLeftAside(const Name: String);
 var
   Path, Aside: String;
@@ -435,7 +438,7 @@ var
   Ours: Boolean;
 begin
   Path := ExpandConstant('{app}\') + Name;
-  if not FileExists(Path) then Exit;
+  if not FileExists(Path) or (Pos('|' + Lowercase(Path) + '|', NotWritten) > 0) then Exit;
   for S := 0 to 1 do
     for N := 0 to 99 do
     begin
@@ -449,6 +452,13 @@ begin
         if CompareText(HeldAt[I], Aside) = 0 then Ours := True;
       if not Ours and DeleteFileW(Aside) then Log(Format('Deleted %s, left by an earlier setup.', [Aside]));
     end;
+end;
+
+// Setup's progress window has a Cancel button on the silent routes too. A setup the
+// person cancelled is not reported to the window as a failed update.
+procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
+begin
+  if Cancel then CancelClicked := True;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -475,6 +485,7 @@ begin
       // newer at its name, so the earlier one goes back there.
       if not FileExists(HeldFrom[I]) then
       begin
+        NotWritten := NotWritten + '|' + Lowercase(HeldFrom[I]) + '|';
         if MoveFileW(HeldAt[I], HeldFrom[I]) then
           Log(Format('Put %s back as %s: nothing was written in its place.', [HeldAt[I], HeldFrom[I]]))
         else
@@ -490,8 +501,9 @@ begin
           HeldAt[I] := Done;
         end;
       end;
-    // Every file an earlier setup left under either name is from before this install,
-    // which has written each file anew, so none is needed. One still running stays.
+    // Where this install wrote a file at a name, every file an earlier setup left under
+    // that name's held or done names is from before it and not needed. One still
+    // running stays, and DeleteLeftAside keeps all of them where it wrote none.
     DeleteLeftAside('InstallerClean.exe');
     DeleteLeftAside('installerclean-cli.exe');
     DeleteLeftAside('LICENSE.txt');
@@ -503,15 +515,16 @@ end;
 procedure DeinitializeSetup;
 var
   ErrorCode: Integer;
-  App: String;
+  App, Args: String;
 begin
   if Installed then Exit;
   PutHeldBack;
   // Update now closes the window before this setup starts, and the [Run] entry that
   // opens it again runs only after a completed install, so where the install did not
   // complete the window is opened here, as whatever is now at its path, with the
-  // switch that has it say the update failed (HandOverContract.UpdateFailedSwitch). A
-  // version that does not read the switch opens as it always does.
+  // switch that has it say the update failed (HandOverContract.UpdateFailedSwitch),
+  // unless the person cancelled the setup. A version that does not read the switch
+  // opens as it always does.
   if UpdatingFromApp then
   begin
     // {app} is set only once Setup has read the earlier install's folder, so a setup
@@ -521,11 +534,12 @@ begin
     except
       App := '';
     end;
+    if CancelClicked then Args := '' else Args := '/updatefailed';
     if App = '' then
       Log('The install folder was not known yet, so the app was not opened.')
     else if not FileExists(App) then
       Log(Format('%s is not there, so the app was not opened.', [App]))
-    else if not ShellExec('', App, '/updatefailed', '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
+    else if not ShellExec('', App, Args, '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
       Log(Format('Could not open %s: %s', [App, SysErrorMessage(ErrorCode)]));
   end;
 end;

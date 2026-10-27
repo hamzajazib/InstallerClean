@@ -17,8 +17,8 @@
 // after a failed install, so the app must never name the held suffix. Inno Setup
 // cannot read the C# constants, so this check holds them together.
 //
-// Both files are read with their comments blanked, through csharp-source.mjs and
-// iss-source.mjs. Each [Files] destination, each HoldAside call and each rename [Code]
+// The setup, ExeReplacement.cs and HandOverContract.cs are read with their comments
+// blanked, through csharp-source.mjs and iss-source.mjs. Each [Files] destination, each HoldAside call and each rename [Code]
 // builds a name for is printed with its line.
 //
 // Run from the repo root: node scripts/check-setup-held-copies.mjs
@@ -49,7 +49,8 @@ const constant = (name) => {
 };
 const csDone = constant('SetupDoneSuffix');
 
-const lines = readIss(read(SETUP_FILE))
+const setupSource = readIss(read(SETUP_FILE));
+const lines = setupSource
   .split(/\r?\n/)
   .map((text, i) => ({ line: i + 1, text: text.trim() }));
 
@@ -154,32 +155,60 @@ if (setupMutex.length !== 1 || setupMutex[0].text.replace(/\s+/g, '') !== 'Setup
 }
 
 // After a completed install, DeleteLeftAside clears what earlier setups left for each
-// file [Files] writes to {app}, so its calls in CurStepChanged name the same files.
+// file [Files] writes to {app}, so its calls in CurStepChanged's ssPostInstall branch
+// name the same files, once each.
+const post = setupSource.match(/CurStep\s*=\s*ssPostInstall\s+then([\s\S]*?)\nend;/i);
 const cleared = new Map();
-for (const m of text.matchAll(/^\s*DeleteLeftAside\s*\(\s*'([^']*)'\s*\)\s*;/gm)) {
-  const line = text.slice(0, m.index).split('\n').length;
-  console.log(`${SETUP_FILE}:${line}: clears what was left of ${m[1]}`);
-  cleared.set(m[1].toLowerCase(), line);
+if (!post) problems.push(`${SETUP_FILE}: no ssPostInstall branch found in CurStepChanged`);
+else {
+  const offset = post.index + post[0].indexOf(post[1]);
+  for (const m of post[1].matchAll(/^[ \t]*DeleteLeftAside\s*\(\s*'([^']*)'\s*\)\s*;/gm)) {
+    const line = setupSource.slice(0, offset + m.index).split('\n').length;
+    console.log(`${SETUP_FILE}:${line}: clears what was left of ${m[1]}`);
+    const key = m[1].toLowerCase();
+    if (cleared.has(key)) problems.push(`${SETUP_FILE}:${line}: DeleteLeftAside('${m[1]}') is called a second time`);
+    cleared.set(key, { name: m[1], line });
+  }
 }
 for (const [key, { name, line }] of written) {
-  if (!cleared.has(key)) problems.push(`${SETUP_FILE}:${line}: writes {app}\\${name}, whose leftovers DeleteLeftAside is never called for`);
+  if (!cleared.has(key)) problems.push(`${SETUP_FILE}:${line}: writes {app}\\${name}, whose leftovers the ssPostInstall branch never clears`);
 }
-for (const [key, line] of cleared) {
-  if (!written.has(key)) problems.push(`${SETUP_FILE}:${line}: DeleteLeftAside names ${key}, which [Files] does not write to {app}`);
+for (const [key, { name, line }] of cleared) {
+  if (!written.has(key)) problems.push(`${SETUP_FILE}:${line}: DeleteLeftAside names ${name}, which [Files] does not write to {app}`);
 }
 
 // The window opened after an Update now whose install did not complete is told so with
-// the switch HandOverContract reads.
+// the switch HandOverContract reads, from DeinitializeSetup after its exit for a
+// completed install, and a completed install's [Run] entry passes no such switch.
 const contract = readCSharp(read(CONTRACT_FILE)).code;
 const failedSwitch = contract.match(/const\s+string\s+UpdateFailedSwitch\s*=\s*"([^"]*)"/)?.[1];
 if (failedSwitch === undefined) problems.push(`${CONTRACT_FILE}: no 'const string UpdateFailedSwitch' found`);
-const opens = [...text.matchAll(/ShellExec\s*\(\s*'[^']*'\s*,\s*App\s*,\s*'([^']*)'/g)];
-if (opens.length !== 1) problems.push(`${SETUP_FILE}: expected one ShellExec('', App, '...', ...) opening the window, found ${opens.length}`);
-for (const m of opens) {
-  const line = text.slice(0, m.index).split('\n').length;
-  console.log(`${SETUP_FILE}:${line}: opens the window with '${m[1]}'`);
-  if (failedSwitch !== undefined && m[1] !== failedSwitch) {
-    problems.push(`${SETUP_FILE}:${line}: opens the window with '${m[1]}', HandOverContract.UpdateFailedSwitch is '${failedSwitch}'`);
+const deinit = setupSource.match(/procedure\s+DeinitializeSetup\s*;[\s\S]*?\nbegin([\s\S]*?)\nend;/i);
+if (!deinit) problems.push(`${SETUP_FILE}: no DeinitializeSetup found`);
+else {
+  const body = deinit[1];
+  const exitAt = body.search(/if\s+Installed\s+then\s+Exit\s*;/i);
+  const switchAt = [...body.matchAll(/Args\s*:=\s*'([^']+)'/g)];
+  const openAt = body.search(/ShellExec\s*\(\s*'[^']*'\s*,\s*App\s*,\s*Args\s*,/);
+  const line = setupSource.slice(0, deinit.index).split('\n').length;
+  if (exitAt < 0) problems.push(`${SETUP_FILE}:${line}: DeinitializeSetup does not exit first for a completed install`);
+  if (switchAt.length !== 1) problems.push(`${SETUP_FILE}:${line}: expected one Args := '...' in DeinitializeSetup, found ${switchAt.length}`);
+  if (openAt < 0) problems.push(`${SETUP_FILE}:${line}: DeinitializeSetup does not open the window with ShellExec('', App, Args, ...)`);
+  for (const m of switchAt) {
+    console.log(`${SETUP_FILE}:${line}: DeinitializeSetup opens the window with '${m[1]}'`);
+    if (failedSwitch !== undefined && m[1] !== failedSwitch) {
+      problems.push(`${SETUP_FILE}:${line}: opens the window with '${m[1]}', HandOverContract.UpdateFailedSwitch is '${failedSwitch}'`);
+    }
+    if (exitAt < 0 || m.index < exitAt || (openAt >= 0 && m.index > openAt)) {
+      problems.push(`${SETUP_FILE}:${line}: '${m[1]}' is not set between the exit for a completed install and the window's start`);
+    }
+  }
+}
+if (failedSwitch !== undefined) {
+  for (const l of lines) {
+    if (l.text.toLowerCase().includes(failedSwitch.toLowerCase()) && /^Filename\s*:/i.test(l.text)) {
+      problems.push(`${SETUP_FILE}:${l.line}: a [Run] entry passes ${failedSwitch}, which a completed install never does`);
+    }
   }
 }
 
