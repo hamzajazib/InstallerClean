@@ -1565,21 +1565,24 @@ function Get-StagingPrefix {
   Join-Path $env:ProgramData (Read-SourceString 'src/InstallerClean.Core/Services/UpdateStagingFolder.cs' 'NamePrefix')
 }
 
-# Waits up to $seconds for every process running from a staging folder, and every
-# process whose path matches one of $alsoLike, to end. Those still running then are
-# ended, and are answered as "<id> <path>".
-function Wait-StagingProcesses([int]$seconds, [string[]]$alsoLike = @()) {
+# Waits up to $seconds for every process started since $since running from a staging
+# folder, or whose path matches one of the regexes $alsoLike, to end. A second's margin
+# is taken off $since, since a process's start time is read off a coarser clock than
+# Get-Date's. Answers those still running then as "<id> <path>", and ends none: nothing
+# here can show that a process is one the run started rather than another given its ID.
+function Wait-StagingProcesses([int]$seconds, [datetime]$since, [string[]]$alsoLike = @()) {
   $prefix = Get-StagingPrefix
+  $from = $since.AddSeconds(-1)
   $clock = [System.Diagnostics.Stopwatch]::StartNew()
   while ($true) {
     $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
       $path = $_.Path
-      $path -and ($path.StartsWith($prefix, 'OrdinalIgnoreCase') -or @($alsoLike | Where-Object { $path -match $_ }).Count) })
+      $path -and ($path.StartsWith($prefix, 'OrdinalIgnoreCase') -or @($alsoLike | Where-Object { $path -match $_ }).Count) -and
+        $(try { $_.StartTime -ge $from } catch { $true }) })
     if (-not $running) { return , @() }
     if ($clock.Elapsed.TotalSeconds -ge $seconds) { break }
     Start-Sleep -Milliseconds 500
   }
-  $running | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
   , @($running | ForEach-Object { "$($_.Id) $($_.Path)" })
 }
 
