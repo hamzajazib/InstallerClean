@@ -1743,8 +1743,8 @@ jobs:
       #
       # The setup exe is judged by its process ID and name: every look it makes for a DLL
       # in its own folder is printed, and the job fails where it loads an image from that
-      # folder. Each process it starts, Inno Setup's setup.tmp from an is-*.tmp folder in
-      # %TEMP%, and each process those start, is judged the same way against its own
+      # folder. Each process it starts, Inno Setup's setup.tmp from an is-*.tmp folder in a
+      # temp folder (Get-TempFolders), and each process those start, is judged the same way against its own
       # folder, read from its own load of its image. An image in any is-*.tmp folder
       # passes only where the same process created it earlier in the record: such a folder
       # is made new with a new name on each run, and the owner and permissions of each are

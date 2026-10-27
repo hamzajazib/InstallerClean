@@ -918,7 +918,7 @@ function Test-PlantedRun($run, $read) {
 }
 
 # The is-*.tmp folder a path lies under, the first along it, or nothing. Inno Setup
-# makes these in %TEMP%, new and newly named for every run.
+# makes these in a temp folder (Get-TempFolders), new and newly named for every run.
 function Get-IsTmpFolder([string]$path) {
   if ($path -match '^(.*?\\is-[^\\]+\.tmp)\\') { $Matches[1] }
 }
@@ -1002,18 +1002,35 @@ function Test-StartedProcesses([string]$csv, $parent, $parentRows, [string]$skip
   $all
 }
 
-# Starts a job writing to $out each is-*.tmp folder that appears in %TEMP%, with its
-# owner and its permissions as read the moment it is seen, until $stop exists. A
-# folder there before the job starts is left out. Answers the job once it has
-# started.
+# The temp folders a setup can make its is-*.tmp folder in: %TEMP%, %TMP% and what
+# GetTempPath answers. Each folder is answered once, in its long spelling where Windows
+# gives one and as it was given where not, and two spellings Windows gives the same short
+# name for are one folder.
+function Get-TempFolders {
+  $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+  $folders = [System.Collections.Generic.List[string]]::new()
+  foreach ($folder in @($env:TEMP, $env:TMP, [IO.Path]::GetTempPath()) | Where-Object { $_ }) {
+    $folder = $folder.TrimEnd('\')
+    $long = Get-LongName $folder
+    $short = Get-ShortName $folder
+    $key = if ($short) { $short.TrimEnd('\') } else { $folder }
+    if ($seen.Add($key)) { $folders.Add($(if ($long) { $long.TrimEnd('\') } else { $folder })) }
+  }
+  , $folders.ToArray()
+}
+
+# Starts a job writing to $out each is-*.tmp folder that appears in any of the folders
+# Get-TempFolders names, with its owner and its permissions as read the moment it is
+# seen, until $stop exists. A folder there before the job starts is left out. Answers
+# the job once it has started.
 function Start-TempWatch([string]$out, [string]$stop) {
-  $job = Start-Job -ArgumentList $env:TEMP, $out, $stop -ScriptBlock {
-    param($temp, $out, $stop)
+  $job = Start-Job -ArgumentList (Get-TempFolders), $out, $stop -ScriptBlock {
+    param($temps, $out, $stop)
     $seen = @{}
-    foreach ($d in @(Get-ChildItem -LiteralPath $temp -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue)) { $seen[$d.FullName] = $true }
+    foreach ($d in @($temps | ForEach-Object { Get-ChildItem -LiteralPath $_ -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue })) { $seen[$d.FullName] = $true }
     Set-Content -Path $out -Value ''
     while (-not (Test-Path -LiteralPath $stop)) {
-      foreach ($d in @(Get-ChildItem -LiteralPath $temp -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue)) {
+      foreach ($d in @($temps | ForEach-Object { Get-ChildItem -LiteralPath $_ -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue })) {
         if ($seen.ContainsKey($d.FullName)) { continue }
         try {
           $acl = Get-Acl -LiteralPath $d.FullName
@@ -1027,7 +1044,7 @@ function Start-TempWatch([string]$out, [string]$stop) {
   }
   $deadline = [DateTime]::UtcNow.AddSeconds(60)
   while (-not (Test-Path -LiteralPath $out)) {
-    if ([DateTime]::UtcNow -gt $deadline) { throw "The job watching %TEMP% did not start within 60 s." }
+    if ([DateTime]::UtcNow -gt $deadline) { throw "The job watching the temp folders did not start within 60 s." }
     Start-Sleep -Milliseconds 200
   }
   $job
@@ -1040,7 +1057,7 @@ function Stop-TempWatch($job, [string]$stop) {
     $null = Wait-Job $job -Timeout 60
     Receive-Job $job | Out-Host
   }
-  catch { Write-Host "The job watching %TEMP% did not end cleanly: $($_.Exception.Message)" }
+  catch { Write-Host "The job watching the temp folders did not end cleanly: $($_.Exception.Message)" }
   finally { Remove-Job $job -Force -ErrorAction SilentlyContinue }
 }
 
@@ -1048,7 +1065,7 @@ function Stop-TempWatch($job, [string]$stop) {
 # is-*.tmp folder, and where one ran from or loaded an image from such a folder that
 # the watch did not see made, whose permissions are then not known.
 function Show-TempFolders([string]$out, $runs) {
-  Write-Host "== The is-*.tmp folders made in %TEMP% (path, owner, permissions):"
+  Write-Host "== The is-*.tmp folders made in $((Get-TempFolders) -join ', ') (path, owner, permissions):"
   $made = @(Get-Content $out -ErrorAction SilentlyContinue | Where-Object { $_ })
   foreach ($line in $made) { Write-Host "  $line" }
   $madePaths = @($made | ForEach-Object { ($_ -split "`t")[0] })
@@ -1058,11 +1075,11 @@ function Show-TempFolders([string]$out, $runs) {
     if ($ranFrom) {
       $ranFromTemp = $true
       if ($madePaths -contains $ranFrom) { Write-Host "  $($run.Exe), process $($run.Id), ran from $ranFrom, printed above" }
-      else { Fail "$($run.Exe), process $($run.Id), ran from $ranFrom, which the watch on %TEMP% did not see made, so its permissions are not known." }
+      else { Fail "$($run.Exe), process $($run.Id), ran from $ranFrom, which the watch on the temp folders did not see made, so its permissions are not known." }
     }
     foreach ($folder in @($run.TempFolders | Where-Object { $_ -and $_ -ne $ranFrom })) {
       if ($madePaths -contains $folder) { Write-Host "  $($run.Exe), process $($run.Id), loaded images from $folder, printed above" }
-      else { Fail "$($run.Exe), process $($run.Id), loaded images from $folder, which the watch on %TEMP% did not see made, so its permissions are not known." }
+      else { Fail "$($run.Exe), process $($run.Id), loaded images from $folder, which the watch on the temp folders did not see made, so its permissions are not known." }
     }
   }
   if (-not $ranFromTemp) { Fail "No process the setup started ran from an is-*.tmp folder." }
@@ -1567,9 +1584,10 @@ function Get-StagingPrefix {
 
 # Waits up to $seconds for every process started since $since running from a staging
 # folder, or with -SetupTemp from an is-*.tmp folder (Get-IsTmpFolder) straight inside
-# %TEMP% or %TMP%, to end. Each of those folders is taken in its short spelling and its
-# long, since a process's path can be in either. A process whose start time cannot be
-# read is counted, since it may be one the run started. A second's margin is taken off
+# a folder Get-TempFolders names, the folders Start-TempWatch watches, to end. Each is
+# taken in every spelling it is given and in its long and short spelling where Windows
+# gives them, since a process's path can be in any. A process whose start time cannot
+# be read is counted, since it may be one the run started. A second's margin is taken off
 # $since, since a process's start time is read off a coarser clock than Get-Date's.
 # Answers those still running then as "<id> <path>", and ends none: nothing here can
 # show that a process is one the run started rather than another given its ID.
@@ -1577,7 +1595,7 @@ function Wait-StagingProcesses([int]$seconds, [datetime]$since, [switch]$SetupTe
   $prefix = Get-StagingPrefix
   $temps = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
   if ($SetupTemp) {
-    foreach ($folder in @($env:TEMP, $env:TMP, [IO.Path]::GetTempPath()) | Where-Object { $_ }) {
+    foreach ($folder in @(Get-TempFolders) + @($env:TEMP, $env:TMP, [IO.Path]::GetTempPath()) | Where-Object { $_ }) {
       foreach ($spelling in $folder, (Get-LongName $folder), (Get-ShortName $folder)) {
         if ($spelling) { $null = $temps.Add($spelling.TrimEnd('\')) }
       }

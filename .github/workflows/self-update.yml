@@ -223,8 +223,8 @@ jobs:
           }
           '@
           . $helper
-          # On the setup's copy a job writes down each is-*.tmp folder that appears in
-          # %TEMP% while the update runs, with its owner and its permissions, read as the
+          # On the setup's copy a job writes down each is-*.tmp folder that appears in a
+          # temp folder (Get-TempFolders) while the update runs, with its owner and its permissions, read as the
           # setup made it (Start-TempWatch in native-libraries.ps1).
           $watch = $null
           if ('${{ matrix.route }}' -eq 'setup') {
@@ -242,7 +242,7 @@ jobs:
           "Exit code: $($run.ExitCode)"
           # The newer version's replace runs detached from the staging folder once both
           # copies have ended, and on the setup's copy starts the setup, which starts its
-          # setup.tmp from an is-*.tmp folder in %TEMP%. Each is waited for, so the
+          # setup.tmp from an is-*.tmp folder in a temp folder. Each is waited for, so the
           # record and the checks see what they left. One still running after 300 s is named
           # for the checks, which fail on it.
           . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
@@ -502,8 +502,9 @@ jobs:
       # of either may not start at all.
       #
       # The old copy starts one installerclean-cli.exe, the newer command line from a
-      # staging folder, and the job fails where it started none, more than one, or one
-      # from anywhere else. Every process it starts is printed. What that process does,
+      # staging folder, and the job fails where it started none, more than one, one from
+      # anywhere else, or any other process but the console host in System32, which
+      # Windows starts itself. Every process it starts is printed. What that process does,
       # the setup it starts on the setup's copy included, is the release's and is not
       # judged here.
       - name: Judge what the update looked for and loaded
@@ -541,6 +542,14 @@ jobs:
             $allCreated = @($byProcess[(Get-RunKey $old)] | Where-Object Operation -eq 'Process Create')
             foreach ($row in $allCreated) { "  the old copy started $($row.Path)" }
             $created = @($allCreated | Where-Object { (Split-Path $_.Path -Leaf) -eq 'installerclean-cli.exe' })
+            # The console host Windows starts for a console program from System32 may sit
+            # beside it, and nothing else: a setup, a crash report or anything the old copy
+            # starts on its own fails.
+            $conhost = Join-Path $env:SystemRoot 'System32\conhost.exe'
+            foreach ($row in @($allCreated | Where-Object { (Split-Path $_.Path -Leaf) -ne 'installerclean-cli.exe' })) {
+              if (($row.Path -replace '^\\\?\?\\', '') -eq $conhost) { "  $($row.Path) is the console host Windows starts, so it is allowed" }
+              else { Fail "The old copy started $($row.Path), where it starts only installerclean-cli.exe from a staging folder." }
+            }
             if ($created.Count -ne 1) { Fail "The old copy started $($created.Count) installerclean-cli.exe processes, where it starts one, the newer command line from a staging folder." }
             elseif (-not $created[0].Path.StartsWith($prefix, 'OrdinalIgnoreCase')) {
               Fail "The old copy started $($created[0].Path), where it starts installerclean-cli.exe from a folder under $prefix."
@@ -551,7 +560,7 @@ jobs:
 
       # The release's setup, started on the setup's copy by the newer version once both
       # copies have ended, runs setup.tmp from an is-*.tmp folder Inno Setup's loader makes
-      # in %TEMP%. Each such folder the watch saw made is printed with its owner and its
+      # in a temp folder. Each such folder the watch saw made is printed with its owner and its
       # permissions, and the step fails where it saw none, since the setup then did not
       # run as an update to a release that runs the newer version does.
       - name: Print the temp folders the release's setup made
@@ -559,14 +568,14 @@ jobs:
         shell: pwsh
         run: |
           $out = Join-Path $env:RUNNER_TEMP 'setup-temp.txt'
-          "The is-*.tmp folders made in %TEMP% by the release's setup (path, owner, permissions):"
+          . scripts/native-libraries.ps1
+          "The is-*.tmp folders made in $((Get-TempFolders) -join ', ') by the release's setup (path, owner, permissions):"
           $made = @(Get-Content $out -ErrorAction SilentlyContinue | Where-Object { $_ })
           foreach ($line in $made) { "  $line" }
-          if (-not $made) { "::error::The watch on %TEMP% saw no is-*.tmp folder made, so the release's setup did not run."; exit 1 }
+          if (-not $made) { "::error::The watch on the temp folders saw no is-*.tmp folder made, so the release's setup did not run."; exit 1 }
           # setup.tmp is the release's setup's own: the Security log, which audits each
           # process start on the setup's copy, has to show one starting from a folder the
           # watch saw made, each path compared in its long spelling.
-          . scripts/native-libraries.ps1
           $folders = @($made | ForEach-Object { $path = ($_ -split "`t")[0]; $long = Get-FullPath $path; "$(if ($long) { $long } else { $path })".TrimEnd('\') + '\' })
           $since = [datetime]::Parse($env:RUN_STARTED)
           $starts = @(Get-WinEvent -FilterHashtable @{ LogName = 'Security'; Id = 4688; StartTime = $since.ToLocalTime() } -ErrorAction SilentlyContinue | ForEach-Object {
