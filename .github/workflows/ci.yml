@@ -2113,7 +2113,7 @@ jobs:
   #   file ended at once took 60 s or more;
   # - the run's exit code is not that of a second run of the file now at the path, with
   #   /s /noupdate, or a process is still running from the run's folder as the run
-  #   ends, or holds its output from a staging folder 10 s after;
+  #   ends, or holds the run's output open 10 s after it;
   # - a stand-in was not started with /s, /noupdate, one /replacecopy: naming the copy at
   #   the path, one /afterprocess: naming the old copy's process, and one /startedevent:
   #   and one /cancelevent:, each carrying an event's id. It writes the arguments it was
@@ -2224,6 +2224,7 @@ jobs:
             $info.RedirectStandardError = $true
             foreach ($name in $environment.Keys) { $info.Environment[$name] = $environment[$name] }
             $clock = [System.Diagnostics.Stopwatch]::StartNew()
+            $runStarted = Get-Date
             $p = [System.Diagnostics.Process]::Start($info)
             $p.StandardInput.Close()
             $out = $p.StandardOutput.ReadToEndAsync()
@@ -2232,35 +2233,37 @@ jobs:
             if (-not $ended) { $p.Kill($true) }
             $p.WaitForExit()
             $clock.Stop()
-            # A process the run started and left running from its folder holds the output
-            # open, so it is ended, and named, before the output is read to its end. A
-            # replace runs from a staging folder and is started holding none of the output,
-            # so a process there is ended only where the output is still open 10 s on: the
-            # newer version left running, which holds it.
-            $left = @(Leftovers (Split-Path $exe))
-            $left | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
-            if (-not $out.Wait(10000) -or -not $err.Wait(10000)) {
-              $held = @(Leftovers $stagingPrefix)
-              $held | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
-              $left += $held
-              $null = $out.Wait(10000)
-              $null = $err.Wait(10000)
-            }
+            # The run's process, and everything it started, is ended where it passes the bound,
+            # through its own handle. Nothing else is ended: a process left running from the
+            # run's folder is named, and fails the run. One whose path cannot be read may be
+            # running from there, or ending, with no path left to read, as the replace does
+            # once the old copy has ended; it is named where it is still running 5 s on. A
+            # process holding the output keeps the read below from completing, so the output
+            # is read for 10 s and taken as it is.
+            $left = @(Leftovers (Split-Path $exe) $runStarted)
+            function Running($process) { try { -not $process.HasExited } catch { $true } }
+            $clock5 = [System.Diagnostics.Stopwatch]::StartNew()
+            while (@($left | Where-Object { -not $_.Path -and (Running $_) }).Count -and $clock5.Elapsed.TotalSeconds -lt 5) { Start-Sleep -Milliseconds 250 }
+            $left = @($left | Where-Object { $_.Path -or (Running $_) })
+            $whole = $out.Wait(10000) -and $err.Wait(10000)
             [pscustomobject]@{
               ExitCode = if ($ended) { $p.ExitCode } else { $null }
               Output = $(if ($out.IsCompleted) { $out.Result } else { '' }) + $(if ($err.IsCompleted) { $err.Result } else { '' })
               Seconds = $clock.Elapsed.TotalSeconds
               Id = $p.Id
+              Whole = $whole
               Left = @($left | ForEach-Object { "$($_.Id) $(if ($_.Path) { $_.Path } else { '(path not readable)' })" })
             }
           }
 
-          # Every installerclean-cli process whose path starts with $folder, and every one whose
-          # path cannot be read, since such a process could be running from there.
-          $stagingPrefix = Get-StagingPrefix
-          function Leftovers([string]$folder) {
-            @(Get-Process -Name 'installerclean-cli' -ErrorAction SilentlyContinue |
-              Where-Object { -not $_.Path -or $_.Path.StartsWith($folder, 'OrdinalIgnoreCase') })
+          # Every installerclean-cli process started since $since whose path starts with
+          # $folder, and every one whose path or start time cannot be read, since such a
+          # process could be running from there. A second's margin is taken off $since, since
+          # a process's start time is read off a coarser clock than Get-Date's.
+          function Leftovers([string]$folder, [datetime]$since) {
+            @(Get-Process -Name 'installerclean-cli' -ErrorAction SilentlyContinue | Where-Object {
+              $started = try { $_.StartTime } catch { $null }
+              ($null -eq $started -or $started -ge $since.AddSeconds(-1)) -and (-not $_.Path -or $_.Path.StartsWith($folder, 'OrdinalIgnoreCase')) })
           }
 
           # The names that must not be left beside the exe: those a replace gives its files,
@@ -2331,11 +2334,12 @@ jobs:
             Write-Host $run.Output
             Write-Host "::endgroup::"
             Write-Host "  exit code $($run.ExitCode), after $([math]::Round($run.Seconds, 1)) s"
+            if (-not $run.Whole) { Fail "$label`: a process held the run's output open 10 s after the run ended, so the output above is not the whole of it." }
             if ($null -eq $run.ExitCode) { Fail "$label`: the run was still going after 240 s and was ended." }
-            if ($run.Left) { Fail "$label`: a process was still running from $folder, or held the run's output from a staging folder, when the run ended, and was ended: $($run.Left -join ', ')" }
+            if ($run.Left) { Fail "$label`: a process was still running from $folder when the run ended: $($run.Left -join ', ')" }
             # The replace writes to crash.log too, so crash.log is read once it has ended.
-            $replaces = Wait-StagingProcesses 120
-            if ($replaces) { Fail "$label`: a process was still running from a staging folder 120 s after the run ended, and was ended: $($replaces -join ', ')" }
+            $replaces = Wait-StagingProcesses 120 $since
+            if ($replaces) { Fail "$label`: a process was still running from a staging folder 120 s after the run ended: $($replaces -join ', ')" }
             else { Write-Host "  nothing is running from a staging folder" }
             $logged = CrashLogSince $logLength
             if ($logged) { Write-Host "  crash.log gained:"; $logged -split "`r?`n" | Where-Object { $_ } | ForEach-Object { Write-Host "    $_" } }
