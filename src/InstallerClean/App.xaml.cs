@@ -970,10 +970,10 @@ public partial class App : Application
     /// name, holding off the pass beside the exe until it ends
     /// (<see cref="ExeReplacement.LockSuffix"/>); or the setup, which opens the app before
     /// it exits.
-    /// Whatever will not go by then is tried again at the next start. While an update of
-    /// this copy's own holds the gate, its files carrying the same names
-    /// (<see cref="UpdateLeftoverGate"/>), no pass runs and the ten seconds wait until it
-    /// lets go. Never throws.
+    /// Whatever will not go by then is tried again at the next start, and so is a staging
+    /// folder an update in another process still holds. While an update of this copy's own
+    /// holds the gate (<see cref="UpdateLeftoverGate"/>), no pass runs and the ten seconds
+    /// wait until it lets go. Never throws.
     /// </summary>
     private static async Task RemoveUpdateLeftoversAsync()
     {

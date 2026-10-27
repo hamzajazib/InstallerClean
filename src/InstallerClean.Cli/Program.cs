@@ -352,7 +352,7 @@ internal static class Program
         }
 
         // What a replace left beside this exe, then the staging folders earlier updates left
-        // in %ProgramData%; a file a running update holds is left where it is, its handle
+        // in %ProgramData%; a staging folder a running update holds is left whole, its handle
         // sharing no delete. A run standing for another copy runs from the staging folder
         // and leaves that copy's folder, and the staging folders, to the copy itself.
         if (s_standsFor is null && Environment.ProcessPath is { Length: > 0 } ownPath)

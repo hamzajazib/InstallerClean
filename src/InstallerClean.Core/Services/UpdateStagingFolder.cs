@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 
@@ -19,6 +20,11 @@ namespace InstallerClean.Services;
 /// A name that already exists fails the create, so a folder somebody else made can
 /// never be taken for this one. Keep it straight under %ProgramData%: a folder deeper
 /// down is only as safe as every folder above it, and any user can make those first.
+/// The folder is held from the same call that makes it (<see cref="Handle"/>), sharing no
+/// delete, so no other process can remove or rename it while this one has it, and the
+/// start-up clean-up, in this process or another, leaves it and everything in it alone. Whatever
+/// this process removes from it goes through a handle on the folder that is shown to be
+/// the one it made, never by the path.
 /// </remarks>
 public sealed class UpdateStagingFolder
 {
@@ -35,10 +41,29 @@ public sealed class UpdateStagingFolder
     /// </summary>
     internal const string AdministratorsOnly = "O:BAD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)";
 
-    private UpdateStagingFolder(string path) => FullPath = path;
+    private readonly string _root;
+    private readonly string _leaf;
+    private readonly FileIdentity _id;
+    private bool _gone;
+
+    private UpdateStagingFolder(string root, string leaf, SafeFileHandle handle, FileIdentity id)
+    {
+        _root = root;
+        _leaf = leaf;
+        _id = id;
+        FullPath = Path.Combine(root, leaf);
+        Handle = handle;
+    }
 
     /// <summary>The folder's full path.</summary>
     public string FullPath { get; }
+
+    /// <summary>
+    /// The handle on the folder, opened as it was made, sharing reading and writing but not
+    /// delete (<see cref="DirectoryGuard.CreateChildFolderHeld"/>). Held until
+    /// <see cref="TryRemove"/> lets it go, or until the process ends.
+    /// </summary>
+    internal SafeFileHandle Handle { get; }
 
     /// <summary>
     /// The folder under the PC's %ProgramData%, the one the app uses.
@@ -48,9 +73,10 @@ public sealed class UpdateStagingFolder
 
     /// <summary>
     /// Creates a new staging folder under <paramref name="root"/>, named
-    /// <see cref="NamePrefix"/> and a new GUID. Throws <see cref="Win32Exception"/>
-    /// where Windows refuses the descriptor or the folder, the name already being
-    /// taken among them, and <see cref="IOException"/> where the root cannot be found.
+    /// <see cref="NamePrefix"/> and a new GUID, and holds it (<see cref="Handle"/>). Throws
+    /// <see cref="Win32Exception"/> where Windows refuses the descriptor, the root or the
+    /// folder, the name already being taken among them, and <see cref="IOException"/> where
+    /// the root cannot be found.
     /// </summary>
     public static UpdateStagingFolder Create(string root) => Create(root, AdministratorsOnly);
 
@@ -64,44 +90,68 @@ public sealed class UpdateStagingFolder
         if (!Directory.Exists(root))
             throw new IOException("The folder to create the update's folder in does not exist.");
 
-        var path = Path.Combine(root, NamePrefix + Guids.NewGuid().ToString("N"));
+        var leaf = NamePrefix + Guids.NewGuid().ToString("N");
+
+        // The root is opened as the path names it, a link included, as a folder made by its
+        // path would be; the folder is then made relative to that handle.
+        using var rootHandle = DirectoryGuard.OpenDirectoryFollow(root, out var rootError)
+            ?? throw new Win32Exception(rootError);
 
         if (!Advapi32.ConvertStringSecurityDescriptorToSecurityDescriptor(
                 descriptorSddl, Advapi32.SDDL_REVISION_1, out var descriptor, IntPtr.Zero))
             throw new Win32Exception(Marshal.GetLastPInvokeError());
         try
         {
-            var attributes = Kernel32.SECURITY_ATTRIBUTES.With(descriptor);
-            if (!Kernel32.CreateDirectory(path, in attributes))
-                throw new Win32Exception(Marshal.GetLastPInvokeError());
+            var handle = DirectoryGuard.CreateChildFolderHeld(rootHandle, leaf, descriptor, out var status)
+                ?? throw new Win32Exception((int)Ntdll.RtlNtStatusToDosError(status));
+            if (DirectoryGuard.IdOf(handle) is not { } id)
+            {
+                var error = Marshal.GetLastPInvokeError();
+                handle.Dispose();
+                throw new Win32Exception(error);
+            }
+            return new UpdateStagingFolder(root, leaf, handle, id);
         }
         finally
         {
             Kernel32.LocalFree(descriptor);
         }
-        return new UpdateStagingFolder(path);
     }
 
     /// <summary>
-    /// Removes this folder where it is empty, as it is once the download has been
-    /// moved out of it, and answers whether it is gone. Leaves it where anything is still
-    /// inside, and never throws: <see cref="RemoveLeftovers(string)"/> takes what is left
-    /// at a later start.
+    /// Lets go of <see cref="Handle"/>, then removes the files named <paramref name="leaves"/>
+    /// from this folder and the folder where it is then empty, and answers whether the folder
+    /// is gone. The folder is opened again by its name with delete access, relative to a
+    /// handle on the root and without following a link, and acted on only where it is the
+    /// folder this made, the same volume and file ID; each file is removed through a handle
+    /// relative to it. Where anything is left, a file another process holds open say, it can
+    /// be called again, and otherwise a later start's clean-up
+    /// (<see cref="RemoveLeftovers(string)"/>) takes the folder. Never throws.
     /// </summary>
-    public bool TryRemoveIfEmpty()
+    internal bool TryRemove(IEnumerable<string> leaves)
     {
         try
         {
-            Directory.Delete(FullPath, recursive: false);
-            return true;
-        }
-        catch (DirectoryNotFoundException)
-        {
-            return true;
+            if (_gone) return true;
+            Handle.Dispose();
+
+            using var rootHandle = DirectoryGuard.OpenDirectoryFollow(_root, out _);
+            if (rootHandle is null) return false;
+            using var folder = DirectoryGuard.OpenChildFolderToRemove(rootHandle, _leaf, out _, out var absent);
+            // Nothing at the name, or another folder there, means the one this made has gone.
+            // Where the folder will not open for another cause, or its ID cannot be read, it is
+            // left for a later try or the clean-up.
+            if (absent) return _gone = true;
+            if (folder is null || DirectoryGuard.IdOf(folder) is not { } id) return false;
+            if (id != _id) return _gone = true;
+
+            foreach (var leaf in leaves)
+                DirectoryGuard.TryRemoveChildFile(folder, leaf);
+            return _gone = DirectoryGuard.TryRemoveEmptyFolder(folder);
         }
         catch
         {
-            // Not empty, or Windows refused the delete: there is nothing more to do now.
+            // Nothing here is worth a failed undo.
             return false;
         }
     }
@@ -116,13 +166,16 @@ public sealed class UpdateStagingFolder
     /// <remarks>
     /// Any user can create a folder with this name in %ProgramData%, so nothing found
     /// is trusted and nothing is reached by its path across a check. The root is opened
-    /// as a handle, and each candidate folder is opened without following a link in its
-    /// name; a folder is cleaned only where its owner and list are the app's own, as
-    /// <see cref="Create(string)"/> sets them, so a folder another account made is left whole.
-    /// Inside a folder that is the app's own, a file is removed through a handle opened
-    /// relative to the folder's, and only where its name has the downloads' shape,
-    /// "InstallerClean-" to ".exe", and it is a plain file; the folder itself goes,
-    /// relative to the root's handle, only once it is empty.
+    /// as a handle, and each candidate folder is opened relative to it, with delete
+    /// access and without following a link in its name; a folder is cleaned only where
+    /// its owner and list are the app's own, as <see cref="Create(string)"/> sets them, so
+    /// a folder another account made is left whole. A folder an update still holds
+    /// (<see cref="Handle"/>), in this process or another, refuses that open, and is left whole and counted
+    /// as not gone. Inside a folder that is the app's own, the files are listed by the
+    /// folder's path, which only Administrators and SYSTEM can change, and each is removed
+    /// through a handle opened relative to the folder's, and only where its name has the
+    /// downloads' shape, "InstallerClean-" to ".exe", and it is a plain file; the folder
+    /// itself goes, through its own handle, only once it is empty.
     /// </remarks>
     public static bool RemoveLeftovers(string root) =>
         RemoveLeftovers(root, DirectoryGuard.FolderExpectation.AppOwned);
@@ -149,7 +202,18 @@ public sealed class UpdateStagingFolder
                 {
                     if (!IsOurName(leaf)) continue;
 
-                    using var folderHandle = DirectoryGuard.OpenDirectoryNoFollow(folder);
+                    using var folderHandle = DirectoryGuard.OpenChildFolderToRemove(rootHandle, leaf, out var heldElsewhere, out _);
+                    if (heldElsewhere)
+                    {
+                        // Held where it shares no delete. Where it is the app's own, an update is
+                        // using it, in this process or another, so it is not this pass's to take
+                        // and is counted as left; a folder another account made and holds is not one the
+                        // app is waiting on.
+                        using var look = DirectoryGuard.OpenChildFolderNoFollow(rootHandle, leaf);
+                        if (look is not null && DirectoryGuard.IsExpectedFolder(look, expected))
+                            allGone = false;
+                        continue;
+                    }
                     if (folderHandle is null || !DirectoryGuard.IsExpectedFolder(folderHandle, expected))
                         continue;
 
@@ -160,7 +224,7 @@ public sealed class UpdateStagingFolder
                             cleared = false;
                     }
 
-                    if (!cleared || !DirectoryGuard.TryRemoveEmptyChildFolder(rootHandle, leaf))
+                    if (!cleared || !DirectoryGuard.TryRemoveEmptyFolder(folderHandle))
                         allGone = false;
                 }
                 catch

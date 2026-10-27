@@ -343,14 +343,35 @@ public sealed class StagedDownloadTests : IDisposable
     }
 
     [Fact]
+    public async Task The_start_up_clean_up_leaves_a_download_written_and_not_yet_held()
+    {
+        // The clean-up runs in this process between each download's write and its hold, the
+        // moment nothing but the folder's hold keeps the file.
+        var network = new ByName(new() { [SetupName] = Release(3), [AppCopy.CommandLineFileName] = Release(2) });
+        var kept = new List<bool>();
+        var updater = Updater(AppCopyKind.Setup, network, beforeHold: path =>
+        {
+            Assert.False(UpdateStagingFolder.RemoveLeftovers(_stagingRoot, ThisAccountExpectation));
+            kept.Add(File.Exists(path));
+        });
+
+        var prepared = await Prepare(updater);
+
+        Assert.Equal([true, true], kept);
+        Assert.Equal(Release(2), File.ReadAllBytes(prepared.FileToStart));
+    }
+
+    [Fact]
     public async Task The_start_up_clean_up_leaves_every_file_a_prepared_update_holds()
     {
         var network = new ByName(new() { [SetupName] = Release(3), [AppCopy.CommandLineFileName] = Release(2) });
         var prepared = await Prepare(Updater(AppCopyKind.Setup, network));
         var folder = Path.GetDirectoryName(prepared.FileToStart)!;
-        // The same two names written and not held, which the clean-up takes, so what keeps
-        // the held ones is the hold and not their names.
-        var unheld = UpdateStagingFolder.Create(_stagingRoot, AdministratorsAndThisAccount).FullPath;
+        // The same two names written in a folder nothing holds, which the clean-up takes, so
+        // what keeps the prepared ones is the hold and not their names.
+        var made = UpdateStagingFolder.Create(_stagingRoot, AdministratorsAndThisAccount);
+        made.Handle.Dispose();
+        var unheld = made.FullPath;
         File.WriteAllBytes(Path.Combine(unheld, SetupName), Release(3));
         File.WriteAllBytes(Path.Combine(unheld, AppCopy.CommandLineFileName), Release(2));
 

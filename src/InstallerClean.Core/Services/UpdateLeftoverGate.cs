@@ -1,11 +1,8 @@
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Keeps the clean-up of what earlier updates left behind apart from an update this
-/// process starts. The clean-up deletes the staging folders' downloads and the newer
-/// version beside the exe by their names, and an update writes files under the same
-/// names while it runs, opened with delete sharing, so a pass of the clean-up while it
-/// runs would delete them. From just before <see cref="AppUpdater.PrepareAsync"/> or
+/// Keeps the clean-up of what earlier updates left behind from running while an update
+/// this process starts is under way. From just before <see cref="AppUpdater.PrepareAsync"/> or
 /// <see cref="AppUpdater.PrepareStagedRunAsync"/> writes its first file until nothing it
 /// wrote is waiting to be used, the update holds the gate (<see cref="HoldForUpdate"/>) and
 /// no pass runs. A run from the staging folder that has started holds it until the process

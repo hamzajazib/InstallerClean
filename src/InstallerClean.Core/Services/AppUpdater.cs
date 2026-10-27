@@ -189,10 +189,10 @@ public sealed class AppUpdater : IAppUpdater
     private sealed record KeptManifest(string Version, byte[] Manifest);
 
     /// <summary>
-    /// The handles holding every download this process has prepared and not undone or
-    /// deleted, so each is held until then or until the process ends.
+    /// The handles holding every download this process has prepared and not undone, and
+    /// the folder each is in, so each is held until then or until the process ends.
     /// </summary>
-    private static readonly List<FileStream> HeldForTheProcess = [];
+    private static readonly List<IDisposable> HeldForTheProcess = [];
 
     /// <param name="kind">The kind of copy running.</param>
     /// <param name="exePath">The running exe's path.</param>
@@ -441,12 +441,10 @@ public sealed class AppUpdater : IAppUpdater
             // the file stays held and the gate stays out until the update is undone or this
             // process ends. The handle is kept in a list that lives as long as the process, as
             // a staged run's are.
-            // Undo lets go of the hold and deletes the download by its path, until its folder
-            // has gone. Once the folder is gone its name is free, and anybody who can write to
-            // the root can make a folder or a link under it, so nothing here reaches into that
-            // path again. A download held open by another
-            // process, an antivirus looking at it say, keeps the folder, which stays this
-            // update's own: an undo tries it again, and otherwise a later start's clean-up takes it.
+            // Undo lets go of the holds and removes the download and its folder through a handle
+            // on the folder this update made. A download held open by another process, an
+            // antivirus looking at it say, keeps the folder: an undo tries it again, and
+            // otherwise a later start's clean-up takes it.
             var isSetup = Kind == AppCopyKind.Setup;
             return staging.Prepared(
                 version, download, isSetup ? _setupArguments : string.Empty, isSetup ? null : _exePath);
@@ -491,9 +489,8 @@ public sealed class AppUpdater : IAppUpdater
         try
         {
             // The setup comes first, so a setup that fails its check costs no download of the
-            // command line. Each file is held from its check on, so the start-up clean-up of
-            // another process, which takes files of both names, cannot take the first while the
-            // second downloads. A Debug build's gate holds only the command line's download, the
+            // command line. The folder is held throughout, so the start-up clean-up, which takes
+            // files of both names, cannot take the first while the second downloads. A Debug build's gate holds only the command line's download, the
             // last, so a cancel there takes away a setup already checked and held as well as a
             // file part written.
             if (Kind == AppCopyKind.Setup)
@@ -568,15 +565,15 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     /// <summary>
-    /// What one update has staged: the gate it holds, the folder its downloads go in, the
-    /// path of each download, and the handles holding the downloads that passed their check.
+    /// What one update has staged: the gate it holds, the folder its downloads go in, held
+    /// from the moment it is made, the path of each download, and the handles holding the
+    /// downloads that passed their check.
     /// </summary>
     private sealed class Staging(UpdateLeftoverGate.Hold hold, UpdateStagingFolder folder)
     {
         private readonly List<string> _staged = [];
         private readonly List<FileStream> _holds = [];
         private readonly object _deleteGate = new();
-        private bool _folderGone;
 
         public string FolderPath => folder.FullPath;
 
@@ -594,7 +591,11 @@ public sealed class AppUpdater : IAppUpdater
         /// </summary>
         public PreparedUpdate Prepared(string version, string fileToStart, string arguments, string? replaces)
         {
-            lock (HeldForTheProcess) HeldForTheProcess.AddRange(_holds);
+            lock (HeldForTheProcess)
+            {
+                HeldForTheProcess.AddRange(_holds);
+                HeldForTheProcess.Add(folder.Handle);
+            }
             return new PreparedUpdate(version, fileToStart, arguments, Abandon, replaces);
         }
 
@@ -612,21 +613,20 @@ public sealed class AppUpdater : IAppUpdater
         }
 
         /// <summary>
-        /// Lets go of the holds, deletes each download by its path, and removes the folder
-        /// where it is empty, until the folder has gone. Once the folder is gone its name is
-        /// free, and anybody who can write to the root can make a folder or a link under it, so
-        /// nothing here reaches into that path again. Never throws.
+        /// Lets go of the holds on the downloads and the folder, and removes each download
+        /// and then the folder through a handle on the folder this update made
+        /// (<see cref="UpdateStagingFolder.TryRemove"/>), until the folder has gone. A folder
+        /// or link somebody makes under the folder's name is never acted on. Never throws.
         /// </summary>
         private void DeleteDownloads()
         {
             lock (_deleteGate)
             {
-                if (_folderGone) return;
                 lock (HeldForTheProcess) HeldForTheProcess.RemoveAll(_holds.Contains);
                 foreach (var file in _holds) file.Dispose();
                 _holds.Clear();
-                foreach (var path in _staged) Helpers.StorageHelpers.TryDeleteTempFile(path);
-                _folderGone = folder.TryRemoveIfEmpty();
+                lock (HeldForTheProcess) HeldForTheProcess.Remove(folder.Handle);
+                folder.TryRemove(_staged.Select(Path.GetFileName)!);
             }
         }
     }

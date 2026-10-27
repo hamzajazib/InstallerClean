@@ -207,8 +207,70 @@ internal static class DirectoryGuard
     /// so a caller can tell a child that is absent from one it could not act on. Zero
     /// where a handle came back.
     /// </summary>
-    internal static unsafe SafeFileHandle? OpenChildNoFollow(
-        SafeFileHandle directory, string leaf, uint access, uint disposition, uint options, out int status)
+    internal static SafeFileHandle? OpenChildNoFollow(
+        SafeFileHandle directory, string leaf, uint access, uint disposition, uint options, out int status) =>
+        OpenChildNoFollow(directory, leaf, access, Kernel32.FILE_SHARE_ALL, disposition, options, IntPtr.Zero, out status);
+
+    /// <summary>
+    /// Creates the folder <paramref name="leaf"/> inside <paramref name="directory"/>, with
+    /// <paramref name="securityDescriptor"/> as its descriptor, and answers a handle on it
+    /// opened in the same call. The handle shares reading and writing but not delete, so
+    /// while it is open no handle can be opened on the folder to delete or rename it. It
+    /// asks for no delete access itself, because a process started with the folder as its
+    /// working folder opens it sharing no delete, and that open would be refused beside a
+    /// handle holding delete access. Null where the create fails, a name already there
+    /// among the causes, with the NTSTATUS in <paramref name="status"/>.
+    /// </summary>
+    internal static SafeFileHandle? CreateChildFolderHeld(
+        SafeFileHandle directory, string leaf, IntPtr securityDescriptor, out int status) =>
+        OpenChildNoFollow(
+            directory, leaf, Ntdll.FILE_GENERIC_READ, Kernel32.FILE_SHARE_READ | Kernel32.FILE_SHARE_WRITE,
+            Ntdll.FILE_CREATE, Ntdll.FILE_DIRECTORY_FILE, securityDescriptor, out status);
+
+    /// <summary>
+    /// Opens the child folder <paramref name="leaf"/> inside <paramref name="directory"/>
+    /// to remove it: for listing and reading its owner and list, and with delete access,
+    /// resolved against that handle and without following a link in <paramref name="leaf"/>.
+    /// Null where it cannot be opened, is not a folder, or is a reparse point.
+    /// <paramref name="heldElsewhere"/> is true where the open was refused because another
+    /// handle on the folder shares no delete, as <see cref="CreateChildFolderHeld"/>'s does,
+    /// and <paramref name="absent"/> where nothing is at the name.
+    /// </summary>
+    internal static SafeFileHandle? OpenChildFolderToRemove(
+        SafeFileHandle directory, string leaf, out bool heldElsewhere, out bool absent)
+    {
+        var child = OpenChildFolderNoFollow(directory, leaf, Ntdll.FILE_GENERIC_READ | Ntdll.DELETE, out var status);
+        heldElsewhere = status == STATUS_SHARING_VIOLATION;
+        absent = status == STATUS_OBJECT_NAME_NOT_FOUND;
+        return child;
+    }
+
+    private const int STATUS_SHARING_VIOLATION = unchecked((int)0xC0000043);
+
+    /// <summary>
+    /// Removes the folder <paramref name="folder"/> names, through that handle, where it is
+    /// empty, the handle having been opened with delete access. Answers false where
+    /// anything is still inside it or Windows refuses.
+    /// </summary>
+    internal static bool TryRemoveEmptyFolder(SafeFileHandle folder) => DeleteByHandle(folder);
+
+    /// <summary>
+    /// The volume serial number and 128-bit file ID of the file or folder
+    /// <paramref name="handle"/> names (<see cref="FileIdentity"/>), which tell it from every
+    /// other on its volume while it exists, ReFS included, where the 64-bit index
+    /// <see cref="Kernel32.GetFileInformationByHandle"/> gives does not. Null where they
+    /// cannot be read.
+    /// </summary>
+    internal static FileIdentity? IdOf(SafeFileHandle handle) =>
+        Kernel32.GetFileInformationByHandleEx(
+            handle, Kernel32.FileIdInfo, out var info,
+            (uint)System.Runtime.CompilerServices.Unsafe.SizeOf<Kernel32.FILE_ID_INFO>())
+            ? new FileIdentity(info.VolumeSerialNumber, info.FileIdLow, info.FileIdHigh)
+            : null;
+
+    private static unsafe SafeFileHandle? OpenChildNoFollow(
+        SafeFileHandle directory, string leaf, uint access, uint share, uint disposition, uint options,
+        IntPtr securityDescriptor, out int status)
     {
         status = 0;
         if (string.IsNullOrEmpty(leaf)) return null;
@@ -233,13 +295,13 @@ internal static class DirectoryGuard
                     RootDirectory = root,
                     ObjectName = (IntPtr)(&name),
                     Attributes = Ntdll.OBJ_CASE_INSENSITIVE,
-                    SecurityDescriptor = IntPtr.Zero,
+                    SecurityDescriptor = securityDescriptor,
                     SecurityQualityOfService = IntPtr.Zero,
                 };
 
                 status = Ntdll.NtCreateFile(
                     out var child, access | Ntdll.SYNCHRONIZE, in attributes, out _, IntPtr.Zero,
-                    0, Kernel32.FILE_SHARE_ALL, disposition,
+                    0, share, disposition,
                     options | Ntdll.FILE_SYNCHRONOUS_IO_NONALERT, IntPtr.Zero, 0);
                 return status < 0 ? null : new SafeFileHandle(child, ownsHandle: true);
             }
@@ -278,17 +340,9 @@ internal static class DirectoryGuard
     /// </summary>
     internal static bool TryRemoveEmptyChildFolder(SafeFileHandle directory, string leaf)
     {
-        using var child = OpenChildNoFollow(
-            directory, leaf,
-            Ntdll.DELETE | Kernel32.FILE_READ_ATTRIBUTES, Ntdll.FILE_OPEN,
-            Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_DIRECTORY_FILE);
-        if (child is null) return false;
-
-        if (!Kernel32.GetFileInformationByHandle(child, out var info)
-            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_REPARSE_POINT) != 0)
-            return false;
-
-        return DeleteByHandle(child);
+        using var child = OpenChildFolderNoFollow(
+            directory, leaf, Ntdll.DELETE | Kernel32.FILE_READ_ATTRIBUTES, out _);
+        return child is not null && DeleteByHandle(child);
     }
 
     /// <summary>
@@ -297,11 +351,18 @@ internal static class DirectoryGuard
     /// <paramref name="leaf"/>. Null where it cannot be opened, is not a folder, or is a
     /// reparse point.
     /// </summary>
-    private static SafeFileHandle? OpenChildFolderNoFollow(SafeFileHandle directory, string leaf)
+    internal static SafeFileHandle? OpenChildFolderNoFollow(SafeFileHandle directory, string leaf) =>
+        OpenChildFolderNoFollow(directory, leaf, Ntdll.FILE_GENERIC_READ, out _);
+
+    /// <summary>
+    /// The same, with <paramref name="access"/>, reporting the NTSTATUS the open returned in
+    /// <paramref name="status"/>.
+    /// </summary>
+    private static SafeFileHandle? OpenChildFolderNoFollow(SafeFileHandle directory, string leaf, uint access, out int status)
     {
         var child = OpenChildNoFollow(
-            directory, leaf, Ntdll.FILE_GENERIC_READ, Ntdll.FILE_OPEN,
-            Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_DIRECTORY_FILE);
+            directory, leaf, access, Ntdll.FILE_OPEN,
+            Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_DIRECTORY_FILE, out status);
         if (child is null) return null;
 
         if (!Kernel32.GetFileInformationByHandle(child, out var info)

@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using InstallerClean.Helpers;
+using InstallerClean.Interop.Native;
 using InstallerClean.Services;
 using InstallerClean.Tests.Helpers;
 using NSubstitute;
@@ -144,6 +146,8 @@ public sealed class UpdateInPlaceTests : IDisposable
         // where the suite holds them.
         var first = UpdateStagingFolder.Create(_root);
         var second = UpdateStagingFolder.Create(_root);
+        first.Handle.Dispose();
+        second.Handle.Dispose();
 
         Assert.NotEqual(first.FullPath, second.FullPath);
         Assert.StartsWith(UpdateStagingFolder.NamePrefix, Path.GetFileName(first.FullPath));
@@ -174,13 +178,14 @@ public sealed class UpdateInPlaceTests : IDisposable
     [Fact]
     public void Leftovers_in_the_apps_own_folders_go_and_nothing_else_does()
     {
-        // A folder the app made, holding a download: cleaned, and the folder with it.
-        var ours = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount).FullPath;
+        // A folder the app made, holding a download, left by a process that has ended:
+        // cleaned, and the folder with it.
+        var ours = Left(UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount));
         File.WriteAllBytes(Path.Combine(ours, "InstallerClean-3.5.0-setup.exe"), Program(1));
 
         // The app's own folder, but a file that is not a download keeps it: the download
         // goes, the other file and the folder stay.
-        var oursWithOtherFile = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount).FullPath;
+        var oursWithOtherFile = Left(UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount));
         File.WriteAllBytes(Path.Combine(oursWithOtherFile, "InstallerClean-3.5.0-setup.exe"), Program(1));
         File.WriteAllText(Path.Combine(oursWithOtherFile, "notes.txt"), "kept");
 
@@ -196,6 +201,147 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.False(File.Exists(Path.Combine(oursWithOtherFile, "InstallerClean-3.5.0-setup.exe")));
         Assert.True(File.Exists(Path.Combine(oursWithOtherFile, "notes.txt")));
         Assert.True(File.Exists(Path.Combine(notOurName, "InstallerClean-3.5.0-setup.exe")));
+    }
+
+    [Fact]
+    public void A_folder_an_update_still_holds_is_left_whole_and_counted_as_not_gone()
+    {
+        // Held as an update in another process holds it: its download goes nowhere, whatever
+        // stage it is at, and the clean-up says a folder of the app's is left.
+        var held = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount);
+        var download = Path.Combine(held.FullPath, "InstallerClean-3.5.0-setup.exe");
+        try
+        {
+            File.WriteAllBytes(download, Program(1));
+
+            Assert.False(UpdateStagingFolder.RemoveLeftovers(_root, ThisAccountExpectation));
+            Assert.True(File.Exists(download));
+        }
+        finally
+        {
+            held.Handle.Dispose();
+        }
+
+        // Once the process holding it has ended, the next pass takes it.
+        Assert.True(UpdateStagingFolder.RemoveLeftovers(_root, ThisAccountExpectation));
+        Assert.False(Directory.Exists(held.FullPath));
+    }
+
+    [Fact]
+    public void A_held_folder_another_account_made_is_left_and_does_not_keep_the_clean_up_retrying()
+    {
+        // The download name, held without delete sharing, but made as an ordinary folder: not
+        // one the app is waiting on.
+        var foreign = Path.Combine(_root, UpdateStagingFolder.NamePrefix + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(foreign);
+        using (var holder = Kernel32.CreateFile(foreign, Kernel32.GENERIC_READ, Kernel32.FILE_SHARE_READ, IntPtr.Zero,
+            Kernel32.OPEN_EXISTING, Kernel32.FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero))
+        {
+            Assert.False(holder.IsInvalid);
+            Assert.True(UpdateStagingFolder.RemoveLeftovers(_root));
+            Assert.True(Directory.Exists(foreign));
+        }
+    }
+
+    [Fact]
+    public void A_held_staging_folder_cannot_be_removed_or_renamed_by_its_path()
+    {
+        var held = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount);
+        try
+        {
+            Assert.ThrowsAny<IOException>(() => Directory.Delete(held.FullPath));
+            Assert.ThrowsAny<IOException>(() => Directory.Move(held.FullPath, held.FullPath + "-moved"));
+            Assert.True(Directory.Exists(held.FullPath));
+        }
+        finally
+        {
+            held.Handle.Dispose();
+        }
+    }
+
+    [Fact]
+    public void A_program_starts_with_a_held_staging_folder_as_its_working_folder()
+    {
+        // Every hand-over starts the setup or the newer version from the staging folder while
+        // this process still holds it.
+        var held = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount);
+        try
+        {
+            var info = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe"), "/d /c cd")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                WorkingDirectory = held.FullPath,
+            };
+            using var started = Process.Start(info)!;
+            var output = started.StandardOutput.ReadToEnd().Trim();
+            Assert.True(started.WaitForExit(30_000));
+
+            Assert.Equal(0, started.ExitCode);
+            Assert.Equal(held.FullPath, output, ignoreCase: true);
+        }
+        finally
+        {
+            held.Handle.Dispose();
+        }
+    }
+
+    [Fact]
+    public void Removing_a_staging_folder_takes_the_files_named_and_then_the_folder()
+    {
+        var folder = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount);
+        File.WriteAllBytes(Path.Combine(folder.FullPath, "InstallerClean-3.5.0-setup.exe"), Program(1));
+        File.WriteAllBytes(Path.Combine(folder.FullPath, "installerclean-cli.exe"), Program(2));
+
+        Assert.True(folder.TryRemove(["InstallerClean-3.5.0-setup.exe", "installerclean-cli.exe"]));
+
+        Assert.False(Directory.Exists(folder.FullPath));
+        Assert.True(folder.Handle.IsClosed);
+        // Asked again, it reaches nothing.
+        Assert.True(folder.TryRemove(["InstallerClean-3.5.0-setup.exe"]));
+    }
+
+    [Fact]
+    public void A_staging_folder_with_anything_else_inside_stays_and_a_later_removal_takes_it()
+    {
+        var folder = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount);
+        var other = Path.Combine(folder.FullPath, "notes.txt");
+        File.WriteAllBytes(Path.Combine(folder.FullPath, "InstallerClean-3.5.0-setup.exe"), Program(1));
+        File.WriteAllText(other, "kept");
+
+        Assert.False(folder.TryRemove(["InstallerClean-3.5.0-setup.exe"]));
+        Assert.False(File.Exists(Path.Combine(folder.FullPath, "InstallerClean-3.5.0-setup.exe")));
+        Assert.True(File.Exists(other));
+
+        File.Delete(other);
+        Assert.True(folder.TryRemove(["InstallerClean-3.5.0-setup.exe"]));
+        Assert.False(Directory.Exists(folder.FullPath));
+    }
+
+    [Fact]
+    public void A_folder_put_in_the_staging_folders_place_is_never_acted_on()
+    {
+        var folder = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount);
+        folder.Handle.Dispose();
+        Directory.Delete(folder.FullPath);
+        Directory.CreateDirectory(folder.FullPath);
+        var planted = Path.Combine(folder.FullPath, "InstallerClean-3.5.0-setup.exe");
+        File.WriteAllBytes(planted, Program(1));
+
+        // Its own folder has gone, so there is nothing of it left to remove.
+        Assert.True(folder.TryRemove(["InstallerClean-3.5.0-setup.exe"]));
+        Assert.True(File.Exists(planted));
+    }
+
+    /// <summary>
+    /// A staging folder as a process that has ended leaves it: made, and its hold let go.
+    /// Answers its path.
+    /// </summary>
+    private static string Left(UpdateStagingFolder folder)
+    {
+        folder.Handle.Dispose();
+        return folder.FullPath;
     }
 
     [Fact]

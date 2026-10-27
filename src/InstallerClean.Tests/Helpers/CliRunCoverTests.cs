@@ -89,6 +89,37 @@ public class CliRunCoverTests
         Assert.DoesNotContain(Strings.Cli_MutexBlocked, run.Stdout);
     }
 
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public async Task A_cover_lost_once_the_batch_has_finished_leaves_the_run_its_ordinary_summary(string arg)
+    {
+        // Lost fires as the batch returns in full, before anything after it runs: nothing
+        // after the batch is cancelled by it, so the run ends as one that went the distance.
+        var cover = new Cover();
+        var services = arg == "/m"
+            ? Services(move: Move(call =>
+            {
+                cover.LoseIt();
+                return new MoveResult(2, Array.Empty<FileOperationError>());
+            }))
+            : Services(delete: Delete(call =>
+            {
+                cover.LoseIt();
+                return new DeleteResult(2, Array.Empty<FileOperationError>());
+            }));
+
+        var run = await Run(arg, services, CancellationToken.None, cover);
+
+        Assert.True(cover.Lost.IsCancellationRequested);
+        Assert.Equal(CliExitCode.Ok, run.ExitCode);
+        Assert.DoesNotContain(Lost(arg, 2, 2), run.Stdout);
+        Assert.DoesNotContain(NoWork(arg), run.Stdout);
+        Assert.DoesNotContain(Strings.Cli_Cancelled, run.Stdout);
+        var summary = Assert.Single(run.Entries, e => CliRunFixtures.IsSummary(e));
+        Assert.Equal(CliContract.ClassifyFileOperation(2, 0).EventClass, summary.Class);
+    }
+
     [Fact]
     public async Task A_delete_whose_cover_is_lost_after_a_file_stops_and_says_how_far_it_got()
     {
@@ -192,14 +223,25 @@ public class CliRunCoverTests
         return move;
     }
 
-    /// <summary>A cover the test sets: <see cref="Covered"/> is what every question answers.</summary>
+    /// <summary>
+    /// A cover the test sets: <see cref="Covered"/> is what every question answers, and
+    /// <see cref="LoseIt"/> fires <see cref="Lost"/>.
+    /// </summary>
     private sealed class Cover : IRunCover
     {
+        private readonly CancellationTokenSource _lost = new();
+
         public bool Covered { get; set; } = true;
 
         public bool Covers() => Covered;
 
-        public CancellationToken Lost => CancellationToken.None;
+        public CancellationToken Lost => _lost.Token;
+
+        public void LoseIt()
+        {
+            Covered = false;
+            _lost.Cancel();
+        }
     }
 
     private sealed record Ran(int ExitCode, string Stdout, IReadOnlyList<(CliEventClass Class, string Text)> Entries);
