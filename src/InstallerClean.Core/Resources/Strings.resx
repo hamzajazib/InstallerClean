@@ -2524,15 +2524,15 @@ Run InstallerClean again as administrator.</value></data>
        and one of them leaves the destination exactly where the user put it. -->
   <data name="Cli.EventLogMoveAborted" xml:space="preserve"><value>{0} mode stopped: could no longer confirm the destination. {1} of {2} {3} had already moved to {4}, {5} relocated, {6} {7}.</value></data>
   <!-- 0 = mode arg, 1 = processed count, 2 = total count, 3 = pluralised noun.
-       The console cancel handler is raised for either control key and never reads
-       which one it was, so the line says where the cancellation came from rather
-       than which key sent it. -->
-  <data name="Cli.EventLogCancelledPartial" xml:space="preserve"><value>{0} mode cancelled at the console: {1} of {2} {3} processed before cancellation. See progress output for the per-file detail.</value></data>
+       The run is cancelled by Ctrl+C or Ctrl+Break, by its console closing or
+       Windows shutting down, or by Task Scheduler ending a task, and the line names
+       none of them. -->
+  <data name="Cli.EventLogCancelledPartial" xml:space="preserve"><value>{0} mode cancelled: {1} of {2} {3} processed before cancellation. See progress output for the per-file detail.</value></data>
   <!-- 0 = mode arg. Audit entry for a cancellation that lands before any file is
        processed (a cancel during the scan, or before the first delete or
        move), so "each /s, /d or /m run writes one summary entry" holds for
        every run, not only the ones that committed work. -->
-  <data name="Cli.EventLogCancelledNoWork" xml:space="preserve"><value>{0} mode cancelled at the console before any work was done. No action taken.</value></data>
+  <data name="Cli.EventLogCancelledNoWork" xml:space="preserve"><value>{0} mode cancelled before any work was done. No action taken.</value></data>
   <!-- 0 = mode arg, 1 = the version running, 2 = the newer version it started, 3 = what
        that newer version was started to run: the command as given, or /s after a yes at
        the console.

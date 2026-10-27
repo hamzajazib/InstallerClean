@@ -184,11 +184,11 @@ public class CliCancelledRunTests
     }
 
     [Fact]
-    public void The_cancelled_audit_lines_say_where_the_cancellation_came_from()
+    public void The_cancelled_audit_lines_name_no_cause()
     {
-        // Console.CancelKeyPress is raised for either control key and the handler
-        // never reads which one it was, so neither line is in a position to name
-        // one. Composed here exactly as the two write sites compose them, so a
+        // A run is cancelled by either control key, by its console closing or by
+        // Task Scheduler ending its task, and the handler does not tell them all
+        // apart, so neither line names one. Composed here exactly as the two write sites compose them, so a
         // slot the value stopped spelling would throw here rather than in the
         // Application channel.
         var partial = MachineContract.English(() => string.Format(
@@ -203,7 +203,7 @@ public class CliCancelledRunTests
             // Beside the absence, so the absence is attributable: a line that had
             // stopped saying how the run ended would satisfy the assertion above
             // on its own.
-            Assert.Contains("cancelled at the console", line, StringComparison.Ordinal);
+            Assert.Contains("mode cancelled", line, StringComparison.Ordinal);
         }
     }
 

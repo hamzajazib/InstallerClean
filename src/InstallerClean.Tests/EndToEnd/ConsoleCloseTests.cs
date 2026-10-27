@@ -136,7 +136,7 @@ public sealed class ConsoleCloseTests : IDisposable
             Assert.Fail($"The run wrote {entries.Count} entries. {evidence}");
         var entry = entries[0];
         Assert.Equal(CliContract.EventIdFor(CliEventClass.TransientSkip), entry.Id);
-        Assert.Contains("cancelled at the console before any work", entry.Message, StringComparison.Ordinal);
+        Assert.Contains("cancelled before any work", entry.Message, StringComparison.Ordinal);
     }
 
     /// <summary>

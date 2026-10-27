@@ -33,8 +33,8 @@ internal sealed class CommandLineRunRecord : ICommandLineRunRecord
     /// "Delete mode (/d):" and "Move mode (/m):", and later versions with "/d mode:"
     /// and "/m mode:". A Delete's summary says "sent to the Recycle Bin" before 3.0.0
     /// and "deleted permanently" from it. A cancelled run's line, written from 1.6.0,
-    /// says "interrupted by Ctrl+C" before 3.0.0 and "cancelled at the console" from
-    /// it, and the stopped Move's line is written from 3.0.0.
+    /// says "interrupted by Ctrl+C" before 3.0.0, "cancelled at the console" from it
+    /// and "cancelled" from 3.5.0, and the stopped Move's line is written from 3.0.0.
     ///
     /// Every version writes these lines in English whatever language Windows is in,
     /// from 2.0.0 through the machine contract (<c>MachineContract</c> in the command
@@ -51,7 +51,7 @@ internal sealed class CommandLineRunRecord : ICommandLineRunRecord
             RegexOptions.CultureInvariant),
         new(@"^/m mode stopped: could no longer confirm the destination\. ([0-9]+) of [0-9]+ \S+ had already moved to ",
             RegexOptions.CultureInvariant),
-        new(@"^/[dm] mode (?:interrupted by Ctrl\+C|cancelled at the console): ([0-9]+) of [0-9]+ \S+ processed before cancellation\.",
+        new(@"^/[dm] mode (?:interrupted by Ctrl\+C|cancelled at the console|cancelled): ([0-9]+) of [0-9]+ \S+ processed before cancellation\.",
             RegexOptions.CultureInvariant),
     ];
 
