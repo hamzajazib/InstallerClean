@@ -5501,8 +5501,8 @@ public class MainViewModelTests : IDisposable
         var updater = Substitute.For<IAppUpdater>();
         updater.Kind.Returns(AppCopyKind.Portable);
         updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(
-            new PreparedUpdate("9.9.9", @"C:\Users\x\InstallerClean.exe", string.Empty, () => { },
-                @"C:\Users\x\InstallerClean.exe.new"));
+            new PreparedUpdate("9.9.9", @"C:\ProgramData\InstallerClean-update-x\InstallerClean.exe", string.Empty,
+                () => { }, @"C:\Users\x\InstallerClean.exe"));
         _windowService.StartUpdateAndCloseAsync(default!).ReturnsForAnyArgs(false);
         var vm = CreateViewModel(new AppSettings(), updater);
         ScanFinds(EmptyScanResult());

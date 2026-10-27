@@ -32,8 +32,6 @@
 ; InstanceLock.Name in src/InstallerClean.Core/Services/InstanceLock.cs, and
 ; scripts/check-instance-lock-name.mjs holds the two together.
 #define AppMutexName "Global\InstallerClean_SingleInstance"
-; The mutex Setup holds while it runs, created first thing in InitializeSetup.
-#define SetupMutexName "Global\InstallerClean_Setup"
 AppId=InstallerClean
 AppName=InstallerClean
 AppVersion={#AppVersion}
@@ -219,13 +217,11 @@ end;
 // closes it as it exits. Setup calls InitializeSetup before its own AppMutex check,
 // which then asks for InstallerClean to be closed where the mutex is still open, and
 // fails the setup with nothing written where /SUPPRESSMSGBOXES answers that box.
-// Setup first creates the mutex it holds while it runs.
 function InitializeSetup: Boolean;
 var
   Waited: Integer;
 begin
   Result := True;
-  CreateMutex('{#SetupMutexName}');
   if not (UpdatingFromApp or UpdatingFromCommandLine) then Exit;
   Waited := 0;
   while CheckForMutexes('{#AppMutexName}') and (Waited < 30000) do

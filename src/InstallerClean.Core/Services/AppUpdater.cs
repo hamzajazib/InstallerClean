@@ -441,9 +441,10 @@ public sealed class AppUpdater : IAppUpdater
             // the file stays held and the gate stays out until the update is undone or this
             // process ends. The handle is kept in a list that lives as long as the process, as
             // a staged run's are.
-            // The download is deleted by its path, by Undo, which first lets go of the hold, until its folder has gone. Once the folder is gone its name is free,
-            // and anybody who can write to the root can make a folder or a link under it, so
-            // nothing here reaches into that path again. A download held open by another
+            // Undo lets go of the hold and deletes the download by its path, until its folder
+            // has gone. Once the folder is gone its name is free, and anybody who can write to
+            // the root can make a folder or a link under it, so nothing here reaches into that
+            // path again. A download held open by another
             // process, an antivirus looking at it say, keeps the folder, which stays this
             // update's own: an undo tries it again, and otherwise a later start's clean-up takes it.
             var isSetup = Kind == AppCopyKind.Setup;

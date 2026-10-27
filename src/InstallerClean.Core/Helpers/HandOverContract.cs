@@ -10,10 +10,10 @@ namespace InstallerClean.Helpers;
 /// puts back after a failure is started with <see cref="UpdateFailedSwitch"/>.
 /// </summary>
 /// <remarks>
-/// Every version from 3.5.0 on starts the version it updates to with these switches and
-/// waits for the event <see cref="StartedEventSwitch"/> names. So every later version has
-/// to go on taking the switches and setting the event, or an update to it from one of these
-/// fails. A switch added to the hand-over later is one an earlier version does not know, so
+/// Every copy from 3.5.0 on that has the newer version put itself at its path starts that
+/// version with these switches and waits for the event <see cref="StartedEventSwitch"/>
+/// names. So every later version has to go on taking the switches and setting the event, or
+/// an update to it from one of these fails. A switch added to the hand-over later is one an earlier version does not know, so
 /// it needs a first version of its own.
 /// </remarks>
 internal static class HandOverContract
@@ -151,10 +151,11 @@ internal static class HandOverContract
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Do not change what this reads. A copy from 3.5.0 on is to start the newer version it updates to with these three, and on the command
-    /// line with the command as typed, <see cref="CliContract.CancelEventSwitch"/> and
-    /// <see cref="CliContract.NoUpdateSwitch"/> beside them, for every newer version it ever
-    /// updates to. A later version reading them another way is one no such copy can update to.
+    /// Do not change what this reads. A copy from 3.5.0 on is to start the newer version it
+    /// updates to with these three, and on the command line with the command as typed,
+    /// <see cref="CliContract.CancelEventSwitch"/> and <see cref="CliContract.NoUpdateSwitch"/>
+    /// beside them, for every newer version it ever updates to. A later version reading them
+    /// another way is one no such copy can update to.
     /// </para>
     /// <para>
     /// What the command line's two sides hold each other to, which every later version keeps

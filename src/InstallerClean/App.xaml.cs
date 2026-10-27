@@ -981,13 +981,13 @@ public partial class App : Application
         {
             var exePath = Environment.ProcessPath;
             var foldersGone = false;
-            var oldCopyGone = exePath is null;
+            var leftoversGone = exePath is null;
             for (var attempt = 0; attempt < 20;)
             {
                 var ran = UpdateLeftoverGate.ForThisProcess.TryRunPass(() =>
                 {
                     foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
-                    oldCopyGone = oldCopyGone
+                    leftoversGone = leftoversGone
                         || ExeReplacement.TryRemoveLeftovers(exePath!);
                 });
                 if (!ran)
@@ -995,7 +995,7 @@ public partial class App : Application
                     await UpdateLeftoverGate.ForThisProcess.WhenFree();
                     continue;
                 }
-                if (foldersGone && oldCopyGone) return;
+                if (foldersGone && leftoversGone) return;
                 attempt++;
                 await Task.Delay(500);
             }
