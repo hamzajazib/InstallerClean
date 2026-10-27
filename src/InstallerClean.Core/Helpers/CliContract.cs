@@ -465,8 +465,8 @@ internal static class CliContract
     /// is "work happened" (success and partial), 2000 a transient skip, 4000 a
     /// hard failure, so an RMM filter can select an outcome by number without
     /// reading the English message. The 3000 band is the notices, which are not
-    /// outcomes and are not counted as runs, except the 3005 or 3006 that is the only
-    /// entry of a run whose update ended it with nothing run. A 3007 is not a run either:
+    /// outcomes and are not counted as runs, except the 3006 that is the only entry of a
+    /// run whose update saw Ctrl+C with nothing run. A 3007 is not a run either:
     /// the newer version writes it alone, having run no command.
     /// </summary>
     internal static int EventIdFor(CliEventClass outcome) => outcome switch

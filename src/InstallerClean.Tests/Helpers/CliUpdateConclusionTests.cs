@@ -235,6 +235,19 @@ public class CliUpdateConclusionTests
     /// Runs <paramref name="act"/> with the console and the Application log captured,
     /// the log refusing every entry where <paramref name="logRefuses"/> is set.
     /// </summary>
+    [Fact]
+    public void Every_reason_an_update_was_not_made_says_it_runs_with_this_version_exactly_where_its_notice_says_the_update_failed()
+    {
+        foreach (var notMade in Enum.GetValues<UpdateNotMade>())
+        {
+            var carried = new CommandLineUpdateResult.CarriedOn(notMade, "3.4.0", "3.5.0");
+            Assert.True(
+                carried.SaysRunningInstead == (Program.UpdateNotMadeClass(notMade) == CliEventClass.UpdateFailedNotice),
+                $"{notMade}: SaysRunningInstead is {carried.SaysRunningInstead}, its notice is {Program.UpdateNotMadeClass(notMade)}");
+        }
+        Assert.False(new CommandLineUpdateResult.CarriedOn(null, null, null).SaysRunningInstead);
+    }
+
     private static Concluded Captured(Func<int?> act, bool logRefuses)
     {
         var original = Console.Out;

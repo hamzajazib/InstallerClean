@@ -366,75 +366,19 @@ internal static class Program
                 () => UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot));
         }
 
-        CommandLineUpdateResult.CarriedOn? updateNotMade = null;
-        if (!cts.IsCancellationRequested
-            && RunUpdate(arg, args, invocation, updateHost, cts.Token, out updateNotMade) is int updateExitCode)
-            return updateExitCode;
+        var update = cts.IsCancellationRequested
+            ? UpdateConclusion.GoesOn
+            : RunUpdate(arg, args, invocation, updateHost, cts.Token);
+        if (update.ExitCode is int updateExitCode) return updateExitCode;
 
         // A Ctrl+C before the update, one the update did not end the run on, or one that
         // came where no update was checked for, stops the run here, before the mutex and
         // the scan.
         if (cts.IsCancellationRequested) return ReportCancelledBeforeWork(arg);
 
-        // Mutate-the-cache operations (/d and /m) take the same singleton
-        // mutex the WPF GUI uses, so a CLI invocation cannot race the
-        // GUI mid-delete or mid-move (and a second concurrent CLI run
-        // is also rejected). /s is read-only and runs unconditionally.
-        // For /d and /m the copy a run stands for holds it until this run has ended
-        // (HandOverContract.ReadReplaceRequest), so such a run goes on where it cannot take
-        // it, and takes it where nothing holds it, as where that copy has ended.
-        InstanceLock? instanceLock = null;
-        if (arg is "/d" or "/m")
-        {
-            instanceLock = new InstanceLock();
-            if (!instanceLock.TryTake() && s_standsFor is not null)
-            {
-                instanceLock.Dispose();
-                instanceLock = null;
-            }
-            else if (!instanceLock.IsHeld)
-            {
-                // Nothing on this path may reach Main's catch-all, and the two
-                // halves of it fail differently. A throw before the write costs
-                // the run its class: a 2000 TransientSkip and exit 75, the one
-                // code a scheduler retries on, become a 4000 HardError and exit
-                // 1. A throw after it produces that 4000 as this run's SECOND
-                // entry, which is what an RMM counts runs by. So every statement
-                // below is guarded where it stands, and the write is guarded
-                // inside EventLogWriter.Write, which builds the entry there so
-                // that no part of the call is evaluated in this frame.
-                try
-                {
-                    Console.WriteLine(Strings.Cli_MutexBlocked);
-                }
-                catch (Exception ex)
-                {
-                    Helpers.CrashLog.TryWrite(ex);
-                }
-                // RMM consumer polling the Application channel for
-                // InstallerClean entries needs an audit record on the
-                // skipped path to distinguish it from "the task never
-                // fired".
-                MachineContract.WriteEventLog(CliEventClass.TransientSkip,
-                    () => string.Format(Strings.Cli_EventLogMutexBlocked, arg));
-                NoteEventLogUnavailable();
-                try
-                {
-                    instanceLock.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Helpers.CrashLog.TryWrite(ex);
-                }
-                return ExitTransient;
-            }
-        }
-
-        // The run goes on from here, the mutex taken where it takes one, so where the update
-        // itself failed or InstallerClean was in use it says it runs with this version. A run
-        // the take turned away has said so above.
-        if (updateNotMade is { SaysRunningInstead: true, FromVersion: { } runningVersion } && !cts.IsCancellationRequested)
-            updateHost.WriteLine(string.Format(Strings.Cli_UpdateRunningInstead, arg, runningVersion));
+        var take = TakeInstanceLock(arg, s_standsFor is not null, () => new InstanceLock(), update.RunningInstead, cts.Token);
+        if (take.ExitCode is int blockedExitCode) return blockedExitCode;
+        var instanceLock = take.Lock;
 
         var report = new RunReport(ConsoleCanAsk());
         int exitCode;
@@ -532,27 +476,125 @@ internal static class Program
     }
 
     /// <summary>
+    /// The run's own take of the single-instance mutex, and the line saying it runs with this
+    /// version. Mutate-the-cache operations (/d and /m) take the same mutex the WPF GUI uses,
+    /// so a command-line run cannot race the GUI mid-delete or mid-move, and a second
+    /// command-line run is turned away too. /s is read-only and takes none.
+    /// For /d and /m the copy a run stands for (<paramref name="standsForCopy"/>) holds it until
+    /// this run has ended (HandOverContract.ReadReplaceRequest), so such a run goes on where it
+    /// cannot take it, and takes it where nothing holds it, as where that copy has ended.
+    /// Answers the lock for the caller to release on this same thread, or none where nothing
+    /// was taken; or the exit code of a run the mutex turned away, which has said so and
+    /// written its entry.
+    /// Where the update itself failed or InstallerClean was in use,
+    /// <paramref name="runningInstead"/> builds the line saying the run goes on with this
+    /// version, printed once the run does go on: after the take, and not after Ctrl+C. It is
+    /// guarded where it stands, the lock being held and the caller's release not yet reached.
+    /// </summary>
+    internal static LockTake TakeInstanceLock(
+        string arg, bool standsForCopy, Func<InstanceLock> newLock, Func<string>? runningInstead,
+        CancellationToken token)
+    {
+        InstanceLock? instanceLock = null;
+        if (arg is "/d" or "/m")
+        {
+            instanceLock = newLock();
+            if (!instanceLock.TryTake() && standsForCopy)
+            {
+                instanceLock.Dispose();
+                instanceLock = null;
+            }
+            else if (!instanceLock.IsHeld)
+            {
+                // Nothing on this path may reach Main's catch-all, and the two
+                // halves of it fail differently. A throw before the write costs
+                // the run its class: a 2000 TransientSkip and exit 75, the one
+                // code a scheduler retries on, become a 4000 HardError and exit
+                // 1. A throw after it produces that 4000 as this run's SECOND
+                // entry, which is what an RMM counts runs by. So every statement
+                // below is guarded where it stands, and the write is guarded
+                // inside EventLogWriter.Write, which builds the entry there so
+                // that no part of the call is evaluated in this frame.
+                try
+                {
+                    Console.WriteLine(Strings.Cli_MutexBlocked);
+                }
+                catch (Exception ex)
+                {
+                    Helpers.CrashLog.TryWrite(ex);
+                }
+                // RMM consumer polling the Application channel for
+                // InstallerClean entries needs an audit record on the
+                // skipped path to distinguish it from "the task never
+                // fired".
+                MachineContract.WriteEventLog(CliEventClass.TransientSkip,
+                    () => string.Format(Strings.Cli_EventLogMutexBlocked, arg));
+                NoteEventLogUnavailable();
+                try
+                {
+                    instanceLock.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Helpers.CrashLog.TryWrite(ex);
+                }
+                return new LockTake(null, ExitTransient);
+            }
+        }
+
+
+        if (runningInstead is not null && !token.IsCancellationRequested)
+        {
+            try
+            {
+                Console.WriteLine(runningInstead());
+            }
+            catch (Exception ex)
+            {
+                Helpers.CrashLog.TryWrite(ex);
+            }
+        }
+        return new LockTake(instanceLock, null);
+    }
+
+    /// <summary>
+    /// What <see cref="TakeInstanceLock"/> answers: the lock it took, or the exit code of a run
+    /// the mutex turned away.
+    /// </summary>
+    internal readonly record struct LockTake(InstanceLock? Lock, int? ExitCode);
+
+    /// <summary>
+    /// What the update made before a run ended in, as <see cref="RunUpdate"/> answers it: the
+    /// exit code where the run ends there, or, where it goes on, the line saying it goes on
+    /// with this version, where one is said.
+    /// </summary>
+    private readonly record struct UpdateConclusion(int? ExitCode, Func<string>? RunningInstead)
+    {
+        /// <summary>The run goes on, with nothing said about the update.</summary>
+        public static UpdateConclusion GoesOn => default;
+    }
+
+    /// <summary>
     /// The update made before a /s, /d or /m (<see cref="CommandLineUpdate"/>). Answers the
-    /// exit code where the run ends here, or null where it goes on with this version, as
-    /// <see cref="ConcludeUpdate"/> decides from what the update ended in.
+    /// exit code where the run ends here, as <see cref="ConcludeUpdate"/> decides from what the
+    /// update ended in, or that the run goes on with this version, with the line saying so
+    /// where the update itself failed or InstallerClean was in use.
     ///
     /// Nothing is checked where <c>/noupdate</c> was given, this account's settings turn
-    /// the check off, or the run stands for another copy, being that copy's update itself. A throw from building what the update needs goes to crash.log and
-    /// the run goes on, as it does after an update that fails with this version's file
-    /// at its path.
+    /// the check off, or the run stands for another copy, being that copy's update itself.
+    /// A throw from building what the update needs goes to crash.log and the run goes on, as
+    /// it does after an update that fails with this version's file at its path.
     /// </summary>
-    private static int? RunUpdate(
-        string arg, string[] args, CliInvocation invocation, ConsoleUpdateHost host, CancellationToken token,
-        out CommandLineUpdateResult.CarriedOn? notMade)
+    private static UpdateConclusion RunUpdate(
+        string arg, string[] args, CliInvocation invocation, ConsoleUpdateHost host, CancellationToken token)
     {
-        notMade = null;
         CommandLineUpdateResult result;
         try
         {
             if (invocation.SkipUpdate || s_standsFor is not null || Environment.ProcessPath is not { Length: > 0 } exePath)
-                return null;
+                return UpdateConclusion.GoesOn;
             if (!new SettingsService().Load().AutoUpdateCheck)
-                return null;
+                return UpdateConclusion.GoesOn;
 
             var canAsk = ConsoleCanAsk();
             var updater = new AppUpdater(
@@ -569,15 +611,18 @@ internal static class Program
         catch (Exception ex)
         {
             Helpers.CrashLog.TryWrite(ex);
-            return null;
+            return UpdateConclusion.GoesOn;
         }
 
         var cancelled = token.IsCancellationRequested;
         if (cancelled && result is CommandLineUpdateResult.HandedOver { ExitCode: CommandLineUpdate.ControlCExit })
             host.SayHeldBackCancelling();
-        if (!cancelled && result is CommandLineUpdateResult.CarriedOn { NotMade: not null, FromVersion: not null, ToVersion: not null } carried)
-            notMade = carried;
-        return ConcludeUpdate(result, arg, cancelled);
+        if (ConcludeUpdate(result, arg, cancelled) is int exitCode) return new UpdateConclusion(exitCode, null);
+        // The run goes on with this version. Where the update itself failed or InstallerClean
+        // was in use, it says so once it does (TakeInstanceLock).
+        return result is CommandLineUpdateResult.CarriedOn { SaysRunningInstead: true, FromVersion: { } runningVersion }
+            ? new UpdateConclusion(null, () => string.Format(Strings.Cli_UpdateRunningInstead, arg, runningVersion))
+            : UpdateConclusion.GoesOn;
     }
 
     /// <summary>

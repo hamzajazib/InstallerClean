@@ -58,8 +58,8 @@ internal static class MachineContract
     /// most tooling watching for them. Every <c>/s</c>, <c>/d</c> or <c>/m</c>
     /// run writes exactly ONE summary entry, and its Event ID is in the 1000,
     /// 2000 or 4000 band (<see cref="CliContract.EventIdFor"/>), except a run whose
-    /// update ended it with nothing run, whose one entry is the 3005 or 3006 below
-    /// saying so. Beside it a run
+    /// update saw Ctrl+C with nothing run, whose one entry is the 3006 below saying so.
+    /// Beside it a run
     /// may write NOTICES, in the 3000 band, which are conditions the scan found and
     /// never the run's outcome. THE LIST BELOW IS THE WHOLE BAND, which is the part
     /// a consumer building a filter needs of it. 3000: the scan could not check some
@@ -92,10 +92,8 @@ internal static class MachineContract
     /// standing property of the machine from a run that fell short of its job, and
     /// on that question 3001 is the standing property while 3000, 3002, 3003 and 3004
     /// are about the run, which is why 3001 is Information and the other four are
-    /// Warning. 3005 is Information because the run fell short of nothing, except the one
-    /// saying Ctrl+C came before the newer version started, which is Warning as a cancelled
-    /// run's 2000 is, and 3006 Warning because the run went on with an older version than
-    /// it set out to use, or ran nothing.
+    /// Warning. 3005 is Information because the run fell short of nothing, and 3006 Warning
+    /// because the run went on with an older version than it set out to use, or ran nothing.
     /// Nothing here contradicts that: this paragraph says only that a notice is not
     /// the run's SUMMARY entry, which is what a consumer counting runs is asking.
     /// Two questions, near-identical wording, and the sense that travels between

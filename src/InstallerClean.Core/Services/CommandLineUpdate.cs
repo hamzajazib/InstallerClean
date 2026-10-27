@@ -47,14 +47,20 @@ internal abstract record CommandLineUpdateResult
     /// <paramref name="NotMade"/> is null where no update was tried and none is noted: no
     /// newer version, the check failing, or a no at the question. Otherwise it says why the
     /// newer version was not run, and the two versions are the running one and the newer
-    /// one. The host notes why at once. <paramref name="SaysRunningInstead"/> is whether the
-    /// host then says the run goes on with this version, once it knows it does: set where
-    /// the update itself was tried and not made, and not where the lines saying why already
-    /// point to what to do instead.
+    /// one. The host notes why at once.
     /// </summary>
-    public sealed record CarriedOn(
-        UpdateNotMade? NotMade, string? FromVersion, string? ToVersion, bool SaysRunningInstead = false)
-        : CommandLineUpdateResult;
+    public sealed record CarriedOn(UpdateNotMade? NotMade, string? FromVersion, string? ToVersion)
+        : CommandLineUpdateResult
+    {
+        /// <summary>
+        /// Whether the host says the run goes on with this version, once it knows it does:
+        /// where the update itself was tried and not made, or InstallerClean was in use, and
+        /// not where the lines saying why already point to what to do instead. These are the
+        /// reasons the host's notice classes as the update failing rather than not possible.
+        /// </summary>
+        public bool SaysRunningInstead =>
+            NotMade is UpdateNotMade.InUse or UpdateNotMade.DownloadFailed or UpdateNotMade.NotRun;
+    }
 
     /// <summary>
     /// The newer version ran in this console with <paramref name="ArgumentsRun"/> and has
@@ -340,7 +346,7 @@ internal sealed class CommandLineUpdate
         }));
         if (token.IsCancellationRequested)
             return new CommandLineUpdateResult.FailedThenCancelled(notMade, current, latest);
-        return new CommandLineUpdateResult.CarriedOn(notMade, current, latest, SaysRunningInstead: true);
+        return new CommandLineUpdateResult.CarriedOn(notMade, current, latest);
     }
 
     private UpdateAvailable? Check(bool canAsk, CancellationToken token)

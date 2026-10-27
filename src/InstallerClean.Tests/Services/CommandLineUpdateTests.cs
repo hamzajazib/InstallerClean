@@ -220,7 +220,7 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(updater, canAsk: true, command: command);
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.InUse, Current, Latest, SaysRunningInstead: true), result);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.InUse, Current, Latest), result);
         // Whether the run goes on is the host's to say once it knows, as the result asks.
         Assert.Equal([Available, Strings.Cli_UpdateInUse], _host.Output);
         Assert.Equal(0, _host.Reads);
@@ -238,7 +238,7 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(updater, canAsk: false, command: "/d");
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(expected, Current, Latest, SaysRunningInstead: true), result);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(expected, Current, Latest), result);
         Assert.Equal(
             [Available, Downloading,
                 expected == UpdateNotMade.DownloadFailed ? Strings.UpdateNotice_DownloadFailed : Strings.Cli_UpdateNotRun],
@@ -274,7 +274,7 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(updater, canAsk: false, command: "/d");
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.NotRun, Current, Latest, SaysRunningInstead: true), result);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.NotRun, Current, Latest), result);
         Assert.True(updater.Undone);
         Assert.Equal([Available, Downloading, Strings.Cli_UpdateNotRun], _host.Output);
         Assert.Equal(1, _host.LockReleases);
@@ -288,7 +288,7 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(updater, canAsk: false);
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.NotRun, Current, Latest, SaysRunningInstead: true), result);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.NotRun, Current, Latest), result);
         Assert.True(updater.Undone);
     }
 
