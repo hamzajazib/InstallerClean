@@ -410,6 +410,37 @@ public sealed class ExeReplacementTests : IDisposable
     }
 
     [Fact]
+    public void Each_earlier_version_the_setup_held_aside_goes_and_nothing_else_does()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Exe)!);
+        File.WriteAllText(Exe, "exe");
+        var heldAside = new[] { Exe + ".setup-old", Exe + ".setup-old-1", Exe + ".setup-old-12" };
+        var kept = new[] { Exe + ".setup-old-", Exe + ".setup-old-x", Exe + ".setup-older", Exe + ".setup-old.txt" };
+        foreach (var path in heldAside.Concat(kept)) File.WriteAllText(path, "held");
+
+        Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
+        foreach (var path in heldAside) Assert.False(File.Exists(path), path);
+        foreach (var path in kept) Assert.True(File.Exists(path), path);
+    }
+
+    [Fact]
+    public void An_earlier_version_the_setup_held_aside_stays_while_the_setup_runs()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Exe)!);
+        File.WriteAllText(Exe, "exe");
+        var heldAside = Exe + ExeReplacement.SetupHeldSuffix;
+        File.WriteAllText(heldAside, "held");
+        using (var setup = new Mutex(initiallyOwned: false, ExeReplacement.SetupMutexName))
+        {
+            Assert.False(ExeReplacement.TryRemoveLeftovers(Exe));
+            Assert.True(File.Exists(heldAside));
+        }
+
+        Assert.True(ExeReplacement.TryRemoveLeftovers(Exe));
+        Assert.False(File.Exists(heldAside));
+    }
+
+    [Fact]
     public async Task A_read_only_exe_put_back_is_read_only_again()
     {
         var oldCopy = StartOldCopy();

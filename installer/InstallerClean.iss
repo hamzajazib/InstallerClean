@@ -32,6 +32,14 @@
 ; InstanceLock.Name in src/InstallerClean.Core/Services/InstanceLock.cs, and
 ; scripts/check-instance-lock-name.mjs holds the two together.
 #define AppMutexName "Global\InstallerClean_SingleInstance"
+; The mutex Setup holds while it runs, named by SetupMutex. It matches
+; ExeReplacement.SetupMutexName in src/InstallerClean.Core/Services/ExeReplacement.cs,
+; which leaves the files [Code] holds aside alone while Setup runs, and
+; scripts/check-setup-held-copies.mjs holds the two together.
+#define SetupMutexName "Global\InstallerClean_Setup"
+; What [Code] adds to the name of each file it holds aside while Setup writes.
+; It matches ExeReplacement.SetupHeldSuffix, and the same check holds them together.
+#define HeldSuffix ".setup-old"
 AppId=InstallerClean
 AppName=InstallerClean
 AppVersion={#AppVersion}
@@ -46,10 +54,13 @@ AppVersion={#AppVersion}
 ; directive.
 AppVerName=InstallerClean {#AppVersion}
 ; Setup pauses with a "close the running app" prompt while the mutex's name can
-; be opened, which it can while InstallerClean.exe or installerclean-cli.exe has it
-; open, held or not. Started by an update, from the window or the command line,
-; Setup first waits for the app to close (InitializeSetup below).
+; be opened, which it can while the window or a command-line Delete or Move has it
+; open, held or not. A command-line scan never opens it, so Setup can meet one
+; running from {app}; [Code] holds each file aside before it is written for that
+; reason (CurStepChanged below). Started by an update, from the window or the
+; command line, Setup first waits for the app to close (InitializeSetup below).
 AppMutex={#AppMutexName}
+SetupMutex={#SetupMutexName}
 ; %LOCALAPPDATA%\InstallerClean\ user data (settings.json,
 ; last-run.json, settings.json.bad on a corrupt-and-recovered run,
 ; crash.log, crash.log.old once the log has rotated) survives
@@ -165,6 +176,12 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreve
 ; the same reason.
 Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
 
+[UninstallDelete]
+; A file [Code] held aside and could not delete afterwards, its program still
+; running then.
+Type: files; Name: "{app}\*{#HeldSuffix}"
+Type: files; Name: "{app}\*{#HeldSuffix}-*"
+
 [Icons]
 Name: "{group}\InstallerClean"; Filename: "{app}\InstallerClean.exe"; IconFilename: "{app}\InstallerClean.exe"
 Name: "{group}\{cm:UninstallApp}"; Filename: "{uninstallexe}"
@@ -231,4 +248,130 @@ begin
   end;
   if Waited > 0 then
     Log(Format('Waited %d ms for InstallerClean to close.', [Waited]));
+end;
+
+// Before any file is written, each file [Files] writes to {app} is renamed aside, and
+// Setup writes every one as new. Inno Setup replaces a file in place by deleting it and
+// moving its own copy in, and Windows refuses to delete a running program, such as a
+// command-line scan, which holds no mutex; it allows renaming one. A failed setup
+// undoes only what it added, so a file it had replaced in place would stay the newer
+// version beside the older ones; a file renamed aside is moved back instead. Where the
+// install then fails, Setup deletes what it wrote and DeinitializeSetup moves each file
+// back; where it completes, the files held aside are deleted, and one still running is
+// deleted at the next start of the copy at that path, or by the uninstaller.
+// HoldAside is called once for each [Files] destination in {app}, and
+// scripts/check-setup-held-copies.mjs fails where one is missing.
+var
+  HeldFrom: array of String;
+  HeldAt: array of String;
+  Installed: Boolean;
+
+// The Nth name a file at Path can be held aside under.
+function HeldName(const Path: String; N: Integer): String;
+begin
+  if N = 0 then
+    Result := Path + '{#HeldSuffix}'
+  else
+    Result := Path + '{#HeldSuffix}-' + IntToStr(N);
+end;
+
+// The first held name for Path with nothing at it, or '' where all are taken. A name
+// already in use, left by an earlier setup, is never reused: the copy at the path may
+// be deleting it as it starts, and a file held aside under it would go with it.
+function FreeHeldName(const Path: String): String;
+var
+  N: Integer;
+begin
+  Result := '';
+  for N := 0 to 99 do
+    if not FileOrDirExists(HeldName(Path, N)) then
+    begin
+      Result := HeldName(Path, N);
+      Exit;
+    end;
+end;
+
+// Renames the file Name in {app} aside, where there is one. Answers False where it is
+// there and could not be renamed.
+function HoldAside(const Name: String): Boolean;
+var
+  Path, Held: String;
+  I: Integer;
+begin
+  Result := True;
+  Path := ExpandConstant('{app}\') + Name;
+  if not FileExists(Path) then Exit;
+  Held := FreeHeldName(Path);
+  if Held = '' then
+  begin
+    Log(Format('No free name to hold %s aside under.', [Path]));
+    Result := False;
+    Exit;
+  end;
+  if not RenameFile(Path, Held) then
+  begin
+    Log(Format('Could not rename %s to %s: %s', [Path, Held, SysErrorMessage(DLLGetLastError)]));
+    Result := False;
+    Exit;
+  end;
+  Log(Format('Held %s aside as %s.', [Path, Held]));
+  I := GetArrayLength(HeldFrom);
+  SetArrayLength(HeldFrom, I + 1);
+  SetArrayLength(HeldAt, I + 1);
+  HeldFrom[I] := Path;
+  HeldAt[I] := Held;
+end;
+
+// Moves each file held aside back to its name, deleting whatever Setup left there.
+// Every failure is written to the setup log.
+procedure PutHeldBack;
+var
+  I: Integer;
+begin
+  for I := GetArrayLength(HeldAt) - 1 downto 0 do
+  begin
+    if FileExists(HeldFrom[I]) and not DeleteFile(HeldFrom[I]) then
+      Log(Format('Could not delete %s to put the earlier file back: %s. The earlier file is left as %s.',
+        [HeldFrom[I], SysErrorMessage(DLLGetLastError), HeldAt[I]]))
+    else if RenameFile(HeldAt[I], HeldFrom[I]) then
+      Log(Format('Put %s back as %s.', [HeldAt[I], HeldFrom[I]]))
+    else
+      Log(Format('Could not rename %s back to %s: %s. The earlier file is left as %s.',
+        [HeldAt[I], HeldFrom[I], SysErrorMessage(DLLGetLastError), HeldAt[I]]));
+  end;
+  SetArrayLength(HeldFrom, 0);
+  SetArrayLength(HeldAt, 0);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  I: Integer;
+  Held: Boolean;
+begin
+  if CurStep = ssInstall then
+  begin
+    Held := HoldAside('InstallerClean.exe');
+    if Held then Held := HoldAside('installerclean-cli.exe');
+    if Held then Held := HoldAside('LICENSE.txt');
+    if Held then Held := HoldAside('THIRD-PARTY-NOTICES.txt');
+    if not Held then
+    begin
+      // Nothing has been written yet, so putting back what moved leaves {app} as it was.
+      PutHeldBack;
+      Abort;
+    end;
+  end
+  else if CurStep = ssPostInstall then
+  begin
+    Installed := True;
+    for I := 0 to GetArrayLength(HeldAt) - 1 do
+      if not DeleteFile(HeldAt[I]) then
+        Log(Format('Could not delete %s: %s. It is left for the next start.', [HeldAt[I], SysErrorMessage(DLLGetLastError)]));
+  end;
+end;
+
+// Called however Setup ends, after a failed install has been rolled back.
+procedure DeinitializeSetup;
+begin
+  if not Installed then PutHeldBack;
 end;

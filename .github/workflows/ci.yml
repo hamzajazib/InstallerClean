@@ -113,6 +113,13 @@ jobs:
         if: success() || failure()
         run: node scripts/check-setup-switches.mjs
 
+      # The setup renames each file it writes to {app} aside first and puts it back where
+      # the install fails, and the app deletes what it held aside at the next start, so
+      # the [Files] list, the HoldAside calls and the names in C# are held together here.
+      - name: Check the setup holds aside every file it writes
+        if: success() || failure()
+        run: node scripts/check-setup-held-copies.mjs
+
       # Two guards read built files, so neither can be picked up with the
       # check-*.mjs glob that runs before the build. Each is invoked by name
       # instead, the artefact guard in both workflows and the native-imports

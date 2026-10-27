@@ -50,6 +50,20 @@ internal static class ExeReplacement
     public const string LockSuffix = ".updating";
 
     /// <summary>
+    /// What the setup adds to the name of each file it renames aside before it writes
+    /// (installer/InstallerClean.iss, HeldSuffix), followed by nothing or by a hyphen and
+    /// a number where that name was taken.
+    /// </summary>
+    public const string SetupHeldSuffix = ".setup-old";
+
+    /// <summary>
+    /// The mutex the setup holds while it runs (installer/InstallerClean.iss,
+    /// SetupMutexName). A file the setup has held aside is its earlier version, which the
+    /// setup moves back where the install fails, so none is deleted while this is open.
+    /// </summary>
+    public const string SetupMutexName = @"Global\InstallerClean_Setup";
+
+    /// <summary>
     /// How long the copy is waited for before crash.log says the replace is still waiting
     /// for it to close. The wait goes on after that.
     /// </summary>
@@ -687,11 +701,13 @@ internal static class ExeReplacement
     /// <summary>
     /// Deletes what a replace left beside <paramref name="exePath"/>: the newer version that
     /// waited there and the older version's second name, each only where it is a plain file,
-    /// and only while a file is at the path. Where any of those or the file a replace holds
+    /// and only while a file is at the path; and each earlier version of the exe the setup
+    /// held aside (<see cref="SetupHeldSuffix"/>), which is left while the setup runs
+    /// (<see cref="SetupMutexName"/>). Where any of those or the file a replace holds
     /// (<see cref="LockSuffix"/>) is beside the exe, it holds that file while it deletes, so
     /// it runs only where no replace of the exe is running, and no replace starts until it
-    /// is done. It tries once, so a caller that is to ride out a replace's hold tries again.
-    /// Answers whether nothing is left. Never throws.
+    /// is done. It tries once, so a caller that is to ride out a replace's hold or the
+    /// setup tries again. Answers whether nothing is left. Never throws.
     /// </summary>
     public static bool TryRemoveLeftovers(string exePath) => TryRemoveLeftovers(exePath, whileHeld: null);
 
@@ -706,7 +722,13 @@ internal static class ExeReplacement
             if (!File.Exists(exePath)) return false;
             var replacing = exePath + ReplacingSuffix;
             var backup = exePath + BackupSuffix;
-            if (!File.Exists(replacing) && !File.Exists(backup) && !File.Exists(exePath + LockSuffix)) return true;
+            // Listed before the setup's mutex is asked: a setup that held a file aside
+            // before the list was taken is either still running, and seen, or has ended.
+            var setupHeld = SetupHeldCopies(exePath);
+            var setupRunning = setupHeld.Count > 0 && SetupMayBeRunning();
+            if (setupRunning) setupHeld = [];
+            if (!File.Exists(replacing) && !File.Exists(backup) && !File.Exists(exePath + LockSuffix) && setupHeld.Count == 0)
+                return !setupRunning;
             using var held = TryHold(exePath, TimeSpan.Zero, out _);
             if (held is null) return false;
             whileHeld?.Invoke();
@@ -714,7 +736,8 @@ internal static class ExeReplacement
             // that cannot delete it while leaving the read-only attribute alone clears that
             // attribute for the delete, so it is put back on the exe here.
             var readOnly = TryReadAttributes(exePath, out var attributes, out _) && (attributes & FileAttributes.ReadOnly) != 0;
-            var removed = TryDeletePlainFile(replacing) & TryDeletePlainFile(backup);
+            var removed = TryDeletePlainFile(replacing) & TryDeletePlainFile(backup) & !setupRunning;
+            foreach (var setupCopy in setupHeld) removed &= TryDeletePlainFile(setupCopy);
             if (readOnly && TryReadAttributes(exePath, out attributes, out _) && (attributes & FileAttributes.ReadOnly) == 0)
                 PutReadOnlyBack(exePath);
             return removed;
@@ -723,6 +746,45 @@ internal static class ExeReplacement
         {
             CrashLog.TryWrite(ex);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// The names beside <paramref name="exePath"/> the setup holds an earlier version of it
+    /// under: the exe's name with <see cref="SetupHeldSuffix"/> on the end, alone or followed
+    /// by a hyphen and a number.
+    /// </summary>
+    internal static List<string> SetupHeldCopies(string exePath)
+    {
+        var folder = Path.GetDirectoryName(exePath)!;
+        var stem = Path.GetFileName(exePath) + SetupHeldSuffix;
+        var found = new List<string>();
+        foreach (var path in Directory.EnumerateFiles(folder, stem + "*"))
+        {
+            var rest = Path.GetFileName(path)[stem.Length..];
+            if (rest.Length == 0 || (rest.Length > 1 && rest[0] == '-' && rest[1..].All(char.IsAsciiDigit)))
+                found.Add(path);
+        }
+        return found;
+    }
+
+    /// <summary>
+    /// Whether the setup may be running: its mutex (<see cref="SetupMutexName"/>) exists, or
+    /// the look failed. Never throws.
+    /// </summary>
+    private static bool SetupMayBeRunning()
+    {
+        try
+        {
+            if (!Mutex.TryOpenExisting(SetupMutexName, out var mutex)) return false;
+            mutex.Dispose();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // A mutex this process may not open still exists.
+            if (ex is not UnauthorizedAccessException) CrashLog.TryWrite(ex);
+            return true;
         }
     }
 
