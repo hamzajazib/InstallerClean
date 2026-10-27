@@ -32,14 +32,15 @@
 ; InstanceLock.Name in src/InstallerClean.Core/Services/InstanceLock.cs, and
 ; scripts/check-instance-lock-name.mjs holds the two together.
 #define AppMutexName "Global\InstallerClean_SingleInstance"
-; The mutex Setup holds while it runs, named by SetupMutex. It matches
-; ExeReplacement.SetupMutexName in src/InstallerClean.Core/Services/ExeReplacement.cs,
-; which leaves the files [Code] holds aside alone while Setup runs, and
-; scripts/check-setup-held-copies.mjs holds the two together.
-#define SetupMutexName "Global\InstallerClean_Setup"
-; What [Code] adds to the name of each file it holds aside while Setup writes.
-; It matches ExeReplacement.SetupHeldSuffix, and the same check holds them together.
+; What [Code] adds to the name of each file it holds aside while Setup writes. Only
+; Setup moves a file under this name back, and only the uninstaller deletes one.
 #define HeldSuffix ".setup-old"
+; What [Code] renames a held file to once the install has completed, where the file
+; is still running and cannot be deleted. It matches ExeReplacement.SetupDoneSuffix in
+; src/InstallerClean.Core/Services/ExeReplacement.cs: the window and the command line
+; delete a file under this name beside their own exe as they start, and
+; scripts/check-setup-held-copies.mjs holds the two together.
+#define DoneSuffix ".setup-done"
 AppId=InstallerClean
 AppName=InstallerClean
 AppVersion={#AppVersion}
@@ -60,7 +61,6 @@ AppVerName=InstallerClean {#AppVersion}
 ; reason (HoldAllAside below). Started by an update, from the window or the
 ; command line, Setup first waits for the app to close (InitializeSetup below).
 AppMutex={#AppMutexName}
-SetupMutex={#SetupMutexName}
 ; %LOCALAPPDATA%\InstallerClean\ user data (settings.json,
 ; last-run.json, settings.json.bad on a corrupt-and-recovered run,
 ; crash.log, crash.log.old once the log has rotated) survives
@@ -177,10 +177,12 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreve
 Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
 
 [UninstallDelete]
-; A file [Code] held aside and could not delete afterwards, its program still
-; running then.
+; A file [Code] held aside and left: one still running when the install
+; completed, or one a failed install could not move back.
 Type: files; Name: "{app}\*{#HeldSuffix}"
 Type: files; Name: "{app}\*{#HeldSuffix}-*"
+Type: files; Name: "{app}\*{#DoneSuffix}"
+Type: files; Name: "{app}\*{#DoneSuffix}-*"
 
 [Icons]
 Name: "{group}\InstallerClean"; Filename: "{app}\InstallerClean.exe"; IconFilename: "{app}\InstallerClean.exe"
@@ -259,8 +261,8 @@ end;
 // instead. Where one file cannot be renamed, the others are moved back and Setup stops
 // before writing anything. Where the install fails, Setup deletes what it wrote and
 // DeinitializeSetup moves each file back; where it completes, the files held aside
-// are deleted, and one still running is deleted at the next start of the copy at that
-// path, or by the uninstaller. scripts/check-setup-held-copies.mjs fails where
+// are deleted, and one still running is renamed to a done name, which the copy at the
+// path deletes at its next start, as does the uninstaller. scripts/check-setup-held-copies.mjs fails where
 // HoldAllAside leaves out a file [Files] writes to {app}.
 var
   HeldFrom: array of String;
@@ -280,36 +282,36 @@ const
   ERROR_SHARING_VIOLATION = 32;
   ERROR_ALREADY_EXISTS = 183;
 
-// The Nth name a file at Path can be held aside under.
-function HeldName(const Path: String; N: Integer): String;
+// The Nth name with Suffix a file at Path can be renamed to.
+function AsideName(const Path, Suffix: String; N: Integer): String;
 begin
   if N = 0 then
-    Result := Path + '{#HeldSuffix}'
+    Result := Path + Suffix
   else
-    Result := Path + '{#HeldSuffix}-' + IntToStr(N);
+    Result := Path + Suffix + '-' + IntToStr(N);
 end;
 
-// The first held name for Path with nothing at it, or '' where all are taken. A name
-// already in use, left by an earlier setup, is never reused: the copy at the path may
-// be deleting it as it starts, and a file held aside under it would go with it.
-function FreeHeldName(const Path: String): String;
+// The first name with Suffix for Path with nothing at it, or '' where all are taken. A
+// held name already in use can be the only copy of an earlier file, left by a setup
+// that could not move it back, so a name is never reused.
+function FreeAsideName(const Path, Suffix: String): String;
 var
   N: Integer;
 begin
   Result := '';
   for N := 0 to 99 do
-    if not FileOrDirExists(HeldName(Path, N)) then
+    if not FileOrDirExists(AsideName(Path, Suffix, N)) then
     begin
-      Result := HeldName(Path, N);
+      Result := AsideName(Path, Suffix, N);
       Exit;
     end;
 end;
 
-// Renames Path to a free held name and answers it, or '' with the reason in the setup
-// log. A rename refused while another program has the file open without sharing its
+// Renames Path to a free name with Suffix and answers it, or '' with the reason in the
+// setup log. A rename refused while another program has the file open without sharing its
 // delete, as an antivirus can, is tried again for up to 5 seconds; a held name taken
 // meanwhile is passed over for the next free one.
-function RenameAside(const Path: String): String;
+function RenameAside(const Path, Suffix: String): String;
 var
   Held: String;
   Tried, Error: Integer;
@@ -318,10 +320,10 @@ begin
   Tried := 0;
   while True do
   begin
-    Held := FreeHeldName(Path);
+    Held := FreeAsideName(Path, Suffix);
     if Held = '' then
     begin
-      Log(Format('No free name to hold %s aside under.', [Path]));
+      Log(Format('No free name ending %s for %s.', [Suffix, Path]));
       Exit;
     end;
     if MoveFileW(Path, Held) then
@@ -351,7 +353,7 @@ begin
   Result := True;
   Path := ExpandConstant('{app}\') + Name;
   if not FileExists(Path) then Exit;
-  Held := RenameAside(Path);
+  Held := RenameAside(Path, '{#HeldSuffix}');
   if Held = '' then
   begin
     HeldFailed := Path;
@@ -388,7 +390,7 @@ begin
     if FileExists(HeldFrom[I]) and not DeleteFileW(HeldFrom[I]) then
     begin
       Error := DLLGetLastError;
-      Left := RenameAside(HeldFrom[I]);
+      Left := RenameAside(HeldFrom[I], '{#DoneSuffix}');
       if Left = '' then
       begin
         Log(Format('Could not delete %s: %s. The earlier file is left as %s.',
@@ -410,6 +412,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   I: Integer;
+  Done: String;
 begin
   if CurStep = ssInstall then
   begin
@@ -436,7 +439,11 @@ begin
           Log(Format('Could not rename %s back to %s: %s.', [HeldAt[I], HeldFrom[I], SysErrorMessage(DLLGetLastError)]));
       end
       else if not DeleteFileW(HeldAt[I]) then
-        Log(Format('Could not delete %s: %s. It is left for the next start.', [HeldAt[I], SysErrorMessage(DLLGetLastError)]));
+      begin
+        Log(Format('Could not delete %s: %s.', [HeldAt[I], SysErrorMessage(DLLGetLastError)]));
+        Done := RenameAside(HeldAt[I], '{#DoneSuffix}');
+        if Done <> '' then Log(Format('Renamed %s to %s, for the next start.', [HeldAt[I], Done]));
+      end;
   end;
 end;
 
