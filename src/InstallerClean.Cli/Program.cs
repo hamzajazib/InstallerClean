@@ -366,8 +366,9 @@ internal static class Program
                 () => UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot));
         }
 
+        CommandLineUpdateResult.CarriedOn? updateNotMade = null;
         if (!cts.IsCancellationRequested
-            && RunUpdate(arg, args, invocation, updateHost, cts.Token) is int updateExitCode)
+            && RunUpdate(arg, args, invocation, updateHost, cts.Token, out updateNotMade) is int updateExitCode)
             return updateExitCode;
 
         // A Ctrl+C before the update, one the update did not end the run on, or one that
@@ -428,6 +429,12 @@ internal static class Program
                 return ExitTransient;
             }
         }
+
+        // The run goes on from here, the mutex taken where it takes one, so where the update
+        // itself failed or InstallerClean was in use it says it runs with this version. A run
+        // the take turned away has said so above.
+        if (updateNotMade is { SaysRunningInstead: true, FromVersion: { } runningVersion } && !cts.IsCancellationRequested)
+            updateHost.WriteLine(string.Format(Strings.Cli_UpdateRunningInstead, arg, runningVersion));
 
         var report = new RunReport(ConsoleCanAsk());
         int exitCode;
@@ -535,8 +542,10 @@ internal static class Program
     /// at its path.
     /// </summary>
     private static int? RunUpdate(
-        string arg, string[] args, CliInvocation invocation, ConsoleUpdateHost host, CancellationToken token)
+        string arg, string[] args, CliInvocation invocation, ConsoleUpdateHost host, CancellationToken token,
+        out CommandLineUpdateResult.CarriedOn? notMade)
     {
+        notMade = null;
         CommandLineUpdateResult result;
         try
         {
@@ -566,7 +575,9 @@ internal static class Program
         var cancelled = token.IsCancellationRequested;
         if (cancelled && result is CommandLineUpdateResult.HandedOver { ExitCode: CommandLineUpdate.ControlCExit })
             host.SayHeldBackCancelling();
-        return ConcludeUpdate(result, arg, args, cancelled);
+        if (!cancelled && result is CommandLineUpdateResult.CarriedOn { NotMade: not null, FromVersion: not null, ToVersion: not null } carried)
+            notMade = carried;
+        return ConcludeUpdate(result, arg, cancelled);
     }
 
     /// <summary>
@@ -598,8 +609,7 @@ internal static class Program
     /// written the notice saying why the newer version was not run.
     /// <paramref name="cancelled"/> is whether Ctrl+C had come when the update returned.
     /// </summary>
-    internal static int? ConcludeUpdate(
-        CommandLineUpdateResult result, string arg, IReadOnlyList<string> args, bool cancelled)
+    internal static int? ConcludeUpdate(CommandLineUpdateResult result, string arg, bool cancelled)
     {
         switch (result)
         {
@@ -624,13 +634,15 @@ internal static class Program
                     () => UpdateFailedThenCancelledEventLogLine(arg, failed.FromVersion, failed.ToVersion, failed.NotMade));
             case CommandLineUpdateResult.CarriedOn { NotMade: { } notMade, FromVersion: { } from, ToVersion: { } to }
                 when cancelled:
-                // Ctrl+C came after the run said it goes on with this version, and the run stops
-                // here before the scan, so its one entry is the one above.
+                // Ctrl+C came as the update returned, and the run stops here before the scan,
+                // so its one entry is the one above.
                 return ReportCancelled(CliEventClass.UpdateFailedNotice,
                     () => UpdateFailedThenCancelledEventLogLine(arg, from, to, notMade));
             case CommandLineUpdateResult.CarriedOn { NotMade: { } notMade, FromVersion: { } from, ToVersion: { } to }:
+                // The notice says why the update was not made and nothing of what then runs,
+                // which the run's own summary says.
                 MachineContract.WriteEventLog(UpdateNotMadeClass(notMade),
-                    () => UpdateFailedEventLogLine(arg, from, to, notMade, args));
+                    () => UpdateFailedEventLogLine(arg, from, to, notMade));
                 return null;
             default:
                 return null;
@@ -668,9 +680,8 @@ internal static class Program
     internal static bool ConsoleCanAsk() => ConsoleIsWatched() && !Console.IsInputRedirected;
 
     /// <summary>
-    /// The Event ID 3005 line: this run updated itself from <paramref name="fromVersion"/>
-    /// to <paramref name="toVersion"/> and started the newer version with
-    /// <paramref name="arguments"/>.
+    /// The Event ID 3005 line: this run, at <paramref name="fromVersion"/>, found
+    /// <paramref name="toVersion"/> and is running <paramref name="arguments"/> with it.
     /// </summary>
     /// <remarks>
     /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
@@ -696,8 +707,7 @@ internal static class Program
     /// <summary>
     /// The Event ID 3006 line: this run could not update itself from
     /// <paramref name="fromVersion"/> to <paramref name="toVersion"/>, for the reason
-    /// <paramref name="notMade"/> gives, and ran <paramref name="arguments"/> with
-    /// <paramref name="fromVersion"/>.
+    /// <paramref name="notMade"/> gives.
     /// </summary>
     /// <remarks>
     /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
@@ -705,10 +715,8 @@ internal static class Program
     /// culture anywhere else.
     /// </remarks>
     internal static string UpdateFailedEventLogLine(
-        string arg, string fromVersion, string toVersion, UpdateNotMade notMade,
-        IReadOnlyList<string> arguments) =>
-        string.Format(UpdateFailedFormat(notMade, thenCancelled: false),
-            arg, fromVersion, toVersion, string.Join(' ', arguments));
+        string arg, string fromVersion, string toVersion, UpdateNotMade notMade) =>
+        string.Format(UpdateFailedFormat(notMade, thenCancelled: false), arg, fromVersion, toVersion);
 
     private static string UpdateFailedFormat(UpdateNotMade notMade, bool thenCancelled) => notMade switch
     {

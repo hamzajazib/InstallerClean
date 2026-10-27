@@ -34,42 +34,42 @@ public class CliUpdateNoticeTests
     }
 
     [Fact]
-    public void The_update_that_went_in_names_both_versions_and_what_the_newer_one_ran()
+    public void The_newer_version_started_names_both_versions_and_what_it_was_started_to_run()
     {
         var line = BuiltUnderItalian(() => MachineContract.English(
             () => Program.UpdatedEventLogLine("/d", "3.4.0", "3.5.0", ["/s"])));
 
-        Assert.Equal("/d mode: InstallerClean updated itself from 3.4.0 to 3.5.0 and ran /s with it.", line);
+        Assert.Equal("/d mode: InstallerClean 3.4.0 found 3.5.0 and is running /s with it.", line);
     }
 
     [Fact]
-    public void The_update_that_went_in_names_a_path_it_was_given_as_given()
+    public void The_newer_version_started_names_a_path_it_was_given_as_given()
     {
         var line = BuiltUnderItalian(() => MachineContract.English(
             () => Program.UpdatedEventLogLine("/m", "3.4.0", "3.5.0", ["/m", @"D:\Backup"])));
 
-        Assert.Equal(@"/m mode: InstallerClean updated itself from 3.4.0 to 3.5.0 and ran /m D:\Backup with it.", line);
+        Assert.Equal(@"/m mode: InstallerClean 3.4.0 found 3.5.0 and is running /m D:\Backup with it.", line);
     }
 
     [Theory]
     [InlineData(UpdateNotMade.DownloadFailed,
-        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the download failed) and ran /m D:\Backup with 3.4.0.")]
+        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the download failed).")]
     [InlineData(UpdateNotMade.NotRun,
-        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer version could not be run) and ran /m D:\Backup with 3.4.0.")]
+        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer version could not be run).")]
     [InlineData(UpdateNotMade.InUse,
-        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (InstallerClean was in use) and ran /m D:\Backup with 3.4.0.")]
+        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (InstallerClean was in use).")]
     [InlineData(UpdateNotMade.CopyCannotTell,
-        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (it can't tell whether its setup installed it) and ran /m D:\Backup with 3.4.0.")]
+        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (it can't tell whether its setup installed it).")]
     [InlineData(UpdateNotMade.FromSource,
-        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (it was built from source) and ran /m D:\Backup with 3.4.0.")]
+        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (it was built from source).")]
     [InlineData(UpdateNotMade.NeedsNetFramework48,
-        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer release needs .NET Framework 4.8) and ran /m D:\Backup with 3.4.0.")]
+        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer release needs .NET Framework 4.8).")]
     [InlineData(UpdateNotMade.CannotInstallAutomatically,
-        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer release can't be installed automatically) and ran /m D:\Backup with 3.4.0.")]
-    public void The_update_not_made_says_why_and_what_ran(UpdateNotMade notMade, string expected)
+        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer release can't be installed automatically).")]
+    public void The_update_not_made_says_why(UpdateNotMade notMade, string expected)
     {
         var line = BuiltUnderItalian(() => MachineContract.English(
-            () => Program.UpdateFailedEventLogLine("/m", "3.4.0", "3.5.0", notMade, ["/m", @"D:\Backup"])));
+            () => Program.UpdateFailedEventLogLine("/m", "3.4.0", "3.5.0", notMade)));
 
         Assert.Equal(expected, line);
     }

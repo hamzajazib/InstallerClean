@@ -120,20 +120,21 @@ public class CliUpdateConclusionTests
 
     [Theory]
     [InlineData(UpdateNotMade.DownloadFailed,
-        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the download failed) and ran /s with 3.4.0.")]
+        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the download failed).")]
     [InlineData(UpdateNotMade.NotRun,
-        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer version could not be run) and ran /s with 3.4.0.")]
+        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer version could not be run).")]
     [InlineData(UpdateNotMade.InUse,
-        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (InstallerClean was in use) and ran /s with 3.4.0.")]
+        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (InstallerClean was in use).")]
     [InlineData(UpdateNotMade.CopyCannotTell,
-        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (it can't tell whether its setup installed it) and ran /s with 3.4.0.")]
+        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (it can't tell whether its setup installed it).")]
     [InlineData(UpdateNotMade.FromSource,
-        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (it was built from source) and ran /s with 3.4.0.")]
+        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (it was built from source).")]
     [InlineData(UpdateNotMade.NeedsNetFramework48,
-        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer release needs .NET Framework 4.8) and ran /s with 3.4.0.")]
+        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer release needs .NET Framework 4.8).")]
     [InlineData(UpdateNotMade.CannotInstallAutomatically,
-        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer release can't be installed automatically) and ran /s with 3.4.0.")]
-    public void An_update_that_was_not_made_writes_the_3006_and_the_run_goes_on(UpdateNotMade notMade, string expected)
+        "/s mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the newer release can't be installed automatically).")]
+    public void An_update_that_was_not_made_writes_the_3006_at_once_and_says_nothing_of_what_runs(
+        UpdateNotMade notMade, string expected)
     {
         var run = Conclude(new CommandLineUpdateResult.CarriedOn(notMade, From, To), cancelled: false);
 
@@ -162,7 +163,7 @@ public class CliUpdateConclusionTests
     {
         var reasons = Enum.GetValues<UpdateNotMade>();
         var goesOn = reasons
-            .Select(r => MachineContract.English(() => Program.UpdateFailedEventLogLine("/s", From, To, r, ["/s"])))
+            .Select(r => MachineContract.English(() => Program.UpdateFailedEventLogLine("/s", From, To, r)))
             .ToHashSet();
         var cancelled = reasons
             .Select(r => MachineContract.English(() => Program.UpdateFailedThenCancelledEventLogLine("/s", From, To, r)))
@@ -230,16 +231,11 @@ public class CliUpdateConclusionTests
         Assert.Equal(1, run.Lines.Count(line => line == Strings.Cli_EventLogUnavailable));
     }
 
-    private sealed record Concluded(
-        int? ExitCode, string[] Lines, IReadOnlyList<(CliEventClass Class, string Text)> Entries);
-
-    /// <param name="handOverWritten">
-    /// Whether the 3005 the host writes as it hands over is written first, as it is on a
-    /// real run that ends in <see cref="CommandLineUpdateResult.HandedOver"/>.
-    /// </param>
-    private static Concluded Conclude(
-        CommandLineUpdateResult result, bool cancelled, string arg = "/s", bool logRefuses = false,
-        bool handOverWritten = false)
+    /// <summary>
+    /// Runs <paramref name="act"/> with the console and the Application log captured,
+    /// the log refusing every entry where <paramref name="logRefuses"/> is set.
+    /// </summary>
+    private static Concluded Captured(Func<int?> act, bool logRefuses)
     {
         var original = Console.Out;
         using var console = new StringWriter();
@@ -249,9 +245,7 @@ public class CliUpdateConclusionTests
             return CliRunFixtures.WithTheLogRefusing(_ => logRefuses, () =>
             {
                 EventLogRecorder.Clear();
-                if (handOverWritten)
-                    MachineContract.WriteEventLog(CliEventClass.UpdatedNotice, () => "the hand-over's entry");
-                var exitCode = Program.ConcludeUpdate(result, arg, [arg], cancelled);
+                var exitCode = act();
                 var lines = console.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
                 return Task.FromResult(new Concluded(exitCode, lines, EventLogRecorder.Entries));
             }).GetAwaiter().GetResult();
@@ -261,4 +255,21 @@ public class CliUpdateConclusionTests
             Console.SetOut(original);
         }
     }
+
+    private sealed record Concluded(
+        int? ExitCode, string[] Lines, IReadOnlyList<(CliEventClass Class, string Text)> Entries);
+
+    /// <param name="handOverWritten">
+    /// Whether the 3005 the host writes as it hands over is written first, as it is on a
+    /// real run that ends in <see cref="CommandLineUpdateResult.HandedOver"/>.
+    /// </param>
+    private static Concluded Conclude(
+        CommandLineUpdateResult result, bool cancelled, string arg = "/s", bool logRefuses = false,
+        bool handOverWritten = false) =>
+        Captured(() =>
+        {
+            if (handOverWritten)
+                MachineContract.WriteEventLog(CliEventClass.UpdatedNotice, () => "the hand-over's entry");
+            return Program.ConcludeUpdate(result, arg, cancelled);
+        }, logRefuses);
 }

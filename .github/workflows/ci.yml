@@ -2095,7 +2095,7 @@ jobs:
   #   newer version running the command, where it said it had started; the newer
   #   version not run and the command run with the old version, where it did not;
   # - the Application log, read for up to 5 s after each run for the entries made since
-  #   it started, does not hold one 3005 naming the update to 9.9.9 where the newer
+  #   it started, does not hold one 3005 naming 9.9.9 where the newer
   #   version started, or one 3006 naming the newer version not run where it did not, or
   #   holds the other, or holds a 3007, which says a replace failed. The app registers
   #   its own event source, as it does on a PC. Where an entry is missing the step prints
@@ -2420,7 +2420,7 @@ jobs:
           $runningInstead = (Line 'Cli.UpdateRunningInstead') -f '/s', $old
           $endRefused = 'Windows refused the request to end the newer version'
           $notEnded = 'The newer version had not ended a few seconds after'
-          $updatedLike = "*updated itself from $old to $latest and ran /s with it*"
+          $updatedLike = '*' + ((Line 'Cli.EventLogUpdated') -f '/s', $old, $latest, '/s') + '*'
 
           # Each crash.log line the checks look for, present or absent, is text the code
           # under src/ still writes, so an absence cannot pass on a line nothing writes.
@@ -2430,7 +2430,7 @@ jobs:
                             'The newer version did not say it had started within ', $endRefused, $notEnded) {
             if (-not $source.Contains($line)) { throw "No C# file under src/ holds '$line', so the crash.log check on it would read nothing." }
           }
-          $failedLike = "*could not update itself from $old to $latest (the newer version could not be run)*"
+          $failedLike = '*' + ((Line 'Cli.EventLogUpdateNotRun') -f '/s', $old, $latest) + '*'
 
           $update = Update 'signals' $signals ''
           Expect-Printed $update @($available, $downloading, $runningNewer) @($notRun, $runningInstead)
@@ -2459,7 +2459,7 @@ jobs:
 
           $cannotInstall = (Line 'UpdateNotice.CannotInstallAutomatically') -f $latest
           $releasePage = (Line 'Cli.UpdateDownloadLink') -f (Line 'UpdateNotice.Download'), "https://github.com/no-faff/InstallerClean/releases/tag/v$latest"
-          $refusedLike = "*could not update itself from $old to $latest (the newer release can't be installed automatically)*"
+          $refusedLike = '*' + ((Line 'Cli.EventLogUpdateCannotInstall') -f '/s', $old, $latest) + '*'
           $refusals = [ordered]@{
             'refused by its schema'      = '{"schema": 2, "downloads": {"cli": {"requires": []}}}'
             'refused by its requirement' = '{"schema": 1, "downloads": {"cli": {"requires": ["dotnet-desktop-99"]}}}'

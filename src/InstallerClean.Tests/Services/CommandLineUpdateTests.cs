@@ -48,8 +48,6 @@ public sealed class CommandLineUpdateTests : IDisposable
 
     private static string Downloading => string.Format(Strings.UpdateNotice_Downloading, Latest);
 
-    private static string RunningInstead(string command) => string.Format(Strings.Cli_UpdateRunningInstead, command, Current);
-
     [Fact]
     public void No_newer_version_tries_nothing_and_says_nothing()
     {
@@ -215,15 +213,16 @@ public sealed class CommandLineUpdateTests : IDisposable
     [Theory]
     [InlineData("/d")]
     [InlineData("/m")]
-    public void A_Move_or_Delete_with_InstallerClean_in_use_runs_this_version_without_asking(string command)
+    public void A_Move_or_Delete_with_InstallerClean_in_use_says_so_and_leaves_whether_it_runs_to_the_host(string command)
     {
         var updater = new FakeUpdater();
         _host.LockAvailable = false;
 
         var result = Run(updater, canAsk: true, command: command);
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.InUse, Current, Latest), result);
-        Assert.Equal([Available, Strings.Cli_UpdateInUse, RunningInstead(command)], _host.Output);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.InUse, Current, Latest, SaysRunningInstead: true), result);
+        // Whether the run goes on is the host's to say once it knows, as the result asks.
+        Assert.Equal([Available, Strings.Cli_UpdateInUse], _host.Output);
         Assert.Equal(0, _host.Reads);
         Assert.Equal(0, updater.Prepares);
         Assert.Equal(0, _host.LockReleases);
@@ -239,11 +238,10 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(updater, canAsk: false, command: "/d");
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(expected, Current, Latest), result);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(expected, Current, Latest, SaysRunningInstead: true), result);
         Assert.Equal(
             [Available, Downloading,
-                expected == UpdateNotMade.DownloadFailed ? Strings.UpdateNotice_DownloadFailed : Strings.Cli_UpdateNotRun,
-                RunningInstead("/d")],
+                expected == UpdateNotMade.DownloadFailed ? Strings.UpdateNotice_DownloadFailed : Strings.Cli_UpdateNotRun],
             _host.Output);
         Assert.Empty(_host.NewerVersionRuns);
         Assert.Equal(1, _host.LockReleases);
@@ -276,9 +274,9 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(updater, canAsk: false, command: "/d");
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.NotRun, Current, Latest), result);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.NotRun, Current, Latest, SaysRunningInstead: true), result);
         Assert.True(updater.Undone);
-        Assert.Equal([Available, Downloading, Strings.Cli_UpdateNotRun, RunningInstead("/d")], _host.Output);
+        Assert.Equal([Available, Downloading, Strings.Cli_UpdateNotRun], _host.Output);
         Assert.Equal(1, _host.LockReleases);
     }
 
@@ -290,7 +288,7 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(updater, canAsk: false);
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.NotRun, Current, Latest), result);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.NotRun, Current, Latest, SaysRunningInstead: true), result);
         Assert.True(updater.Undone);
     }
 
@@ -344,7 +342,6 @@ public sealed class CommandLineUpdateTests : IDisposable
         var result = Run(updater, canAsk: false, token: cancel.Token);
 
         Assert.Equal(new CommandLineUpdateResult.FailedThenCancelled(UpdateNotMade.DownloadFailed, Current, Latest), result);
-        Assert.DoesNotContain(RunningInstead("/s"), _host.Output);
     }
 
     [Fact]

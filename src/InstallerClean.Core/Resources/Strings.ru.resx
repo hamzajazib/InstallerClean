@@ -2341,13 +2341,15 @@ InstallerClean уже был запущен от имени администра
        commands as typed and stay as written. -->
   <!-- Where a newer version is out, a Move or Delete was asked for and InstallerClean is in
        use: the window is open, or another Move or Delete is running. The update is not
-       tried, and Cli.UpdateRunningInstead follows. -->
-  <!-- After UpdateNotice.DownloadFailed, Cli.UpdateNotRun or Cli.UpdateInUse,
-       before the run goes on with the version it is. 0 = the command given, /s, /d or /m,
+       tried. Cli.UpdateRunningInstead follows where the run can then go on, and
+       Cli.MutexBlocked where it cannot. -->
+  <!-- After UpdateNotice.DownloadFailed, Cli.UpdateNotRun or Cli.UpdateInUse, once the
+       run is known to go on with the version it is: not cancelled, and for a Move or
+       Delete, able to start it. 0 = the command given, /s, /d or /m,
        as typed and left as written; 1 = the version that runs it. -->
   <!-- Where the newer version could not be run: its download not carrying its version, the
        folder it is downloaded to not made, or its start failing. Cli.UpdateRunningInstead
-       follows. -->
+       follows where the run goes on. -->
   <!-- Once the newer version has started, downloaded beside nothing else of this copy's, to
        run the command and then put itself in this copy's place. 0 = the command it runs,
        /s, /d or /m, as typed and left as written; 1 = its version. -->
@@ -2401,13 +2403,15 @@ InstallerClean уже был запущен от имени администра
        processed (a cancel during the scan, or before the first delete or
        move), so "each /s, /d or /m run writes one summary entry" holds for
        every run, not only the ones that committed work. -->
-  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed,
-       3 = the arguments the newer version was started with. Event ID 3005, a notice
-       written once the newer version has started; the newer version writes the run's
-       summary. -->
-  <!-- 0 = mode arg, 1 = the version that ran, 2 = the newer version it did not run, 3 = the
-       arguments the run was given. Event ID 3006, a notice beside the run's own summary, where
-       the run went on with the version it is. In order: the download failed; the newer version
+  <!-- 0 = mode arg, 1 = the version running, 2 = the newer version it started, 3 = what
+       that newer version was started to run: the command as given, or /s after a yes at
+       the console.
+       Event ID 3005, a notice written once the newer version has said it started; the
+       newer version writes the run's summary, and a 3007 where it could not take this
+       copy's place. -->
+  <!-- 0 = mode arg, 1 = the version running, 2 = the newer version it did not run. Event ID
+       3006, a notice written as soon as the update is known not to be made; the run's own
+       summary says what then ran. In order: the download failed; the newer version
        was downloaded and could not be run; a Move or Delete found InstallerClean in use, so the
        update was not tried; the copy cannot tell whether its setup installed it; it was built
        from source; the newer release needs .NET Framework 4.8; the

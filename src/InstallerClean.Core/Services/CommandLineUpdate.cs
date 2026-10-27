@@ -42,12 +42,18 @@ internal abstract record CommandLineUpdateResult
     private CommandLineUpdateResult() { }
 
     /// <summary>
-    /// The run goes on with the version it is. <paramref name="NotMade"/> is null where no
-    /// update was tried and none is noted: no newer version, the check failing, or a no at
-    /// the question. Otherwise it says why the newer version was not run, and the two
-    /// versions are the running one and the newer one.
+    /// The update leaves the run to the version it is, which goes on with the command where
+    /// nothing after this stops it: Ctrl+C, or for a Move or Delete, the mutex.
+    /// <paramref name="NotMade"/> is null where no update was tried and none is noted: no
+    /// newer version, the check failing, or a no at the question. Otherwise it says why the
+    /// newer version was not run, and the two versions are the running one and the newer
+    /// one. The host notes why at once. <paramref name="SaysRunningInstead"/> is whether the
+    /// host then says the run goes on with this version, once it knows it does: set where
+    /// the update itself was tried and not made, and not where the lines saying why already
+    /// point to what to do instead.
     /// </summary>
-    public sealed record CarriedOn(UpdateNotMade? NotMade, string? FromVersion, string? ToVersion)
+    public sealed record CarriedOn(
+        UpdateNotMade? NotMade, string? FromVersion, string? ToVersion, bool SaysRunningInstead = false)
         : CommandLineUpdateResult;
 
     /// <summary>
@@ -101,8 +107,9 @@ internal interface ICommandLineUpdateHost : IConsolePrompt
     /// at <paramref name="replaces"/> and then to take that copy's place
     /// (<see cref="Helpers.HandOverContract.ReplaceArguments"/>), the Ctrl+C event and
     /// <see cref="Helpers.CliContract.NoUpdateSwitch"/>. Once it has set the started event,
-    /// calls <paramref name="onStarted"/>, notes in the Application log that this run
-    /// updated itself from <paramref name="fromVersion"/> to <paramref name="toVersion"/>,
+    /// calls <paramref name="onStarted"/>, notes in the Application log that this run, at
+    /// <paramref name="fromVersion"/>, found <paramref name="toVersion"/> and is running
+    /// <paramref name="arguments"/> with it,
     /// waits for it to end and answers with its exit code. Answers null where it did not
     /// start: it ended, or did not set the event within
     /// <see cref="Helpers.HandOverContract.StartBound"/> and was ended, with nothing said and
@@ -238,7 +245,7 @@ internal sealed class CommandLineUpdate
             if (command is "/d" or "/m")
             {
                 holdsLock = _host.TryTakeInstanceLock();
-                if (!holdsLock) return CarryOn(UpdateNotMade.InUse, null, command, current, latest, token);
+                if (!holdsLock) return CarryOn(UpdateNotMade.InUse, null, current, latest, token);
             }
 
             if (canAsk)
@@ -264,8 +271,8 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
-    /// Says why a copy that cannot update itself is not updated, and runs the command with
-    /// this version. The command line is never Scoop's copy (<see cref="AppCopy.DetectRunningCommandLine"/>),
+    /// Says why a copy that cannot update itself is not updated, leaving the command to this
+    /// version. The command line is never Scoop's copy (<see cref="AppCopy.DetectRunningCommandLine"/>),
     /// so a copy that is neither undetermined nor downloaded is a build from source.
     /// </summary>
     private CommandLineUpdateResult CannotUpdateItself(string current, string latest, CancellationToken token)
@@ -286,7 +293,7 @@ internal sealed class CommandLineUpdate
         return Unchanged(notMade, current, latest, token);
     }
 
-    /// <summary>Says why the newer version's release rules this copy out, and runs the command with this version.</summary>
+    /// <summary>Says why the newer version's release rules this copy out, leaving the command to this version.</summary>
     private CommandLineUpdateResult Refused(UpdateRefusal refusal, string current, string latest, CancellationToken token)
     {
         if (refusal == UpdateRefusal.NeedsNetFramework48)
@@ -303,7 +310,7 @@ internal sealed class CommandLineUpdate
 
     /// <summary>
     /// The answer where the newer version was not tried for a reason already said, with no
-    /// further line: the command runs with this version, or nothing runs where Ctrl+C has come.
+    /// further line: the command is left to this version, or nothing runs where Ctrl+C has come.
     /// </summary>
     private static CommandLineUpdateResult Unchanged(
         UpdateNotMade notMade, string current, string latest, CancellationToken token) =>
@@ -316,13 +323,13 @@ internal sealed class CommandLineUpdate
             Strings.UpdateNotice_Download, UpdateCheckService.ReleasePageUrl(latest)));
 
     /// <summary>
-    /// Says the newer version was not run and why, writes <paramref name="failure"/> to
-    /// crash.log where there is one, and says the command runs with this version, unless
-    /// Ctrl+C has come.
+    /// Says the newer version was not run and why, and writes <paramref name="failure"/> to
+    /// crash.log where there is one. Whether the command then runs with this version is
+    /// decided by the host after this, by Ctrl+C and, for a Move or Delete, by its own take
+    /// of the mutex, so the line saying it runs is the host's to print once it does.
     /// </summary>
     private CommandLineUpdateResult CarryOn(
-        UpdateNotMade notMade, Exception? failure, string command, string current, string latest,
-        CancellationToken token)
+        UpdateNotMade notMade, Exception? failure, string current, string latest, CancellationToken token)
     {
         if (failure is not null) Helpers.CrashLog.TryWrite(failure);
         SayGuarded(() => _host.WriteLine(notMade switch
@@ -333,8 +340,7 @@ internal sealed class CommandLineUpdate
         }));
         if (token.IsCancellationRequested)
             return new CommandLineUpdateResult.FailedThenCancelled(notMade, current, latest);
-        SayGuarded(() => _host.WriteLine(string.Format(Strings.Cli_UpdateRunningInstead, command, current)));
-        return new CommandLineUpdateResult.CarriedOn(notMade, current, latest);
+        return new CommandLineUpdateResult.CarriedOn(notMade, current, latest, SaysRunningInstead: true);
     }
 
     private UpdateAvailable? Check(bool canAsk, CancellationToken token)
@@ -397,7 +403,7 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Downloads the newer version into its staging folder and runs the command with it
     /// there. Where the download fails, is refused or the newer version does not start, what
-    /// was downloaded is taken away and the command runs with this version. Once the newer
+    /// was downloaded is taken away and the command is left to this version. Once the newer
     /// version has started nothing is taken away: it runs from the staging folder and then
     /// takes this copy's place from there.
     /// </summary>
@@ -431,7 +437,7 @@ internal sealed class CommandLineUpdate
             var notMade = ex is UpdateFailedException { Stage: UpdateFailureStage.Download }
                 ? UpdateNotMade.DownloadFailed
                 : UpdateNotMade.NotRun;
-            return CarryOn(notMade, ex, command, current, latest, token);
+            return CarryOn(notMade, ex, current, latest, token);
         }
 
         IReadOnlyList<string> run = canAsk ? ["/s"] : arguments;
@@ -450,14 +456,14 @@ internal sealed class CommandLineUpdate
         catch (Exception ex)
         {
             prepared.Undo();
-            return CarryOn(UpdateNotMade.NotRun, ex, command, current, latest, token);
+            return CarryOn(UpdateNotMade.NotRun, ex, current, latest, token);
         }
         if (exitCode is null)
         {
             // It ended, or was ended, without setting the started event, so it ran none of the
             // command, and nothing on disk has changed.
             prepared.Undo();
-            return CarryOn(UpdateNotMade.NotRun, null, command, current, latest, token);
+            return CarryOn(UpdateNotMade.NotRun, null, current, latest, token);
         }
 
         // The newer version runs from the staging folder and then takes this copy's place from

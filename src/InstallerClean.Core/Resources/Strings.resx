@@ -2459,15 +2459,17 @@ Run InstallerClean again as administrator.</value></data>
   <data name="Cli.UpdateListsOnlyAfterMove" xml:space="preserve"><value>The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards.</value></data>
   <!-- Where a newer version is out, a Move or Delete was asked for and InstallerClean is in
        use: the window is open, or another Move or Delete is running. The update is not
-       tried, and Cli.UpdateRunningInstead follows. -->
+       tried. Cli.UpdateRunningInstead follows where the run can then go on, and
+       Cli.MutexBlocked where it cannot. -->
   <data name="Cli.UpdateInUse" xml:space="preserve"><value>InstallerClean is in use, so it can't update itself now.</value></data>
-  <!-- After UpdateNotice.DownloadFailed, Cli.UpdateNotRun or Cli.UpdateInUse,
-       before the run goes on with the version it is. 0 = the command given, /s, /d or /m,
+  <!-- After UpdateNotice.DownloadFailed, Cli.UpdateNotRun or Cli.UpdateInUse, once the
+       run is known to go on with the version it is: not cancelled, and for a Move or
+       Delete, able to start it. 0 = the command given, /s, /d or /m,
        as typed and left as written; 1 = the version that runs it. -->
   <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>Running {0} with InstallerClean {1} instead.</value></data>
   <!-- Where the newer version could not be run: its download not carrying its version, the
        folder it is downloaded to not made, or its start failing. Cli.UpdateRunningInstead
-       follows. -->
+       follows where the run goes on. -->
   <data name="Cli.UpdateNotRun" xml:space="preserve"><value>The newer version couldn't be run.</value></data>
   <!-- Once the newer version has started, downloaded beside nothing else of this copy's, to
        run the command and then put itself in this copy's place. 0 = the command it runs,
@@ -2531,25 +2533,27 @@ Run InstallerClean again as administrator.</value></data>
        move), so "each /s, /d or /m run writes one summary entry" holds for
        every run, not only the ones that committed work. -->
   <data name="Cli.EventLogCancelledNoWork" xml:space="preserve"><value>{0} mode cancelled at the console before any work was done. No action taken.</value></data>
-  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed,
-       3 = the arguments the newer version was started with. Event ID 3005, a notice
-       written once the newer version has started; the newer version writes the run's
-       summary. -->
-  <data name="Cli.EventLogUpdated" xml:space="preserve"><value>{0} mode: InstallerClean updated itself from {1} to {2} and ran {3} with it.</value></data>
-  <!-- 0 = mode arg, 1 = the version that ran, 2 = the newer version it did not run, 3 = the
-       arguments the run was given. Event ID 3006, a notice beside the run's own summary, where
-       the run went on with the version it is. In order: the download failed; the newer version
+  <!-- 0 = mode arg, 1 = the version running, 2 = the newer version it started, 3 = what
+       that newer version was started to run: the command as given, or /s after a yes at
+       the console.
+       Event ID 3005, a notice written once the newer version has said it started; the
+       newer version writes the run's summary, and a 3007 where it could not take this
+       copy's place. -->
+  <data name="Cli.EventLogUpdated" xml:space="preserve"><value>{0} mode: InstallerClean {1} found {2} and is running {3} with it.</value></data>
+  <!-- 0 = mode arg, 1 = the version running, 2 = the newer version it did not run. Event ID
+       3006, a notice written as soon as the update is known not to be made; the run's own
+       summary says what then ran. In order: the download failed; the newer version
        was downloaded and could not be run; a Move or Delete found InstallerClean in use, so the
        update was not tried; the copy cannot tell whether its setup installed it; it was built
        from source; the newer release needs .NET Framework 4.8; the
        newer release rules this copy out. -->
-  <data name="Cli.EventLogUpdateDownloadFailed" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the download failed) and ran {3} with {1}.</value></data>
-  <data name="Cli.EventLogUpdateNotRun" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the newer version could not be run) and ran {3} with {1}.</value></data>
-  <data name="Cli.EventLogUpdateInUse" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (InstallerClean was in use) and ran {3} with {1}.</value></data>
-  <data name="Cli.EventLogUpdateCopyCannotTell" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (it can't tell whether its setup installed it) and ran {3} with {1}.</value></data>
-  <data name="Cli.EventLogUpdateFromSource" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (it was built from source) and ran {3} with {1}.</value></data>
-  <data name="Cli.EventLogUpdateNeedsNetFramework48" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the newer release needs .NET Framework 4.8) and ran {3} with {1}.</value></data>
-  <data name="Cli.EventLogUpdateCannotInstall" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the newer release can't be installed automatically) and ran {3} with {1}.</value></data>
+  <data name="Cli.EventLogUpdateDownloadFailed" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the download failed).</value></data>
+  <data name="Cli.EventLogUpdateNotRun" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the newer version could not be run).</value></data>
+  <data name="Cli.EventLogUpdateInUse" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (InstallerClean was in use).</value></data>
+  <data name="Cli.EventLogUpdateCopyCannotTell" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (it can't tell whether its setup installed it).</value></data>
+  <data name="Cli.EventLogUpdateFromSource" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (it was built from source).</value></data>
+  <data name="Cli.EventLogUpdateNeedsNetFramework48" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the newer release needs .NET Framework 4.8).</value></data>
+  <data name="Cli.EventLogUpdateCannotInstall" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the newer release can't be installed automatically).</value></data>
   <!-- 0 = the version that was not installed, 1 = the newest release's page. Event ID 3007, written
        by that version, the copy being updated having closed and left nothing at its path. -->
   <data name="Cli.EventLogUpdateNothingAtPath" xml:space="preserve"><value>An update to InstallerClean {0} was not installed: once the copy being updated had closed, nothing was left at its path. InstallerClean can be downloaded again from {1}.</value></data>

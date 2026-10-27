@@ -255,9 +255,11 @@ internal enum CliEventClass
     SourcesGivenUpNotice,
 
     /// <summary>
-    /// Notice: the run found a newer version, installed it, and ran with it. The newer
-    /// version writes the run's summary, so this entry sits beside a summary written by
-    /// another process. Information, on the rule at <see cref="CliContract.EntryTypeFor"/>:
+    /// Notice: the run found a newer version and started it in its place, naming what it was
+    /// started to run. It is written once the newer version has said it started, and says
+    /// nothing of what that run then does: the newer version writes the run's summary, so this entry sits
+    /// beside a summary written by another process, and a 3007 where it could not take this
+    /// copy's place. Information, on the rule at <see cref="CliContract.EntryTypeFor"/>:
     /// the run fell short of nothing.
     /// </summary>
     UpdatedNotice,
@@ -265,8 +267,9 @@ internal enum CliEventClass
     /// <summary>
     /// Notice: the run found a newer version and did not run with it, for a reason that can
     /// pass by the next run (the download failed, the newer version could not be run, or
-    /// InstallerClean was in use), and ran with the version it is. Where Ctrl+C came after the
-    /// run said it goes on, whatever the reason, nothing ran and it is the run's only entry.
+    /// InstallerClean was in use). It is written as soon as that is known and says nothing of
+    /// what then runs, which the run's own summary says. Where the update itself saw Ctrl+C,
+    /// whatever the reason, it says nothing ran and is the run's only entry.
     /// WARNING, on the rule at <see cref="CliContract.EntryTypeFor"/>: the run did its job with a
     /// version older than the one it set out to use, or did not do it.
     /// </summary>
@@ -276,7 +279,7 @@ internal enum CliEventClass
     /// Notice: the run found a newer version this copy does not update to, for a reason that
     /// holds on every run until something on the PC changes (the copy cannot tell whether its
     /// setup installed it, it was built from source, the release needs .NET Framework 4.8 or
-    /// the release rules this copy out), and ran with the version it is. It shares Event ID
+    /// the release rules this copy out), written as soon as that is known. It shares Event ID
     /// 3006 with <see cref="UpdateFailedNotice"/>, so one filter sees every update not made.
     /// INFORMATION, on the rule at <see cref="CliContract.EntryTypeFor"/>: it is true every night
     /// on a PC with nothing wrong with it.

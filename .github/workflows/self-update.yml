@@ -428,7 +428,7 @@ jobs:
           $notInstalled = @($events | Where-Object Id -eq (Get-NothingAtPathEventId))
           $summaries = @($events | Where-Object { $_.Id -in 1000, 1002, 2000, 4000 })
           $unavailable = $run.Output.Contains((Line 'Cli.EventLogUnavailable'))
-          $expectedId, $otherId, $like = if ($staged) { 3005, 3006, "*from $old to $latest *" } else { 3006, 3005, ((Line 'Cli.EventLogUpdateNotRun') -f '*', $old, $latest, '*') }
+          $expectedId, $otherId, $like = if ($staged) { 3005, 3006, ('*' + ((Line 'Cli.EventLogUpdated') -f '/s', $old, $latest, '/s') + '*') } else { 3006, 3005, ('*' + ((Line 'Cli.EventLogUpdateNotRun') -f '/s', $old, $latest) + '*') }
           $expectedEntries = @($events | Where-Object Id -eq $expectedId)
           if ($expectedEntries.Count -ne 1) {
             Fail "$($expectedEntries.Count) entries with Event ID $expectedId, where one was expected$(if ($unavailable) { '; the run printed that the Application log refused its entries' })."

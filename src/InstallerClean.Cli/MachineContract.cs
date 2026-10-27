@@ -77,17 +77,14 @@ internal static class MachineContract
     /// left those files alone; the entry names them, says which of the two it was, and
     /// counts the files, so a run whose scan and check each gave one up writes two. The
     /// check's is written as soon as the check returns, so a run refused after it
-    /// carries it too. 3005: the run installed a newer version and ran it, naming both
-    /// versions and what the newer one was started with; that newer version, a process of
-    /// its own, writes the run's summary. Where Ctrl+C came before the newer version
-    /// started, the 3005 says so instead, is the run's one entry and is a Warning. 3006: the run could
-    /// not install a newer version, naming both versions and whether the download failed,
-    /// the install failed or InstallerClean was in use, and went on with the version it
-    /// is. Where the newer version is in place and would not start, or Ctrl+C came after
-    /// the update failed or was not tried, the 3006 says so instead and is the run's one
-    /// entry. Those two aside, a notice never replaces the
+    /// carries it too. 3005: the run found a newer version and started it, naming both
+    /// versions and what it was started to run; that newer version, a process of its own, writes the
+    /// run's summary. 3006: the run found a newer version and did not run with it, naming
+    /// both versions and why; it says nothing of what then ran, which the summary says.
+    /// Where the update itself saw Ctrl+C, the 3006 says nothing ran and is the run's one
+    /// entry. That aside, a notice never replaces the
     /// summary and never stands in for one, so counting runs means counting the summary
-    /// bands and those two, and each notice repeats for as long as its own condition
+    /// bands and that one, and each notice repeats for as long as its own condition
     /// holds, so a machine can emit one on every run for weeks.
     ///
     /// "NEVER THE RUN'S OUTCOME" IS ABOUT COUNTING RUNS AND IS NOT THE OTHER SENSE
