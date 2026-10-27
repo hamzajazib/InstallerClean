@@ -193,7 +193,7 @@ public sealed class UpdateRequirementsCheckTests
     private static AppUpdater Updater(HttpMessageHandler network, IRegistryReader? registry = null) =>
         new(AppCopyKind.Portable, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
             new UpdateDownloadService(network, null), Path.GetTempPath(), AppUpdater.WindowSetupArguments,
-            UpdateStagingFolder.AdministratorsOnly, registry ?? Substitute.For<IRegistryReader>(), new UpdateLeftoverGate());
+            UpdateStagingFolder.AdministratorsOnly, registry ?? Substitute.For<IRegistryReader>());
 
     /// <summary>
     /// Answers every request with <paramref name="status"/> and <paramref name="body"/>, and

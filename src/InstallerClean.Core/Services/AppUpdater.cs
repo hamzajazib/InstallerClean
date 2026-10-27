@@ -179,7 +179,6 @@ public sealed class AppUpdater : IAppUpdater
     private readonly string _stagingRoot;
     private readonly string _stagingDescriptor;
     private readonly IRegistryReader _registry;
-    private readonly UpdateLeftoverGate _leftovers;
     private readonly TimeSpan _holdRetryBound;
     private readonly Action<string>? _beforeHold;
     // Read and replaced whole, from whichever pool thread a check or an update runs on.
@@ -214,20 +213,18 @@ public sealed class AppUpdater : IAppUpdater
 
     /// <summary>
     /// Test seam: the staging folder's descriptor given as SDDL, so a suite without
-    /// administrator rights can write into it, the registry the PC's .NET Framework
-    /// is read from, and the gate the update holds from before it writes anything, which is
-    /// <see cref="UpdateLeftoverGate.ForThisProcess"/> where none is given. Also how long the
-    /// hold on a download is tried for (<see cref="HoldRetryBound"/> where none is given), and
-    /// what runs with a download's path just before its hold is first tried.
+    /// administrator rights can write into it, and the registry the PC's .NET Framework
+    /// is read from. Also how long the hold on a download is tried for
+    /// (<see cref="HoldRetryBound"/> where none is given), and what runs with a download's
+    /// path just before its hold is first tried.
     /// </summary>
     internal AppUpdater(
         AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot,
         string setupArguments, string stagingDescriptor, IRegistryReader registry,
-        UpdateLeftoverGate? leftovers = null, TimeSpan? holdRetryBound = null, Action<string>? beforeHold = null)
+        TimeSpan? holdRetryBound = null, Action<string>? beforeHold = null)
     {
         _holdRetryBound = holdRetryBound ?? HoldRetryBound;
         _beforeHold = beforeHold;
-        _leftovers = leftovers ?? UpdateLeftoverGate.ForThisProcess;
         Kind = kind;
         _exePath = exePath;
         _setupArguments = setupArguments;
@@ -413,9 +410,8 @@ public sealed class AppUpdater : IAppUpdater
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
         // Everything after this runs on a pool thread, whatever thread called, so the
-        // requirements' registry read, the wait for a running pass of the start-up clean-up
-        // (UpdateLeftoverGate), the staging folder's creation and the start of the download
-        // stay off the window's thread. With the release's file kept, nothing before the
+        // requirements' registry read, the staging folder's creation and the start of the
+        // download stay off the window's thread. With the release's file kept, nothing before the
         // download awaits anything unfinished.
         await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
@@ -423,11 +419,11 @@ public sealed class AppUpdater : IAppUpdater
             throw new UpdateRefusedException(refusal, version);
 
         // Everything above only reads, so an update that ends before this point, refused,
-        // failed or cancelled, never holds the gate. The hold comes before the update's
-        // first write, so a write added above this line moves the hold above it. A cancel
-        // that came after the requirements were checked is answered here, before the hold.
+        // failed or cancelled, leaves nothing behind. The staging folder is the update's first
+        // write, so a write added above this line moves the folder above it. A cancel that came
+        // after the requirements were checked is answered here, before the folder is made.
         cancellationToken.ThrowIfCancellationRequested();
-        var staging = StagingUnderHold();
+        var staging = MakeStaging();
         try
         {
             // Checked in the staging folder, which only Administrators and SYSTEM can write to,
@@ -438,8 +434,8 @@ public sealed class AppUpdater : IAppUpdater
 
             // The setup's copy starts the download as a setup; the window's other copies start it
             // to put itself at the running exe's path. Either runs it from the staging folder, so
-            // the file stays held and the gate stays out until the update is undone or this
-            // process ends. The handle is kept in a list that lives as long as the process, as
+            // the file and the folder stay held until the update is undone or this process ends.
+            // The handle is kept in a list that lives as long as the process, as
             // a staged run's are.
             // Undo lets go of the holds and removes the download and its folder through a handle
             // on the folder this update made. A download held open by another process, an
@@ -483,9 +479,9 @@ public sealed class AppUpdater : IAppUpdater
         if (await CheckStagedRunRequirementsHereAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
             throw new UpdateRefusedException(refusal, version);
 
-        // The hold comes before the first write, as in PrepareAsync.
+        // The staging folder is the first write, as in PrepareAsync.
         cancellationToken.ThrowIfCancellationRequested();
-        var staging = StagingUnderHold();
+        var staging = MakeStaging();
         try
         {
             // The setup comes first, so a setup that fails its check costs no download of the
@@ -502,8 +498,8 @@ public sealed class AppUpdater : IAppUpdater
 
             // The run starts the command line from the staging folder, and the newer version
             // puts itself, or on the setup's copy its setup, in this copy's place from there.
-            // So once the run has started nothing is undone: the files stay held and the
-            // gate stays out until this process ends.
+            // So once the run has started nothing is undone: the files and the folder stay held
+            // until this process ends.
             return staging.Prepared(version, commandLine, string.Empty, _exePath);
         }
         catch
@@ -565,11 +561,11 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     /// <summary>
-    /// What one update has staged: the gate it holds, the folder its downloads go in, held
+    /// What one update has staged: the folder its downloads go in, held
     /// from the moment it is made, the path of each download, and the handles holding the
     /// downloads that passed their check.
     /// </summary>
-    private sealed class Staging(UpdateLeftoverGate.Hold hold, UpdateStagingFolder folder)
+    private sealed class Staging(UpdateStagingFolder folder)
     {
         private readonly List<string> _staged = [];
         private readonly List<FileStream> _holds = [];
@@ -587,7 +583,7 @@ public sealed class AppUpdater : IAppUpdater
         /// The update to start, holding its downloads until <see cref="PreparedUpdate.Undo"/>
         /// or the end of the process. The handles are kept in a list that lives as long as the
         /// process, since a handle nothing references is closed by its finalizer, whatever the
-        /// caller keeps. Its undo takes the downloads away and releases the gate.
+        /// caller keeps. Its undo takes the downloads and the folder away.
         /// </summary>
         public PreparedUpdate Prepared(string version, string fileToStart, string arguments, string? replaces)
         {
@@ -599,26 +595,14 @@ public sealed class AppUpdater : IAppUpdater
             return new PreparedUpdate(version, fileToStart, arguments, Abandon, replaces);
         }
 
-        /// <summary>Takes away everything staged and releases the gate.</summary>
-        public void Abandon()
-        {
-            try
-            {
-                DeleteDownloads();
-            }
-            finally
-            {
-                hold.Release();
-            }
-        }
-
         /// <summary>
-        /// Lets go of the holds on the downloads and the folder, and removes each download
-        /// and then the folder through a handle on the folder this update made
-        /// (<see cref="UpdateStagingFolder.TryRemove"/>), until the folder has gone. A folder
-        /// or link somebody makes under the folder's name is never acted on. Never throws.
+        /// Takes away everything staged: lets go of the holds on the downloads and the folder,
+        /// and removes each download and then the folder through a handle on the folder this
+        /// update made (<see cref="UpdateStagingFolder.TryRemove"/>), until the folder has
+        /// gone. A folder or link somebody makes under the folder's name is never acted on.
+        /// Never throws.
         /// </summary>
-        private void DeleteDownloads()
+        public void Abandon()
         {
             lock (_deleteGate)
             {
@@ -689,21 +673,19 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     /// <summary>
-    /// Holds the gate (<see cref="UpdateLeftoverGate"/>) and then makes the folder the
-    /// download is saved in, the first thing this update writes, so no pass of the start-up
-    /// clean-up deletes it or anything written in it while the update runs. Where the folder
-    /// cannot be made, the hold is released and the update fails at the Install stage.
+    /// Makes and holds the folder the download is saved in, the first thing this update
+    /// writes, so no pass of the start-up clean-up deletes it or anything written in it while
+    /// the update runs (<see cref="UpdateStagingFolder"/>). Where the folder cannot be made,
+    /// the update fails at the Install stage.
     /// </summary>
-    private Staging StagingUnderHold()
+    private Staging MakeStaging()
     {
-        var hold = _leftovers.HoldForUpdate();
         try
         {
-            return new Staging(hold, UpdateStagingFolder.Create(_stagingRoot, _stagingDescriptor));
+            return new Staging(UpdateStagingFolder.Create(_stagingRoot, _stagingDescriptor));
         }
         catch (Exception ex)
         {
-            hold.Release();
             throw new UpdateFailedException(UpdateFailureStage.Install,
                 "The folder the download is saved in could not be created.", ex);
         }

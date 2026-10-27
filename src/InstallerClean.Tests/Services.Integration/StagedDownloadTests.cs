@@ -23,7 +23,6 @@ public sealed class StagedDownloadTests : IDisposable
     private readonly string _root = Directory.CreateTempSubdirectory("ic-staged-").FullName;
     private readonly string _stagingRoot;
     private readonly string _exe;
-    private readonly UpdateLeftoverGate _gate = new();
     private readonly List<PreparedUpdate> _prepared = [];
     private readonly IDisposable _crashLog = TestCrashLog.OwnFolder();
 
@@ -86,7 +85,7 @@ public sealed class StagedDownloadTests : IDisposable
         AppCopyKind kind, HttpMessageHandler network, IRegistryReader? registry = null,
         TimeSpan? holdRetryBound = null, Action<string>? beforeHold = null) =>
         new(kind, _exe, new UpdateDownloadService(network, null), _stagingRoot,
-            CommandLineUpdate.SetupArguments, AdministratorsAndThisAccount, registry ?? NoRegistry, _gate,
+            CommandLineUpdate.SetupArguments, AdministratorsAndThisAccount, registry ?? NoRegistry,
             holdRetryBound, beforeHold);
 
     private async Task<PreparedUpdate> Prepare(AppUpdater updater, CancellationToken cancellationToken = default)
@@ -99,7 +98,6 @@ public sealed class StagedDownloadTests : IDisposable
     private void AssertNothingLeft()
     {
         Assert.Empty(Directory.EnumerateFileSystemEntries(_stagingRoot));
-        Assert.True(_gate.TryRunPass(() => { }));
     }
 
     private static void AssertHeld(string path)
@@ -143,12 +141,11 @@ public sealed class StagedDownloadTests : IDisposable
         Assert.Equal(name, Path.GetFileName(prepared.FileToStart));
         Assert.Equal(Release(2), File.ReadAllBytes(prepared.FileToStart));
         AssertHeld(prepared.FileToStart);
-        Assert.False(_gate.TryRunPass(() => { }));
+        Assert.False(UpdateStagingFolder.RemoveLeftovers(_stagingRoot, ThisAccountExpectation));
 
         prepared.Undo();
 
         Assert.Empty(Directory.EnumerateFileSystemEntries(_stagingRoot));
-        Assert.True(_gate.TryRunPass(() => { }));
     }
 
     [Fact]
@@ -164,7 +161,7 @@ public sealed class StagedDownloadTests : IDisposable
         Assert.Equal(string.Empty, prepared.Arguments);
         Assert.Equal(Release(2), File.ReadAllBytes(prepared.FileToStart));
         AssertHeld(prepared.FileToStart);
-        Assert.False(_gate.TryRunPass(() => { }));
+        Assert.False(UpdateStagingFolder.RemoveLeftovers(_stagingRoot, ThisAccountExpectation));
         Assert.Equal(Program(1), File.ReadAllBytes(_exe));
 
         prepared.Undo();
@@ -222,8 +219,6 @@ public sealed class StagedDownloadTests : IDisposable
             Assert.Equal(UpdateFailureStage.Install, error.Stage);
             Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION,
                 Assert.IsType<System.ComponentModel.Win32Exception>(error.InnerException).NativeErrorCode);
-            // The gate is released, so the clean-up can take whatever the other process kept.
-            Assert.True(_gate.TryRunPass(() => { }));
         }
         finally
         {

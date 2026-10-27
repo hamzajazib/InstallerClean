@@ -971,9 +971,7 @@ public partial class App : Application
     /// (<see cref="ExeReplacement.LockSuffix"/>); or the setup, which opens the app before
     /// it exits.
     /// Whatever will not go by then is tried again at the next start, and so is a staging
-    /// folder an update in another process still holds. While an update of this copy's own
-    /// holds the gate (<see cref="UpdateLeftoverGate"/>), no pass runs and the ten seconds
-    /// wait until it lets go. Never throws.
+    /// folder an update still holds, in this process or another. Never throws.
     /// </summary>
     private static async Task RemoveUpdateLeftoversAsync()
     {
@@ -982,21 +980,11 @@ public partial class App : Application
             var exePath = Environment.ProcessPath;
             var foldersGone = false;
             var leftoversGone = exePath is null;
-            for (var attempt = 0; attempt < 20;)
+            for (var attempt = 0; attempt < 20; attempt++)
             {
-                var ran = UpdateLeftoverGate.ForThisProcess.TryRunPass(() =>
-                {
-                    foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
-                    leftoversGone = leftoversGone
-                        || ExeReplacement.TryRemoveLeftovers(exePath!);
-                });
-                if (!ran)
-                {
-                    await UpdateLeftoverGate.ForThisProcess.WhenFree();
-                    continue;
-                }
+                foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
+                leftoversGone = leftoversGone || ExeReplacement.TryRemoveLeftovers(exePath!);
                 if (foldersGone && leftoversGone) return;
-                attempt++;
                 await Task.Delay(500);
             }
         }

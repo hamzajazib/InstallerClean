@@ -358,8 +358,7 @@ internal static class Program
         if (s_standsFor is null && Environment.ProcessPath is { Length: > 0 } ownPath)
         {
             ExeReplacement.TryRemoveLeftovers(ownPath);
-            UpdateLeftoverGate.ForThisProcess.TryRunPass(
-                () => UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot));
+            UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
         }
 
         var update = cts.IsCancellationRequested
