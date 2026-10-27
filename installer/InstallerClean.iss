@@ -273,18 +273,35 @@ end;
 // stay the newer version beside the older ones; a file renamed aside is moved back
 // instead. Where one file cannot be renamed, the others are moved back and Setup stops
 // before writing anything. Where the install fails, Setup deletes what it wrote and
-// DeinitializeSetup moves each file back; where it completes, the files held aside
-// are deleted, and one still running is renamed to a done name, which the copy at the
-// path deletes at its next start, as do the next completed install and the uninstaller.
-// scripts/check-setup-held-copies.mjs fails where HoldAllAside leaves out a file
-// [Files] writes to {app}.
+// DeinitializeSetup moves each file back; where it completes, each file held aside is
+// deleted, or moved back where Setup wrote nothing in its place, and one still running
+// is renamed to a done name, which the copy at the path deletes at its next start, as
+// do the next completed install and the uninstaller. scripts/check-setup-held-copies.mjs
+// fails where AppFile leaves out a file [Files] writes to {app}.
 var
   HeldFrom: array of String;
   HeldAt: array of String;
+  HeldSkipped: array of Boolean;
   HeldFailed: String;
-  NotWritten: String;
   CancelClicked: Boolean;
   Installed: Boolean;
+
+const
+  AppFileCount = 4;
+
+// The Ith file [Files] writes to {app}, by its name there, for I from 0 to
+// AppFileCount - 1.
+function AppFile(I: Integer): String;
+begin
+  case I of
+    0: Result := 'InstallerClean.exe';
+    1: Result := 'installerclean-cli.exe';
+    2: Result := 'LICENSE.txt';
+    3: Result := 'THIRD-PARTY-NOTICES.txt';
+  else
+    Result := '';
+  end;
+end;
 
 // MoveFileW and DeleteFileW from kernel32.dll, so DLLGetLastError answers the error
 // each one set.
@@ -380,20 +397,27 @@ begin
   I := GetArrayLength(HeldFrom);
   SetArrayLength(HeldFrom, I + 1);
   SetArrayLength(HeldAt, I + 1);
+  SetArrayLength(HeldSkipped, I + 1);
   HeldFrom[I] := Path;
   HeldAt[I] := Held;
+  HeldSkipped[I] := False;
 end;
 
 // Holds aside every file [Files] writes to {app}, stopping at the first that cannot be.
 // Each name stays empty from its rename until Setup writes the file: a command-line run
 // started then finds no exe there, and the earlier file waits under its held name,
-// which a setup run later moves back or replaces where this one is cut off.
+// which stays until a later setup writes the file and deletes it, or the uninstaller
+// does, where this one is cut off.
 function HoldAllAside: Boolean;
+var
+  I: Integer;
 begin
-  Result := HoldAside('InstallerClean.exe');
-  if Result then Result := HoldAside('installerclean-cli.exe');
-  if Result then Result := HoldAside('LICENSE.txt');
-  if Result then Result := HoldAside('THIRD-PARTY-NOTICES.txt');
+  Result := True;
+  for I := 0 to AppFileCount - 1 do
+  begin
+    Result := HoldAside(AppFile(I));
+    if not Result then Exit;
+  end;
 end;
 
 // Moves each file held aside back to its name. Whatever Setup left at the name is
@@ -438,7 +462,9 @@ var
   Ours: Boolean;
 begin
   Path := ExpandConstant('{app}\') + Name;
-  if not FileExists(Path) or (Pos('|' + Lowercase(Path) + '|', NotWritten) > 0) then Exit;
+  if not FileExists(Path) then Exit;
+  for I := 0 to GetArrayLength(HeldFrom) - 1 do
+    if HeldSkipped[I] and (CompareText(HeldFrom[I], Path) = 0) then Exit;
   for S := 0 to 1 do
     for N := 0 to 99 do
     begin
@@ -454,10 +480,16 @@ begin
     end;
 end;
 
-// Setup's progress window has a Cancel button on the silent routes too. A setup the
-// person cancelled is not reported to the window as a failed update.
+// Setup's progress window has a Cancel button on the silent routes too. The question
+// whether to stop is asked here rather than by Setup, so that only a setup the person
+// did stop is kept from being reported to the window as a failed update.
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
 begin
+  if Confirm then
+  begin
+    Cancel := ExitSetupMsgBox;
+    Confirm := False;
+  end;
   if Cancel then CancelClicked := True;
 end;
 
@@ -485,7 +517,7 @@ begin
       // newer at its name, so the earlier one goes back there.
       if not FileExists(HeldFrom[I]) then
       begin
-        NotWritten := NotWritten + '|' + Lowercase(HeldFrom[I]) + '|';
+        HeldSkipped[I] := True;
         if MoveFileW(HeldAt[I], HeldFrom[I]) then
           Log(Format('Put %s back as %s: nothing was written in its place.', [HeldAt[I], HeldFrom[I]]))
         else
@@ -504,10 +536,8 @@ begin
     // Where this install wrote a file at a name, every file an earlier setup left under
     // that name's held or done names is from before it and not needed. One still
     // running stays, and DeleteLeftAside keeps all of them where it wrote none.
-    DeleteLeftAside('InstallerClean.exe');
-    DeleteLeftAside('installerclean-cli.exe');
-    DeleteLeftAside('LICENSE.txt');
-    DeleteLeftAside('THIRD-PARTY-NOTICES.txt');
+    for I := 0 to AppFileCount - 1 do
+      DeleteLeftAside(AppFile(I));
   end;
 end;
 
