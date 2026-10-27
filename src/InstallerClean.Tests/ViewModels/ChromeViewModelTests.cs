@@ -341,7 +341,7 @@ public class ChromeViewModelTests
     {
         var vm = await CreateUpdatingViewModelAsync();
         var prepared = Prepared();
-        _updater.PrepareAsync("9.9.9", Arg.Any<IProgress<double?>>(), Arg.Any<CancellationToken>())
+        _updater.PrepareAsync("9.9.9", Arg.Any<IProgress<UpdateProgress>>(), Arg.Any<CancellationToken>())
             .Returns(_ => { _calls.Add("prepare"); return prepared; });
         _windowService.StartUpdateAndCloseAsync(prepared)
             .Returns(_ => { _calls.Add("start"); return true; });
@@ -369,6 +369,30 @@ public class ChromeViewModelTests
         await vm.UpdateNowCommand.ExecuteAsync(null);
 
         Assert.Equal([string.Format(Strings.UpdateNotice_Downloading, "9.9.9")], seen);
+    }
+
+    [Fact]
+    public async Task The_card_says_the_download_is_being_checked_once_it_is_complete()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        string? seen = null;
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(async call =>
+        {
+            var progress = call.ArgAt<IProgress<UpdateProgress>>(1);
+            progress.Report(new UpdateProgress(1));
+            progress.Report(new UpdateProgress(null, Checking: true));
+            // Progress<T> reports on the thread pool where there is no synchronization context.
+            var waited = System.Diagnostics.Stopwatch.StartNew();
+            while (vm.UpdatingText != Strings.UpdateNotice_CheckingDownload && waited.Elapsed < TimeSpan.FromSeconds(5))
+                await Task.Delay(10);
+            seen = vm.UpdatingText;
+            throw new UpdateFailedException(UpdateFailureStage.Install, "no");
+        });
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.Equal(Strings.UpdateNotice_CheckingDownload, seen);
+        Assert.Equal(100, vm.UpdateProgressPercent);
     }
 
     [Fact]

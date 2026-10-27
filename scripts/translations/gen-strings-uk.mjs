@@ -676,6 +676,7 @@ const MAP = {
   'Cli.ReportWaiting': `Надсилається звіт, що чекає на надсилання ще з раннішого запуску.`,
   'Cli.UpdateRunningNewer': `Команду {0} буде виконано в InstallerClean {1}. Після завершення ця версія замінить поточну копію.`,
   'Cli.UpdateNotRun': `Не вдалося запустити новішу версію.`,
+  'UpdateNotice.CheckingDownload': `Перевірка завантаженого файлу...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

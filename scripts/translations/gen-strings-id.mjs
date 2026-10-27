@@ -681,6 +681,7 @@ const MAP = {
   'Cli.ReportWaiting': `Mengirim laporan yang tertunda sejak proses sebelumnya.`,
   'Cli.UpdateRunningNewer': `Menjalankan {0} dengan InstallerClean {1}. Versi ini akan menggantikan salinan ini setelah proses selesai.`,
   'Cli.UpdateNotRun': `Versi yang lebih baru tidak dapat dijalankan.`,
+  'UpdateNotice.CheckingDownload': `Memeriksa unduhan...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

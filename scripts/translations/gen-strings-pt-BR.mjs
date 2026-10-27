@@ -661,6 +661,7 @@ const MAP = {
   'Cli.ReportWaiting': `Enviando um relatório pendente desde uma execução anterior.`,
   'Cli.UpdateRunningNewer': `{0} será executado com o InstallerClean {1}. Ao final da execução, ele substituirá esta cópia.`,
   'Cli.UpdateNotRun': `Não foi possível executar a versão mais recente.`,
+  'UpdateNotice.CheckingDownload': `Verificando o download...`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

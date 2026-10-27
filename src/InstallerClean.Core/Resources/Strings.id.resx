@@ -1559,6 +1559,10 @@ Detail di {1}.</value></data>
     <value>Mengunduh InstallerClean {0}...</value>
     <comment>The line on the card shown while the newer version downloads, over a progress bar and Cancel. {0} = the newer version number, as 3.5.0.</comment>
   </data>
+  <data name="UpdateNotice.CheckingDownload" xml:space="preserve">
+    <value>Memeriksa unduhan...</value>
+    <comment>The line on the card in place of UpdateNotice.Downloading once the download is complete, while InstallerClean checks the downloaded file is the version it asked for, over the progress bar and Cancel. It can stay a while where an antivirus is looking at the new file.</comment>
+  </data>
   <data name="UpdateNotice.DownloadFailed" xml:space="preserve">
     <value>Pembaruan tidak dapat diunduh.</value>
     <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, after the newer version could not be downloaded. Update now and the link show under it.</comment>

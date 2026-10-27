@@ -674,6 +674,7 @@ const MAP = {
   'Cli.ReportWaiting': `Ein Bericht, der seit einem früheren Durchlauf auf das Senden wartet, wird gesendet.`,
   'Cli.UpdateRunningNewer': `{0} wird mit InstallerClean {1} ausgeführt. Sobald der Lauf beendet ist, ersetzt diese Version diese Kopie.`,
   'Cli.UpdateNotRun': `Die neuere Version konnte nicht ausgeführt werden.`,
+  'UpdateNotice.CheckingDownload': `Download wird geprüft...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

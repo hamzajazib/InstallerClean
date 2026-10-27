@@ -112,6 +112,27 @@ public sealed class StagedDownloadTests : IDisposable
         Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION, error.HResult & 0xFFFF);
     }
 
+    /// <summary>Records each report on the thread that makes it, in order.</summary>
+    private sealed class Reports : IProgress<UpdateProgress>
+    {
+        public List<UpdateProgress> Seen { get; } = [];
+        public void Report(UpdateProgress value) { lock (Seen) Seen.Add(value); }
+    }
+
+    [Fact]
+    public async Task A_download_reports_how_far_it_has_got_and_then_that_it_is_being_checked()
+    {
+        var network = new ByName(new() { ["InstallerClean-portable.exe"] = Release(2) });
+        var reports = new Reports();
+
+        _prepared.Add(await Updater(AppCopyKind.Portable, network).PrepareAsync(CoreRelease, reports, CancellationToken.None));
+
+        Assert.True(reports.Seen.Count >= 2);
+        Assert.Equal(new UpdateProgress(null, Checking: true), reports.Seen[^1]);
+        Assert.All(reports.Seen[..^1], step => Assert.False(step.Checking));
+        Assert.Equal(1d, reports.Seen[^2].Fraction);
+    }
+
     [Theory]
     [InlineData(AppCopyKind.Setup)]
     [InlineData(AppCopyKind.Portable)]

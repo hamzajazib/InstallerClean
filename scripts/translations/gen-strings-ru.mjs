@@ -538,6 +538,7 @@ const MAP = {
   'UpdateNotice.CopyCannotTell': `InstallerClean не может определить, установлен ли он своим установщиком, поэтому не может обновиться.`,
   'UpdateNotice.DownloadNetFramework48': `Скачать .NET Framework 4.8 с сайта Microsoft`,
   'Automation.UpdateNotice.DownloadNetFramework48': `Скачать .NET Framework 4.8 с сайта Microsoft`,
+  'UpdateNotice.CheckingDownload': `Проверка скачанного файла...`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

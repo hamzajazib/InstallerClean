@@ -720,6 +720,7 @@ const MAP = {
   'Cli.ReportWaiting': `Sending a report left waiting by an earlier run.`,
   'Cli.UpdateRunningNewer': `Running {0} with InstallerClean {1}. It takes this copy's place once the run ends.`,
   'Cli.UpdateNotRun': `The newer version couldn't be run.`,
+  'UpdateNotice.CheckingDownload': `Checking the download...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

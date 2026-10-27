@@ -593,6 +593,7 @@ const MAP = {
   'Cli.ReportWaiting': `Se envía un informe que esperaba desde una ejecución anterior.`,
   'Cli.UpdateRunningNewer': `Se ejecuta {0} con InstallerClean {1}. Ocupará el lugar de esta copia cuando termine la ejecución.`,
   'Cli.UpdateNotRun': `No se pudo ejecutar la versión más reciente.`,
+  'UpdateNotice.CheckingDownload': `Comprobando la descarga...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

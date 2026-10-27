@@ -657,6 +657,7 @@ const MAP = {
   'Cli.ReportWaiting': `이전 실행 때부터 대기 중이던 보고서를 보내는 중입니다.`,
   'Cli.UpdateRunningNewer': `InstallerClean {1} 버전으로 {0} 명령을 실행합니다. 실행이 끝나면 이 사본을 대체합니다.`,
   'Cli.UpdateNotRun': `새 버전을 실행하지 못했습니다.`,
+  'UpdateNotice.CheckingDownload': `내려받은 파일을 확인하는 중...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

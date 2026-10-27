@@ -332,6 +332,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Couldn't copy it. Select the command and copy it yourself. | コピーできませんでした。コマンドを選択して手動でコピーしてください。 |
 | _Continue without updating | 更新せずに続行(_C) |
 | Downloading InstallerClean {0}... | InstallerClean {0} をダウンロード中... |
+| Checking the download... | ダウンロードしたファイルを確認中... |
 | The update couldn't be downloaded. | 更新をダウンロードできませんでした。 |
 | The update couldn't be installed. | 更新をインストールできませんでした。 |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub に到達できませんでした。インターネット接続を確認して再試行してください。 |

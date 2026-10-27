@@ -581,6 +581,7 @@ const MAP = {
   'Cli.ReportWaiting': `以前の実行から送信待ちになっているレポートを送信しています。`,
   'Cli.UpdateRunningNewer': `InstallerClean {1} で {0} を実行します。実行が終わると、このコピーと置き換わります。`,
   'Cli.UpdateNotRun': `新しいバージョンを実行できませんでした。`,
+  'UpdateNotice.CheckingDownload': `ダウンロードしたファイルを確認中...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

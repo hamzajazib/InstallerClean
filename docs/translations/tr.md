@@ -332,6 +332,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Couldn't copy it. Select the command and copy it yourself. | Kopyalanamadı. Komutu seçip kendiniz kopyalayın. |
 | _Continue without updating | Güncellemeden _devam et |
 | Downloading InstallerClean {0}... | InstallerClean {0} indiriliyor... |
+| Checking the download... | İndirilen dosya denetleniyor... |
 | The update couldn't be downloaded. | Güncelleştirme indirilemedi. |
 | The update couldn't be installed. | Güncelleştirme yüklenemedi. |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub'a ulaşılamadı. İnternet bağlantınızı kontrol edip yeniden deneyin. |

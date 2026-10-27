@@ -582,6 +582,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.ReportWaiting': `Daha önceki bir çalıştırmadan beri bekleyen bir rapor gönderiliyor.`,
   'Cli.UpdateRunningNewer': `{0} komutu InstallerClean {1} ile çalıştırılıyor. Çalışma bitince bu kopyanın yerini alacak.`,
   'Cli.UpdateNotRun': `Daha yeni sürüm çalıştırılamadı.`,
+  'UpdateNotice.CheckingDownload': `İndirilen dosya denetleniyor...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -656,6 +656,7 @@ const MAP = {
   'Cli.ReportWaiting': `Đang gửi một báo cáo còn chờ từ một lần chạy trước đó.`,
   'Cli.UpdateRunningNewer': `Chạy {0} bằng InstallerClean {1}. Khi chạy xong, phiên bản này sẽ thay thế bản hiện tại.`,
   'Cli.UpdateNotRun': `Không thể chạy phiên bản mới hơn.`,
+  'UpdateNotice.CheckingDownload': `Đang kiểm tra bản tải về...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

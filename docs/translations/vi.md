@@ -332,6 +332,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Couldn't copy it. Select the command and copy it yourself. | Không thể sao chép. Hãy chọn lệnh rồi tự sao chép. |
 | _Continue without updating | _Tiếp tục mà không cập nhật |
 | Downloading InstallerClean {0}... | Đang tải về InstallerClean {0}... |
+| Checking the download... | Đang kiểm tra bản tải về... |
 | The update couldn't be downloaded. | Không thể tải về bản cập nhật. |
 | The update couldn't be installed. | Không thể cài đặt bản cập nhật. |
 | Couldn't reach GitHub. Check your internet connection and try again. | Không thể kết nối tới GitHub. Hãy kiểm tra kết nối internet và thử lại. |

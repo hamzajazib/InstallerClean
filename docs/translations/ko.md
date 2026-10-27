@@ -332,6 +332,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Couldn't copy it. Select the command and copy it yourself. | 복사하지 못했습니다. 명령을 선택해 직접 복사하세요. |
 | _Continue without updating | 업데이트하지 않고 계속(_C) |
 | Downloading InstallerClean {0}... | InstallerClean {0} 내려받는 중... |
+| Checking the download... | 내려받은 파일을 확인하는 중... |
 | The update couldn't be downloaded. | 업데이트를 내려받지 못했습니다. |
 | The update couldn't be installed. | 업데이트를 설치하지 못했습니다. |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub에 연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도하세요. |

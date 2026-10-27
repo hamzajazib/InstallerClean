@@ -569,6 +569,7 @@ const MAP = {
   'Cli.ReportWaiting': `正在傳送較早一次執行留下的待傳送報告。`,
   'Cli.UpdateRunningNewer': `使用 InstallerClean {1} 執行 {0}。執行結束後，它將取代此副本。`,
   'Cli.UpdateNotRun': `無法執行較新的版本。`,
+  'UpdateNotice.CheckingDownload': `正在檢查下載的檔案...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

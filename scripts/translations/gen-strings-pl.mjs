@@ -698,6 +698,7 @@ const MAP = {
   'Cli.ReportWaiting': `Wysyłanie raportu oczekującego od wcześniejszego uruchomienia.`,
   'Cli.UpdateRunningNewer': `Polecenie {0} zostanie uruchomione w wersji InstallerClean {1}. Po zakończeniu ta wersja zastąpi tę kopię.`,
   'Cli.UpdateNotRun': `Nie udało się uruchomić nowszej wersji.`,
+  'UpdateNotice.CheckingDownload': `Sprawdzanie pobranego pliku...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

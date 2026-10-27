@@ -332,6 +332,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Couldn't copy it. Select the command and copy it yourself. | Tidak dapat menyalinnya. Pilih perintahnya lalu salin sendiri. |
 | _Continue without updating | _Lanjutkan tanpa memperbarui |
 | Downloading InstallerClean {0}... | Mengunduh InstallerClean {0}... |
+| Checking the download... | Memeriksa unduhan... |
 | The update couldn't be downloaded. | Pembaruan tidak dapat diunduh. |
 | The update couldn't be installed. | Pembaruan tidak dapat dipasang. |
 | Couldn't reach GitHub. Check your internet connection and try again. | Tidak bisa menjangkau GitHub. Periksa koneksi internet Anda dan coba lagi. |

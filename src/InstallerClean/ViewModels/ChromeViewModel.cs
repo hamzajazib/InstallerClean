@@ -691,10 +691,17 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         var handedOver = false;
         try
         {
-            var progress = new Progress<double?>(fraction =>
+            var progress = new Progress<UpdateProgress>(step =>
             {
-                IsUpdateProgressKnown = fraction is not null;
-                UpdateProgressPercent = (fraction ?? 0) * 100;
+                // Once the download is complete the card says it is being checked, which
+                // waits while another program, an antivirus say, looks at the new file.
+                if (step.Checking)
+                {
+                    UpdatingText = Strings.UpdateNotice_CheckingDownload;
+                    return;
+                }
+                IsUpdateProgressKnown = step.Fraction is not null;
+                UpdateProgressPercent = (step.Fraction ?? 0) * 100;
             });
             prepared = await _updater.PrepareAsync(version, progress, cts.Token);
             // Cancel pressed as the download finished: what was readied is taken away below.

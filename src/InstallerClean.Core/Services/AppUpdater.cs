@@ -3,6 +3,13 @@ using InstallerClean.Helpers;
 namespace InstallerClean.Services;
 
 /// <summary>
+/// How far an update's download has got: the fraction downloaded, or null where the length
+/// is not known, and then, once the download is complete, that it is being checked
+/// (<paramref name="Checking"/>) until the update is ready to start.
+/// </summary>
+public readonly record struct UpdateProgress(double? Fraction, bool Checking = false);
+
+/// <summary>
 /// Gets a newer version ready to start: downloaded, and where the copy replaces its
 /// own file, written beside it to take its place.
 /// </summary>
@@ -53,8 +60,9 @@ public interface IAppUpdater
     /// version, and answers with what to start. The check reads the file through a handle
     /// that shares only reading, kept open until <see cref="PreparedUpdate.DeleteDownload"/>,
     /// <see cref="PreparedUpdate.Undo"/> or the end of the process, so the file started is the
-    /// file checked. Reports the fraction
-    /// downloaded, or null where the length is not known. Throws
+    /// file checked. Reports the fraction downloaded, or null where the length is not known,
+    /// and then that the download is being checked, which can take a while where another
+    /// process, an antivirus say, is looking at the new file. Throws
     /// <see cref="UpdateFailedException"/> where any step fails, a download that does not
     /// carry the version included, <see cref="UpdateRefusedException"/> before anything is
     /// downloaded where the release rules this copy out,
@@ -63,7 +71,7 @@ public interface IAppUpdater
     /// them leaves anything changed on disk.
     /// </summary>
     Task<PreparedUpdate> PrepareAsync(
-        string version, IProgress<double?>? progress, CancellationToken cancellationToken);
+        string version, IProgress<UpdateProgress>? progress, CancellationToken cancellationToken);
 
     /// <summary>
     /// Downloads the command line of <paramref name="version"/> for the command line to run
@@ -421,7 +429,7 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     public async Task<PreparedUpdate> PrepareAsync(
-        string version, IProgress<double?>? progress, CancellationToken cancellationToken)
+        string version, IProgress<UpdateProgress>? progress, CancellationToken cancellationToken)
     {
         if (AppCopy.DownloadFileName(Kind, version) is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
@@ -529,6 +537,12 @@ public sealed class AppUpdater : IAppUpdater
             staging.Abandon();
             throw;
         }
+    }
+
+    /// <summary>Passes the download's fractions on as <see cref="UpdateProgress"/>, on the thread that reports them.</summary>
+    private sealed class Fractions(IProgress<UpdateProgress> progress) : IProgress<double?>
+    {
+        public void Report(double? value) => progress.Report(new UpdateProgress(value));
     }
 
     /// <summary>
@@ -649,25 +663,28 @@ public sealed class AppUpdater : IAppUpdater
     /// <paramref name="staging"/>'s folder, recording its path there before the download
     /// starts, and checks the version it carries through a handle that shares only reading,
     /// which <paramref name="staging"/> keeps. Answers the path. Reports the fraction
-    /// downloaded to <paramref name="progress"/>, and in a Debug build holds the download at
+    /// downloaded to <paramref name="progress"/>, then that the download is being checked,
+    /// and in a Debug build holds the download at
     /// the download gate where <paramref name="gated"/>. Throws <see cref="UpdateFailedException"/> at the Install
     /// stage where the file does not carry the version, including where it cannot be opened
     /// that way.
     /// </summary>
     private async Task<string> StageHeldAsync(
-        AppCopyKind kind, string version, Staging staging, IProgress<double?>? progress, bool gated,
+        AppCopyKind kind, string version, Staging staging, IProgress<UpdateProgress>? progress, bool gated,
         CancellationToken cancellationToken)
     {
+        var fractions = progress is null ? null : new Fractions(progress);
         var path = Path.Combine(staging.FolderPath, AppCopy.DownloadFileName(kind, version)!);
         var address = AppCopy.DownloadAddress(kind, version)!;
         staging.AddStaged(path);
 #if DEBUG
         if (LocalFile(kind) is { } local)
             await new UpdateDownloadService(new LocalFileAnswer(local, gated ? DownloadGate() : null), null)
-                .DownloadAsync(address, path, progress, cancellationToken).ConfigureAwait(false);
+                .DownloadAsync(address, path, fractions, cancellationToken).ConfigureAwait(false);
         else
 #endif
-        await _downloader.DownloadAsync(address, path, progress, cancellationToken).ConfigureAwait(false);
+        await _downloader.DownloadAsync(address, path, fractions, cancellationToken).ConfigureAwait(false);
+        progress?.Report(new UpdateProgress(null, Checking: true));
 
         // The bytes checked are the bytes held, read through the handle that holds them. The
         // open refuses a reparse point at the name, so the handle is on the file the name

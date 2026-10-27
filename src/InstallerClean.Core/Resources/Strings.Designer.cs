@@ -590,6 +590,7 @@ public static class Strings
     public static string UpdateCheck_Title => Get("UpdateCheck.Title");
     public static string UpdateNotice_Available => Get("UpdateNotice.Available");
     public static string UpdateNotice_CannotInstallAutomatically => Get("UpdateNotice.CannotInstallAutomatically");
+    public static string UpdateNotice_CheckingDownload => Get("UpdateNotice.CheckingDownload");
     public static string UpdateNotice_CommandCopied => Get("UpdateNotice.CommandCopied");
     public static string UpdateNotice_ContinueWithoutUpdating => Get("UpdateNotice.ContinueWithoutUpdating");
     public static string UpdateNotice_CopyCannotTell => Get("UpdateNotice.CopyCannotTell");

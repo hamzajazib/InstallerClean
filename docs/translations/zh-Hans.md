@@ -332,6 +332,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Couldn't copy it. Select the command and copy it yourself. | 无法复制。请选中该命令并手动复制。 |
 | _Continue without updating | 不更新，直接继续(_C) |
 | Downloading InstallerClean {0}... | 正在下载 InstallerClean {0}… |
+| Checking the download... | 正在检查下载的文件… |
 | The update couldn't be downloaded. | 无法下载更新。 |
 | The update couldn't be installed. | 无法安装更新。 |
 | Couldn't reach GitHub. Check your internet connection and try again. | 无法连接到 GitHub。请检查您的网络连接后重试。 |

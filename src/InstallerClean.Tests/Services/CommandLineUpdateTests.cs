@@ -404,7 +404,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         }
 
         public Task<PreparedUpdate> PrepareAsync(
-            string version, IProgress<double?>? progress, CancellationToken cancellationToken) =>
+            string version, IProgress<UpdateProgress>? progress, CancellationToken cancellationToken) =>
             throw new NotSupportedException("The command line runs from staging.");
 
         public Task<PreparedUpdate> PrepareStagedRunAsync(string version, CancellationToken cancellationToken)

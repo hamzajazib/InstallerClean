@@ -640,6 +640,7 @@ const MAP = {
   'Cli.ReportWaiting': `Een rapport dat sinds een eerdere uitvoering wacht, wordt nu verstuurd.`,
   'Cli.UpdateRunningNewer': `{0} wordt uitgevoerd met InstallerClean {1}. Na afloop neemt deze versie de plaats van deze kopie in.`,
   'Cli.UpdateNotRun': `De nieuwere versie kon niet worden uitgevoerd.`,
+  'UpdateNotice.CheckingDownload': `Download controleren...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

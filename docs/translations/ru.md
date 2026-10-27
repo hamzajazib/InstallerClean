@@ -332,6 +332,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Couldn't copy it. Select the command and copy it yourself. | Не удалось скопировать. Выделите команду и скопируйте её вручную. |
 | _Continue without updating | _Продолжить без обновления |
 | Downloading InstallerClean {0}... | Скачивание InstallerClean {0}... |
+| Checking the download... | Проверка скачанного файла... |
 | The update couldn't be downloaded. | Не удалось скачать обновление. |
 | The update couldn't be installed. | Не удалось установить обновление. |
 | Couldn't reach GitHub. Check your internet connection and try again. | Не удалось подключиться к GitHub. Проверьте подключение к интернету и повторите попытку. |
