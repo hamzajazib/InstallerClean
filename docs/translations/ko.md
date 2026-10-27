@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | 오류: 예상치 못한 추가 인수 '{0}'. /s와 /d는 다른 인수를 받지 않으며, 한 번 실행에 플래그는 하나만 쓸 수 있습니다. |
 | Cancelling... | 취소 중... |
 | Cancelled. | 취소되었습니다. |
-| Cancelling once the update has finished... | 업데이트가 끝나면 취소합니다... |
 | Error: unexpected failure ({0}). Details written to {1}. | 오류: 예상치 못한 실패({0}). 자세한 내용을 {1}에 기록했습니다. |
 | Error: unexpected failure ({0}). The crash log could not be written. | 오류: 예상치 못한 실패({0}). 크래시 로그를 기록하지 못했습니다. |
 | Scanning {InstallerFolder}... | {InstallerFolder} 검사 중... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | 불필요한 {1} {0}개를 이동했습니다. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | 프로그램이 여전히 정상적으로 업데이트되고 제거되는지 확인한 다음 {0}을(를) 삭제하세요. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean은 무료입니다. 도움이 되었다면 3달러를 후원해 주세요: {0} |
-| Update now? [{0}/{1}] | 지금 업데이트할까요? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | 지금 업데이트할까요? 최신 버전을 사용할 것을 강력히 권장합니다. [{0}/{1}] |
 | Y | Y |
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | 이번 실행의 익명 보고서를 보낼까요? {0}에 저장되어 있습니다. ?를 입력하면 담긴 내용을 볼 수 있습니다. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | 보고서를 보내지 않았습니다. |
 | The report could not be sent. It is kept in {0}. | 보고서를 보내지 못했습니다. {0}에 보관되어 있습니다. |
 | Sending a report left waiting by an earlier run. | 이전 실행 때부터 대기 중이던 보고서를 보내는 중입니다. |
-| InstallerClean {0} is installed. | InstallerClean {0} 버전이 설치되었습니다. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 삭제하지 않습니다. 삭제하려면 그 후에 /d를 다시 실행하세요. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다. |
 | Running {0} with InstallerClean {1} instead. | 대신 InstallerClean {1} 버전으로 {0} 명령을 실행합니다. |
-| Waiting for another program to let go of {0}... | 다른 프로그램이 {0} 사용을 마칠 때까지 기다리는 중... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean이 설치 프로그램이 설치한 버전을 확인하지 못해 명령이 실행되지 않았습니다. 다시 실행하세요. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 버전이 설치되었지만 시작할 수 없었습니다. 명령을 다시 실행하세요. |
+| The newer version couldn't be run. | 새 버전을 실행하지 못했습니다. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | InstallerClean {1} 버전으로 {0} 명령을 실행합니다. 실행이 끝나면 이 사본을 대체합니다. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | 이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 다시 실행하여 업데이트하세요. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 되돌리기는 간단합니다. {0}에서 {InstallerFolder}로 다시 옮기면 모든 것이 원래대로 돌아갑니다. |

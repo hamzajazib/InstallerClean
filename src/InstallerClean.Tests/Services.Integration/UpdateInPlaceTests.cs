@@ -899,19 +899,6 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
-    public async Task A_command_line_written_beside_its_exe_keeps_the_newer_version_while_nothing_is_at_its_path()
-    {
-        var (updater, exe, _) = CommandLineDownloadUpdater(new OneAnswer(Release(2)));
-        var prepared = CommandLineUpdate.StageBeside(
-            await updater.PrepareAsync(CoreRelease, null, CancellationToken.None), exe, CancellationToken.None);
-        File.Move(exe, exe + SelfReplacement.OldSuffix);
-
-        prepared.Undo();
-
-        Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-    }
-
-    [Fact]
     public async Task A_prepared_update_holds_the_clean_up_off_until_its_undo_removes_the_download()
     {
         var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
@@ -930,57 +917,6 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         Assert.False(File.Exists(prepared.FileToStart));
         Assert.True(gate.TryRunPass(() => { }));
-    }
-
-    [Fact]
-    public async Task A_command_line_written_beside_its_exe_holds_the_clean_up_off_until_its_undo()
-    {
-        var gate = new UpdateLeftoverGate();
-        var (updater, exe, stagingRoot) = CommandLineDownloadUpdater(new OneAnswer(Release(2)), gate);
-
-        var prepared = CommandLineUpdate.StageBeside(
-            await updater.PrepareAsync(CoreRelease, null, CancellationToken.None), exe, CancellationToken.None);
-        Assert.False(gate.TryRunPass(() => { }));
-
-        prepared.Undo();
-
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
-        Assert.True(gate.TryRunPass(() => { }));
-    }
-
-    [Fact]
-    public async Task A_command_lines_undo_never_reaches_into_its_download_folder_once_that_has_gone()
-    {
-        var (updater, exe, _) = CommandLineDownloadUpdater(new OneAnswer(Release(2)));
-        var staged = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
-        var download = staged.FileToStart;
-        var folder = Path.GetDirectoryName(download)!;
-
-        var prepared = CommandLineUpdate.StageBeside(staged, exe, CancellationToken.None);
-        Assert.False(Directory.Exists(folder));
-        // Anything able to write to the staging root can make the same name again.
-        Directory.CreateDirectory(folder);
-        File.WriteAllBytes(download, Program(9));
-
-        prepared.Undo();
-
-        Assert.Equal(Program(9), File.ReadAllBytes(download));
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-    }
-
-    [Fact]
-    public async Task A_command_line_whose_undo_keeps_the_newer_version_keeps_the_clean_up_off()
-    {
-        var gate = new UpdateLeftoverGate();
-        var (updater, exe, _) = CommandLineDownloadUpdater(new OneAnswer(Release(2)), gate);
-        var prepared = CommandLineUpdate.StageBeside(
-            await updater.PrepareAsync(CoreRelease, null, CancellationToken.None), exe, CancellationToken.None);
-        File.Move(exe, exe + SelfReplacement.OldSuffix);
-
-        prepared.Undo();
-
-        Assert.False(gate.TryRunPass(() => { }));
     }
 
     [Fact]
@@ -1043,26 +979,6 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.DoesNotContain("/UPDATEFROMAPP", prepared.Arguments);
 
         prepared.Undo();
-    }
-
-    [Fact]
-    public async Task The_command_lines_own_download_is_written_beside_its_file_and_the_download_removed()
-    {
-        var (updater, exe, stagingRoot) = CommandLineDownloadUpdater(new OneAnswer(Release(2)));
-
-        var prepared = CommandLineUpdate.StageBeside(
-            await updater.PrepareAsync(CoreRelease, null, CancellationToken.None), exe, CancellationToken.None);
-
-        Assert.Equal(exe, prepared.FileToStart);
-        Assert.Null(prepared.Replaces);
-        Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
-        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
-
-        prepared.Undo();
-
-        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
     }
 
     /// <summary>An updater for the command line's own download in its own folder, the exe it updates and the staging root, holding <paramref name="gate"/> where one is given.</summary>

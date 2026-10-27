@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Ошибка: непредвиденный лишний аргумент «{0}». /s и /d не принимают других аргументов, и за один запуск можно использовать только один ключ. |
 | Cancelling... | Отмена... |
 | Cancelled. | Отменено. |
-| Cancelling once the update has finished... | Отмена после завершения обновления... |
 | Error: unexpected failure ({0}). Details written to {1}. | Ошибка: непредвиденный сбой ({0}). Подробности записаны в {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Ошибка: непредвиденный сбой ({0}). Журнал сбоя записать не удалось. |
 | Scanning {InstallerFolder}... | Сканирование {InstallerFolder}... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | Перемещено {0} ненужных {1}. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Убедитесь, что ваши программы по-прежнему обновляются и удаляются как обычно, а затем удалите {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 3 $: {0} |
-| Update now? [{0}/{1}] | Обновить сейчас? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Обновить сейчас? Настоятельно рекомендуется использовать последнюю версию. [{0}/{1}] |
 | Y | Д |
 | N | Н |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Отправить анонимный отчёт об этом запуске? Он сохранён в {0}. Введите ?, чтобы увидеть, что в нём. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | Отчёт не отправлен. |
 | The report could not be sent. It is kept in {0}. | Не удалось отправить отчёт. Он хранится в {0}. |
 | Sending a report left waiting by an earlier run. | Отправляется отчёт, ожидающий отправки ещё с более раннего запуска. |
-| InstallerClean {0} is installed. | Версия InstallerClean {0} установлена. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Новая версия просканирует и покажет список найденного, ничего не удаляя. Чтобы удалить, затем снова запустите /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean используется, поэтому сейчас не может обновиться. |
 | Running {0} with InstallerClean {1} instead. | Вместо этого команда {0} будет выполнена в InstallerClean {1}. |
-| Waiting for another program to let go of {0}... | Ожидание, пока другая программа освободит {0}... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean не удалось проверить версию, установленную программой установки, поэтому команда не была выполнена. Выполните её ещё раз. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | Версия InstallerClean {0} установлена, но запустить её не удалось. Выполните команду ещё раз. |
+| The newer version couldn't be run. | Не удалось запустить более новую версию. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | Команда {0} будет выполнена в InstallerClean {1}. После завершения эта версия заменит текущую копию. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем снова запустите InstallerClean, чтобы выполнить обновление. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Это легко отменить. Переместите их из {0} обратно в {InstallerFolder}, и всё вернётся как было. |

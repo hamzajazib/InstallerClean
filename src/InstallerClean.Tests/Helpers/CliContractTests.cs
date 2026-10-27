@@ -228,8 +228,8 @@ public class CliContractTests
         Assert.Equal(3003, CliContract.EventIdFor(CliEventClass.ScanSupersededHeldBackNotice));
         Assert.Equal(3004, CliContract.EventIdFor(CliEventClass.SourcesGivenUpNotice));
         Assert.Equal(3005, CliContract.EventIdFor(CliEventClass.UpdatedNotice));
-        Assert.Equal(3005, CliContract.EventIdFor(CliEventClass.UpdatedThenCancelledNotice));
         Assert.Equal(3006, CliContract.EventIdFor(CliEventClass.UpdateFailedNotice));
+        Assert.Equal(3006, CliContract.EventIdFor(CliEventClass.UpdateNotPossibleNotice));
     }
 
     [Fact]
@@ -250,8 +250,8 @@ public class CliContractTests
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.ScanSupersededHeldBackNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.SourcesGivenUpNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdatedNotice), outcomes);
-        Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdatedThenCancelledNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdateFailedNotice), outcomes);
+        Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdateNotPossibleNotice), outcomes);
     }
 
     [Fact]
@@ -265,15 +265,15 @@ public class CliContractTests
         //
         // The denominator is asserted rather than assumed: a walk that found no
         // members would report no duplicates, which reads exactly like a clean map.
-        //
-        // The two update notices share 3005 by design, so one filter sees every update
-        // that went in, and are counted as one class here. Any other pair is a fault.
         var classes = Enum.GetValues<CliEventClass>();
         Assert.True(classes.Length >= 7,
             $"CliEventClass has {classes.Length} members, which is too few for this walk to be "
             + "measuring what it claims.");
 
-        var ids = classes.Where(c => c != CliEventClass.UpdatedThenCancelledNotice)
+        //
+        // The two 3006 notices share it by design, so one filter sees every update not made,
+        // and are counted as one class here. Any other pair is a fault.
+        var ids = classes.Where(c => c != CliEventClass.UpdateNotPossibleNotice)
             .Select(CliContract.EventIdFor).ToArray();
         var duplicated = ids.GroupBy(id => id).Where(g => g.Count() > 1).Select(g => g.Key).ToArray();
 
@@ -295,10 +295,11 @@ public class CliContractTests
     [Fact]
     public void EntryType_the_update_notices_follow_the_run()
     {
-        // One Event ID, two entry types: the run that ran the newer version fell short of
-        // nothing, and the run cancelled before it started did not do its job.
+        // The run that ran the newer version fell short of nothing, and so does one whose copy
+        // does not update to it for a reason true on every run; the run that did not run it for
+        // a reason that can pass did its job with an older version, or did not do it.
         Assert.Equal(EventLogEntryType.Information, CliContract.EntryTypeFor(CliEventClass.UpdatedNotice));
-        Assert.Equal(EventLogEntryType.Warning, CliContract.EntryTypeFor(CliEventClass.UpdatedThenCancelledNotice));
+        Assert.Equal(EventLogEntryType.Information, CliContract.EntryTypeFor(CliEventClass.UpdateNotPossibleNotice));
         Assert.Equal(EventLogEntryType.Warning, CliContract.EntryTypeFor(CliEventClass.UpdateFailedNotice));
     }
 
@@ -338,15 +339,6 @@ public class CliContractTests
         // finished checking, and it stops the moment the drive or share answers.
         Assert.Equal(EventLogEntryType.Warning,
             CliContract.EntryTypeFor(CliEventClass.SourcesGivenUpNotice));
-    }
-
-    [Fact]
-    public void EntryType_the_update_notices_split_on_whether_the_update_went_in()
-    {
-        // A run that installed the newer version and ran it fell short of nothing; a run
-        // that could not went on with an older version than it set out to use.
-        Assert.Equal(EventLogEntryType.Information, CliContract.EntryTypeFor(CliEventClass.UpdatedNotice));
-        Assert.Equal(EventLogEntryType.Warning, CliContract.EntryTypeFor(CliEventClass.UpdateFailedNotice));
     }
 
     [Theory]

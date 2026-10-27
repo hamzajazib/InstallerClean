@@ -81,6 +81,15 @@ public interface IAppUpdater
     /// command line's own download; none of them leaves anything on disk.
     /// </summary>
     Task<PreparedUpdate> PrepareStagedRunAsync(string version, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The check <see cref="PrepareStagedRunAsync"/> makes before it downloads anything,
+    /// answered as <see cref="CheckRequirementsAsync"/> answers, with its time limit and its
+    /// exceptions: on the setup's copy the release's setup and its command line are both
+    /// judged, from one read of the release's file.
+    /// </summary>
+    Task<UpdateRefusal?> CheckStagedRunRequirementsAsync(
+        string version, TimeSpan? within, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -109,9 +118,8 @@ public sealed class PreparedUpdate
 
     /// <summary>
     /// The program to start: the newer setup, or the newer version itself, in the folder it
-    /// was downloaded to. Where the command line has written the newer version beside its
-    /// own exe (<see cref="CommandLineUpdate.StageBeside"/>), the exe's path. For a run from
-    /// the staging folder, the newer command line there.
+    /// was downloaded to. For the command line's run from the staging folder, the newer
+    /// command line there.
     /// </summary>
     public string FileToStart { get; }
 
@@ -120,10 +128,10 @@ public sealed class PreparedUpdate
 
     /// <summary>
     /// Where the newer version at <see cref="FileToStart"/> is started to put itself at the
-    /// running exe's path, that path. Null where something else puts it there: the setup's
-    /// copy's setup, or the command line's rename of the version written beside its exe. For
-    /// a run from the staging folder, the running exe's path, which the run stands for and
-    /// the newer version, or on the setup's copy its setup, takes the place of.
+    /// running exe's path, that path. Null where the window's setup's copy runs the newer
+    /// setup, which puts it there. For a run from the staging folder, the running exe's path,
+    /// which the run stands for and the newer version, or on the setup's copy its setup, takes
+    /// the place of.
     /// </summary>
     public string? Replaces { get; }
 
@@ -159,8 +167,7 @@ public sealed class PreparedUpdate
 /// The update from inside the app. The setup's copy downloads the newer setup and runs
 /// it; the portable, the slim and the command line's own download download the newer
 /// version of the same file. The window starts it to put itself at the running exe's path;
-/// the command line writes it beside its own exe (<see cref="CommandLineUpdate.StageBeside"/>),
-/// or runs its command with the newer command line from the staging folder
+/// the command line runs its command with the newer command line from the staging folder
 /// (<see cref="PrepareStagedRunAsync"/>).
 /// Each download is saved in a staging folder only Administrators and SYSTEM can write to,
 /// and checked there for the version it was downloaded as before anything uses it. A build from source,
@@ -328,9 +335,9 @@ public sealed class AppUpdater : IAppUpdater
     /// .NET Framework 4.8 would not change it.
     /// </summary>
     private async Task<UpdateRefusal?> CheckStagedRunRequirementsHereAsync(
-        string version, CancellationToken cancellationToken)
+        string version, TimeSpan? within, CancellationToken cancellationToken)
     {
-        var manifest = await ReadManifestHereAsync(version, null, cancellationToken).ConfigureAwait(false);
+        var manifest = await ReadManifestHereAsync(version, within, cancellationToken).ConfigureAwait(false);
         AppCopyKind[] kinds = Kind == AppCopyKind.Setup ? [AppCopyKind.Setup, AppCopyKind.CommandLineDownload] : [Kind];
         // Read once, where any entry asks for it.
         var hasNetFramework48 = new Lazy<bool>(() => UpdateManifest.HasNetFramework48(_registry));
@@ -447,8 +454,7 @@ public sealed class AppUpdater : IAppUpdater
             // to put itself at the running exe's path. Either runs it from the staging folder, so
             // the file stays held and the gate stays out until the update is undone or this
             // process ends. The handle is kept in a list that lives as long as the process, as
-            // a staged run's are. The command line's StageBeside copies the download beside its
-            // exe and then deletes it, which lets go of the file there and then.
+            // a staged run's are.
             // The download is deleted by its path, by DeleteDownload or Undo, which first let go
             // of the hold, until its folder has gone. Once the folder is gone its name is free,
             // and anybody who can write to the root can make a folder or a link under it, so
@@ -469,15 +475,29 @@ public sealed class AppUpdater : IAppUpdater
         }
     }
 
-    public async Task<PreparedUpdate> PrepareStagedRunAsync(string version, CancellationToken cancellationToken)
+    public async Task<UpdateRefusal?> CheckStagedRunRequirementsAsync(
+        string version, TimeSpan? within, CancellationToken cancellationToken)
+    {
+        ThrowIfNoStagedRun();
+        // On a pool thread from here, as in CheckRequirementsAsync.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+        return await CheckStagedRunRequirementsHereAsync(version, within, cancellationToken).ConfigureAwait(false);
+    }
+
+    private void ThrowIfNoStagedRun()
     {
         if (Kind is not (AppCopyKind.Setup or AppCopyKind.CommandLineDownload))
             throw new InvalidOperationException($"A copy of kind {Kind} has no command line to run from a download.");
+    }
+
+    public async Task<PreparedUpdate> PrepareStagedRunAsync(string version, CancellationToken cancellationToken)
+    {
+        ThrowIfNoStagedRun();
 
         // Everything after this runs on a pool thread, as in PrepareAsync.
         await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
-        if (await CheckStagedRunRequirementsHereAsync(version, cancellationToken).ConfigureAwait(false) is { } refusal)
+        if (await CheckStagedRunRequirementsHereAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
             throw new UpdateRefusedException(refusal, version);
 
         // The hold comes before the first write, as in PrepareAsync.

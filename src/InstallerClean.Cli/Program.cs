@@ -316,10 +316,6 @@ internal static class Program
 
         using var cts = new CancellationTokenSource();
         var updateHost = new ConsoleUpdateHost(arg);
-        // This run's own file is held against renaming for as long as it runs, so another
-        // run's update of the same file cannot move it aside under this one. A run standing
-        // for another copy runs from the staging folder, where no update renames anything.
-        if (s_standsFor is null) updateHost.HoldOwnFile();
 
         // A Ctrl+C from here until the run returns cancels the run, before the update and the
         // mutex as well as during the work, and one that came before this line does so as it
@@ -342,7 +338,7 @@ internal static class Program
             // it can answer it. The token is cancelled all the same, which is how the run
             // knows the Ctrl+C came in that last case.
             if (updateHost.TakeCancellingLine())
-                SayCancelling(updateHost.SetupRunning ? Strings.Cli_CancellingAfterUpdate : Strings.Cli_Cancelling);
+                SayCancelling(Strings.Cli_Cancelling);
             // Cancelled whether or not the line went out, so the run stops either way. The
             // run may have returned and disposed the source meanwhile, which throws here.
             try
@@ -357,13 +353,17 @@ internal static class Program
 
         // What an earlier update left beside this exe: the copy it renamed aside, which
         // could not be deleted while it was still running, a newer version written beside
-        // it that never took its place, and what a replace left beside it. A run standing for
-        // another copy runs from the staging folder and leaves that copy's folder to the
-        // copy itself.
+        // it that never took its place, and what a replace left beside it. Then the staging
+        // folders earlier updates left in %ProgramData%; a file a running update holds is
+        // left where it is, its handle sharing no delete. A run standing for another copy
+        // runs from the staging folder and leaves that copy's folder, and the staging
+        // folders, to the copy itself.
         if (s_standsFor is null && Environment.ProcessPath is { Length: > 0 } ownPath)
         {
             SelfReplacement.TryRemoveOldCopy(ownPath);
             ExeReplacement.TryRemoveLeftovers(ownPath);
+            UpdateLeftoverGate.ForThisProcess.TryRunPass(
+                () => UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot));
         }
 
         if (!cts.IsCancellationRequested
@@ -593,11 +593,9 @@ internal static class Program
     /// Writes what the update ended in to the Application log and answers the exit code
     /// where the run ends here: the newer version's, where it ran in this console;
     /// <see cref="ExitCancelled"/> after Ctrl+C at the question, during the download,
-    /// after an update that failed or was not tried, with the newer version installed and
-    /// not yet started, or where Ctrl+C ended the newer version before it could answer it;
-    /// or <see cref="ExitError"/> where the update failed and the run could not go on with
-    /// this version, so nothing ran. Answers null where the run goes on with this
-    /// version, having written the notice for an update that failed.
+    /// after the newer version was not run, or where Ctrl+C ended the newer version before
+    /// it could answer it. Answers null where the run goes on with this version, having
+    /// written the notice saying why the newer version was not run.
     /// <paramref name="cancelled"/> is whether Ctrl+C had come when the update returned.
     /// </summary>
     internal static int? ConcludeUpdate(
@@ -619,37 +617,21 @@ internal static class Program
                 return handedOver.ExitCode;
             case CommandLineUpdateResult.Cancelled:
                 return ReportCancelledBeforeWork(arg);
-            case CommandLineUpdateResult.UpdatedThenCancelled updated:
-                // The newer version is in place and nothing ran, so the notice saying so is
-                // the run's one entry.
-                return ReportCancelled(CliEventClass.UpdatedThenCancelledNotice,
-                    () => UpdatedThenCancelledEventLogLine(arg, updated.FromVersion, updated.ToVersion));
             case CommandLineUpdateResult.FailedThenCancelled failed:
                 // Nothing changed this version's file and nothing ran, so the notice saying why
                 // the update did not happen is the run's one entry.
                 return ReportCancelled(CliEventClass.UpdateFailedNotice,
-                    () => UpdateFailedThenCancelledEventLogLine(arg, failed.FromVersion, failed.ToVersion, failed.Stage));
-            case CommandLineUpdateResult.CarriedOn { FailedAt: { } stage, FromVersion: { } from, ToVersion: { } to }
+                    () => UpdateFailedThenCancelledEventLogLine(arg, failed.FromVersion, failed.ToVersion, failed.NotMade));
+            case CommandLineUpdateResult.CarriedOn { NotMade: { } notMade, FromVersion: { } from, ToVersion: { } to }
                 when cancelled:
                 // Ctrl+C came after the run said it goes on with this version, and the run stops
                 // here before the scan, so its one entry is the one above.
                 return ReportCancelled(CliEventClass.UpdateFailedNotice,
-                    () => UpdateFailedThenCancelledEventLogLine(arg, from, to, stage));
-            case CommandLineUpdateResult.CarriedOn { FailedAt: { } stage, FromVersion: { } from, ToVersion: { } to }:
-                MachineContract.WriteEventLog(CliEventClass.UpdateFailedNotice,
-                    () => UpdateFailedEventLogLine(arg, from, to, stage, args));
+                    () => UpdateFailedThenCancelledEventLogLine(arg, from, to, notMade));
+            case CommandLineUpdateResult.CarriedOn { NotMade: { } notMade, FromVersion: { } from, ToVersion: { } to }:
+                MachineContract.WriteEventLog(UpdateNotMadeClass(notMade),
+                    () => UpdateFailedEventLogLine(arg, from, to, notMade, args));
                 return null;
-            case CommandLineUpdateResult.NotStarted notStarted:
-                MachineContract.WriteEventLog(CliEventClass.UpdateFailedNotice,
-                    () => UpdateNotStartedEventLogLine(arg, notStarted.FromVersion, notStarted.ToVersion));
-                NoteEventLogUnavailable();
-                return ExitError;
-            case CommandLineUpdateResult.Stopped stopped:
-                MachineContract.WriteEventLog(CliEventClass.HardError, () => stopped.CrashLogPath is { } path
-                    ? string.Format(Strings.Cli_EventLogHardError, arg, stopped.FailureType, path)
-                    : string.Format(Strings.Cli_EventLogHardError_NoLog, arg, stopped.FailureType));
-                NoteEventLogUnavailable();
-                return ExitError;
             default:
                 return null;
         }
@@ -700,10 +682,22 @@ internal static class Program
         string.Format(Strings.Cli_EventLogUpdated, arg, fromVersion, toVersion, string.Join(' ', arguments));
 
     /// <summary>
+    /// The class of the 3006 a run that goes on with this version writes: Information where
+    /// the reason holds on every run until something on the PC changes, Warning where it can
+    /// pass by the next run.
+    /// </summary>
+    internal static CliEventClass UpdateNotMadeClass(UpdateNotMade notMade) => notMade switch
+    {
+        UpdateNotMade.CopyCannotTell or UpdateNotMade.FromSource or UpdateNotMade.NeedsNetFramework48
+            or UpdateNotMade.CannotInstallAutomatically => CliEventClass.UpdateNotPossibleNotice,
+        _ => CliEventClass.UpdateFailedNotice,
+    };
+
+    /// <summary>
     /// The Event ID 3006 line: this run could not update itself from
-    /// <paramref name="fromVersion"/> to <paramref name="toVersion"/>, the part named by
-    /// <paramref name="stage"/> having failed or InstallerClean having been in use, and ran
-    /// <paramref name="arguments"/> with <paramref name="fromVersion"/>.
+    /// <paramref name="fromVersion"/> to <paramref name="toVersion"/>, for the reason
+    /// <paramref name="notMade"/> gives, and ran <paramref name="arguments"/> with
+    /// <paramref name="fromVersion"/>.
     /// </summary>
     /// <remarks>
     /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
@@ -711,69 +705,45 @@ internal static class Program
     /// culture anywhere else.
     /// </remarks>
     internal static string UpdateFailedEventLogLine(
-        string arg, string fromVersion, string toVersion, UpdateFailureStage stage,
+        string arg, string fromVersion, string toVersion, UpdateNotMade notMade,
         IReadOnlyList<string> arguments) =>
-        string.Format(UpdateFailedFormat(stage, thenCancelled: false),
+        string.Format(UpdateFailedFormat(notMade, thenCancelled: false),
             arg, fromVersion, toVersion, string.Join(' ', arguments));
 
-    /// <summary>
-    /// The 3006 line's wording for <paramref name="stage"/>: the run going on with the
-    /// version it is, or, where <paramref name="thenCancelled"/>, Ctrl+C having come so
-    /// nothing ran.
-    /// </summary>
-    private static string UpdateFailedFormat(UpdateFailureStage stage, bool thenCancelled) => stage switch
+    private static string UpdateFailedFormat(UpdateNotMade notMade, bool thenCancelled) => notMade switch
     {
-        UpdateFailureStage.Download => thenCancelled
+        UpdateNotMade.DownloadFailed => thenCancelled
             ? Strings.Cli_EventLogUpdateDownloadFailedThenCancelled
             : Strings.Cli_EventLogUpdateDownloadFailed,
-        UpdateFailureStage.InUse => thenCancelled
+        UpdateNotMade.InUse => thenCancelled
             ? Strings.Cli_EventLogUpdateInUseThenCancelled
             : Strings.Cli_EventLogUpdateInUse,
+        UpdateNotMade.CopyCannotTell => thenCancelled
+            ? Strings.Cli_EventLogUpdateCopyCannotTellThenCancelled
+            : Strings.Cli_EventLogUpdateCopyCannotTell,
+        UpdateNotMade.FromSource => thenCancelled
+            ? Strings.Cli_EventLogUpdateFromSourceThenCancelled
+            : Strings.Cli_EventLogUpdateFromSource,
+        UpdateNotMade.NeedsNetFramework48 => thenCancelled
+            ? Strings.Cli_EventLogUpdateNeedsNetFramework48ThenCancelled
+            : Strings.Cli_EventLogUpdateNeedsNetFramework48,
+        UpdateNotMade.CannotInstallAutomatically => thenCancelled
+            ? Strings.Cli_EventLogUpdateCannotInstallThenCancelled
+            : Strings.Cli_EventLogUpdateCannotInstall,
         _ => thenCancelled
-            ? Strings.Cli_EventLogUpdateInstallFailedThenCancelled
-            : Strings.Cli_EventLogUpdateInstallFailed,
+            ? Strings.Cli_EventLogUpdateNotRunThenCancelled
+            : Strings.Cli_EventLogUpdateNotRun,
     };
 
     /// <summary>
-    /// The Event ID 3006 line where the run ends with nothing run: this run updated
-    /// itself from <paramref name="fromVersion"/> to <paramref name="toVersion"/>, which
-    /// is in place and would not start.
+    /// The Event ID 3006 line for a run that could not update itself, for the reason
+    /// <paramref name="notMade"/> gives, and was then cancelled, so nothing ran. Built
+    /// outside the en-GB scope, as <see cref="UpdateFailedEventLogLine"/> is.
     /// </summary>
-    /// <remarks>
-    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
-    /// caller wraps it, so the line renders English in production and in the ambient
-    /// culture anywhere else.
-    /// </remarks>
-    internal static string UpdateNotStartedEventLogLine(string arg, string fromVersion, string toVersion) =>
-        string.Format(Strings.Cli_EventLogUpdateNotStarted, arg, fromVersion, toVersion);
-
-    /// <summary>
-    /// The Event ID 3006 line where the run ends with nothing run: this run could not
-    /// update itself from <paramref name="fromVersion"/> to <paramref name="toVersion"/>,
-    /// the part named by <paramref name="stage"/> having failed or InstallerClean having
-    /// been in use, and Ctrl+C came before anything ran.
-    /// </summary>
-    /// <remarks>
-    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
-    /// caller wraps it, so the line renders English in production and in the ambient
-    /// culture anywhere else.
-    /// </remarks>
     internal static string UpdateFailedThenCancelledEventLogLine(
-        string arg, string fromVersion, string toVersion, UpdateFailureStage stage) =>
-        string.Format(UpdateFailedFormat(stage, thenCancelled: true), arg, fromVersion, toVersion);
+        string arg, string fromVersion, string toVersion, UpdateNotMade notMade) =>
+        string.Format(UpdateFailedFormat(notMade, thenCancelled: true), arg, fromVersion, toVersion);
 
-    /// <summary>
-    /// The Event ID 3005 line where the run ends with nothing run: this run updated itself
-    /// from <paramref name="fromVersion"/> to <paramref name="toVersion"/>, which is in
-    /// place, and Ctrl+C came before it started.
-    /// </summary>
-    /// <remarks>
-    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
-    /// caller wraps it, so the line renders English in production and in the ambient
-    /// culture anywhere else.
-    /// </remarks>
-    internal static string UpdatedThenCancelledEventLogLine(string arg, string fromVersion, string toVersion) =>
-        string.Format(Strings.Cli_EventLogUpdatedThenCancelled, arg, fromVersion, toVersion);
 
     /// <summary>
     /// Prints what a run held back, in the operator's language: ONE counted

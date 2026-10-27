@@ -1724,9 +1724,6 @@ InstallerClean уже был запущен от имени администра
        take no path at all, so the quoting advice above would answer about a flag
        the user did not type. The way in is combining flags ("/s /d"), which is
        what the second sentence addresses. -->
-  <!-- Printed in place of Cli.Cancelling where Ctrl+C comes while the newer setup
-       runs: the run waits for the setup to end, then prints Cli.UpdateInstalled where it
-       installed and Cli.Cancelled. -->
   <!-- 0 = exception type name (full message + stack trace go to the
        crash log; the CLI runs elevated so .Message could include paths
        from another user's profile if logged to a shared file).
@@ -2305,8 +2302,8 @@ InstallerClean уже был запущен от имени администра
        Application log. 0 = the donation page's address, printed as written. The
        amount is in US dollars, written the way the language writes a dollar amount. -->
   <!-- The command line's update, printed before the scan where a newer version is out.
-       The question follows UpdateNotice.Available and UpdateNotice.Recommended, and is
-       asked only where a person can see it and answer it. 0 = the letter for yes, shown
+       The question follows UpdateNotice.Available, and is asked only where a person can see
+       it and answer it. 0 = the letter for yes, shown
        in capitals because Enter answers yes; 1 = the letter for no, in lower case. Both
        come from Cli.UpdateAnswerYes and Cli.UpdateAnswerNo, so the brackets always show
        the letters the reader takes. -->
@@ -2335,25 +2332,21 @@ InstallerClean уже был запущен от имени администра
   <!-- A later run at the console, before it sends a report an earlier run left waiting.
        Nothing is asked. InstallerClean's window also sends one without asking, at every
        start until a send is accepted. The line names no cause: more than one thing leaves a report waiting. -->
-  <!-- After the newer version is in place, before it runs. 0 = its version. -->
-  <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer
+  <!-- After Cli.UpdateRunningNewer, where the person typed /d or /m and answered yes: the newer
        version scans and lists, as /s does, and moves or deletes nothing. /d and /m are the
        commands as typed and stay as written. -->
-  <!-- Where a newer version is out and InstallerClean is in use: the window is open, a
-       Move or Delete is running, or another run of the command line is running from the
-       same file. The update is not tried, and Cli.UpdateRunningInstead follows. -->
-  <!-- After UpdateNotice.DownloadFailed, UpdateNotice.InstallFailed or Cli.UpdateInUse,
+  <!-- Where a newer version is out, a Move or Delete was asked for and InstallerClean is in
+       use: the window is open, or another Move or Delete is running. The update is not
+       tried, and Cli.UpdateRunningInstead follows. -->
+  <!-- After UpdateNotice.DownloadFailed, Cli.UpdateNotRun or Cli.UpdateInUse,
        before the run goes on with the version it is. 0 = the command given, /s, /d or /m,
        as typed and left as written; 1 = the version that runs it. -->
-  <!-- After the newer setup has finished, while another program holds the file the setup
-       wrote at the command line's path and the run waits for it before reading its version.
-       0 = the file's name, installerclean-cli.exe, as it is on disk and left as written. -->
-  <!-- Where the newer setup finished and another program held the file it wrote at the
-       command line's path for as long as the run waited for it, or Ctrl+C or the console
-       closing ended that wait. The run ends with nothing run, before /s, /d or /m. -->
-  <!-- Where the newer version is in place at the command line's path but would not start,
-       so the run ends with nothing run and the next run of the command starts the newer
-       version. 0 = its version. -->
+  <!-- Where the newer version could not be run: its download not carrying its version, the
+       folder it is downloaded to not made, or its start failing. Cli.UpdateRunningInstead
+       follows. -->
+  <!-- Once the newer version has started, downloaded beside nothing else of this copy's, to
+       run the command and then put itself in this copy's place. 0 = the command it runs,
+       /s, /d or /m, as typed and left as written; 1 = its version. -->
   <!-- Where a newer version is out and this copy cannot update itself (a build from source,
        or a copy that cannot tell from the setup's record whether the setup installed it), or
        the newer version's release rules this copy out. 0 = the link's words,
@@ -2408,13 +2401,13 @@ InstallerClean уже был запущен от имени администра
        3 = the arguments the newer version was started with. Event ID 3005, a notice
        written once the newer version has started; the newer version writes the run's
        summary. -->
-  <!-- 0 = mode arg, 1 = the version that ran, 2 = the version it could not install, 3 = the
-       arguments the run was given. Event ID 3006, a notice beside the run's own summary: the
-       first where the download failed, the second where putting it in place or starting it
-       failed, the third where InstallerClean was in use, so the update was not tried. -->
-  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
-       ID 3006, the run's only entry, where the newer version is in place but would not
-       start, so nothing ran. -->
+  <!-- 0 = mode arg, 1 = the version that ran, 2 = the newer version it did not run, 3 = the
+       arguments the run was given. Event ID 3006, a notice beside the run's own summary, where
+       the run went on with the version it is. In order: the download failed; the newer version
+       was downloaded and could not be run; a Move or Delete found InstallerClean in use, so the
+       update was not tried; the copy cannot tell whether its setup installed it; it was built
+       from source; the newer release needs .NET Framework 4.8; the
+       newer release rules this copy out. -->
   <!-- 0 = the version that was not installed, 1 = the newest release's page. Event ID 3007, written
        by that version, the copy being updated having closed and left nothing at its path. -->
   <!-- 0 = the version that was not installed. Event ID 3007, written by that version where the
@@ -2429,14 +2422,10 @@ InstallerClean уже был запущен от имени администра
        that version where the setup it ran ended with an exit code other than 0. -->
   <!-- 0 = the setup's version. Event ID 3007, written by the command line of that version where
        the setup ended with exit code 0 and the command line at the path does not carry it. -->
-  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
-       ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
-       before it started, so nothing ran. -->
-  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version it could not
-       install. Event ID 3006, the run's only entry, where Ctrl+C came after the update
-       failed or was not tried, so nothing ran: the first where the download failed, the
-       second where putting it in place or starting it failed, the third where
-       InstallerClean was in use. -->
+  <!-- 0 = mode arg, 1 = the version that ran, 2 = the newer version it did not run. Event ID
+       3006, the run's only entry, where Ctrl+C came after the run said it goes on with the
+       version it is, so nothing ran. One for each reason, in the order of
+       Cli.EventLogUpdateDownloadFailed and those after it. -->
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant
@@ -2651,18 +2640,15 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.SourceGivenUp.Path" xml:space="preserve"><value>InstallerClean перестал ждать {0} и оставил без изменений все файлы, которые ещё нужно было сверить с тем, что там находится. Когда доступ станет нормальным, запустите команду снова.</value></data>
   <data name="Cli.SourcesGivenUp" xml:space="preserve"><value>InstallerClean перестал ждать несколько дисков или сетевых ресурсов ({0}) и оставил без изменений все файлы, которые ещё нужно было сверить с одним из них. Когда они начнут отвечать нормально, запустите команду снова.</value></data>
   <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 3 $: {0}</value></data>
-  <data name="Cli.UpdatePrompt" xml:space="preserve"><value>Обновить сейчас? [{0}/{1}]</value></data>
+  <data name="Cli.UpdatePrompt" xml:space="preserve"><value>Обновить сейчас? Настоятельно рекомендуется использовать последнюю версию. [{0}/{1}]</value></data>
   <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>Д</value></data>
   <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>Н</value></data>
-  <data name="Cli.UpdateInstalled" xml:space="preserve"><value>Версия InstallerClean {0} установлена.</value></data>
   <data name="Cli.UpdateListsOnlyAfterDelete" xml:space="preserve"><value>Новая версия просканирует и покажет список найденного, ничего не удаляя. Чтобы удалить, затем снова запустите /d.</value></data>
   <data name="Cli.UpdateListsOnlyAfterMove" xml:space="preserve"><value>Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m.</value></data>
   <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>Вместо этого команда {0} будет выполнена в InstallerClean {1}.</value></data>
-  <data name="Cli.UpdateNotStarted" xml:space="preserve"><value>Версия InstallerClean {0} установлена, но запустить её не удалось. Выполните команду ещё раз.</value></data>
   <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>{0}: {1}</value></data>
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Перед сканированием проверяет, есть ли более новая версия InstallerClean.&#10;При запуске вручную спрашивает перед обновлением. При запуске без участия&#10;человека, в запланированной задаче или скрипте, обновляется без вопросов.&#10;Добавьте /noupdate, чтобы пропустить проверку.</value></data>
   <data name="Cli.UpdateInUse" xml:space="preserve"><value>InstallerClean используется, поэтому сейчас не может обновиться.</value></data>
-  <data name="Cli.CancellingAfterUpdate" xml:space="preserve"><value>Отмена после завершения обновления...</value></data>
   <data name="Cli.UpdateNeedsNetFramework48" xml:space="preserve"><value>Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем снова запустите InstallerClean, чтобы выполнить обновление.</value></data>
   <data name="Cli.ReportPrompt" xml:space="preserve"><value>Отправить анонимный отчёт об этом запуске? Он сохранён в {0}. Введите ?, чтобы увидеть, что в нём. [{1}/{2}/?]</value></data>
   <data name="Cli.ReportChartAt" xml:space="preserve"><value>график по адресу {0}</value></data>
@@ -2672,6 +2658,6 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.ReportNotSent" xml:space="preserve"><value>Отчёт не отправлен.</value></data>
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Не удалось отправить отчёт. Он хранится в {0}.</value></data>
   <data name="Cli.ReportWaiting" xml:space="preserve"><value>Отправляется отчёт, ожидающий отправки ещё с более раннего запуска.</value></data>
-  <data name="Cli.UpdateWaitingForFile" xml:space="preserve"><value>Ожидание, пока другая программа освободит {0}...</value></data>
-  <data name="Cli.UpdateNotChecked" xml:space="preserve"><value>InstallerClean не удалось проверить версию, установленную программой установки, поэтому команда не была выполнена. Выполните её ещё раз.</value></data>
+  <data name="Cli.UpdateRunningNewer" xml:space="preserve"><value>Команда {0} будет выполнена в InstallerClean {1}. После завершения эта версия заменит текущую копию.</value></data>
+  <data name="Cli.UpdateNotRun" xml:space="preserve"><value>Не удалось запустить более новую версию.</value></data>
 </root>

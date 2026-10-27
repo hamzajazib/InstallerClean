@@ -48,8 +48,6 @@ const BUILDERS = [
   'SourcesGivenUpNoticeEventLogLine',
   'UpdatedEventLogLine',
   'UpdateFailedEventLogLine',
-  'UpdateNotStartedEventLogLine',
-  'UpdatedThenCancelledEventLogLine',
   'UpdateFailedThenCancelledEventLogLine',
 ];
 const RAW_VALUE = 'Strings\\.Cli_EventLog(?!Unavailable\\b)[A-Za-z0-9_]*';

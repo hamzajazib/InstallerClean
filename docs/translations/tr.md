@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Hata: beklenmeyen fazladan argüman '{0}'. /s ve /d başka argüman almaz ve her çalıştırmada yalnızca bir bayrak kullanılabilir. |
 | Cancelling... | İptal ediliyor... |
 | Cancelled. | İptal edildi. |
-| Cancelling once the update has finished... | Güncelleştirme bittiğinde iptal edilecek... |
 | Error: unexpected failure ({0}). Details written to {1}. | Hata: beklenmeyen arıza ({0}). Ayrıntılar {1} konumuna yazıldı. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Hata: beklenmeyen arıza ({0}). Çökme günlüğü yazılamadı. |
 | Scanning {InstallerFolder}... | {InstallerFolder} taranıyor... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | {0} gereksiz {1} taşındı. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Programlarınızın hâlâ normal şekilde güncellendiğini ve kaldırıldığını doğrulayın, sonra {0} klasörünü silin. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean ücretsizdir. İşinize yaradıysa lütfen 3 $ bağış yapın: {0} |
-| Update now? [{0}/{1}] | Şimdi güncellensin mi? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Şimdi güncellensin mi? En son sürümü kullanmanız önemle tavsiye edilir. [{0}/{1}] |
 | Y | E |
 | N | H |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Bu çalıştırmanın anonim raporu gönderilsin mi? {0} konumuna kaydedildi. İçeriğini görmek için ? yazın. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | Rapor gönderilmedi. |
 | The report could not be sent. It is kept in {0}. | Rapor gönderilemedi. {0} konumunda saklanıyor. |
 | Sending a report left waiting by an earlier run. | Daha önceki bir çalıştırmadan beri bekleyen bir rapor gönderiliyor. |
-| InstallerClean {0} is installed. | InstallerClean {0} sürümü yüklendi. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor. |
 | Running {0} with InstallerClean {1} instead. | Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor. |
-| Waiting for another program to let go of {0}... | Başka bir programın {0} dosyasını bırakması bekleniyor... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean, kurulum programının yüklediği sürümü denetleyemedi, bu nedenle komutunuz çalıştırılmadı. Yeniden çalıştırın. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} sürümü yüklendi ancak başlatılamadı. Komutu yeniden çalıştırın. |
+| The newer version couldn't be run. | Daha yeni sürüm çalıştırılamadı. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | {0} komutu InstallerClean {1} ile çalıştırılıyor. Çalışma bitince bu kopyanın yerini alacak. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Bu sürüm .NET Framework 4.8 gerektiriyor. Microsoft'tan yükleyin, bilgisayarı yeniden başlatın, ardından güncellemek için InstallerClean'i yeniden çalıştırın. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Geri almak kolay. Onları {0} konumundan {InstallerFolder} klasörüne geri taşıyın, her şey eskisi gibi olur. |

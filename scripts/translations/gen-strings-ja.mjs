@@ -549,14 +549,12 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `更新をダウンロードできませんでした。`,
   'UpdateNotice.InstallFailed': `更新をインストールできませんでした。`,
   'UpdateNotice.ContinueWithoutUpdating': `更新せずに続行(_C)`,
-  'Cli.UpdatePrompt': `今すぐ更新しますか？ [{0}/{1}]`,
+  'Cli.UpdatePrompt': `今すぐ更新しますか？最新バージョンの使用を強くおすすめします。 [{0}/{1}]`,
   'Cli.UpdateAnswerYes': `Y`,
   'Cli.UpdateAnswerNo': `N`,
-  'Cli.UpdateInstalled': `InstallerClean {0} をインストールしました。`,
   'Cli.UpdateListsOnlyAfterDelete': `新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。`,
   'Cli.UpdateListsOnlyAfterMove': `新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。`,
   'Cli.UpdateRunningInstead': `代わりに InstallerClean {1} で {0} を実行します。`,
-  'Cli.UpdateNotStarted': `InstallerClean {0} をインストールしましたが、起動できませんでした。もう一度コマンドを実行してください。`,
   'Cli.UpdateDownloadLink': `{0}：{1}`,
   'Cli.Help.UpdateNote': `スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。&#10;自分で実行した場合は、更新する前に確認を求めます。&#10;スケジュールされたタスクやスクリプトで自動実行される場合は、&#10;確認なしで更新します。確認を省くには /noupdate を付けてください。`,
   'UpdateNotice.Scoop': `このコピーは Scoop でインストールされています。更新するには、InstallerClean を閉じてから次を実行してください：`,
@@ -566,7 +564,6 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `コマンドをコピー`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop の更新コマンド`,
   'Cli.UpdateInUse': `InstallerClean は使用中のため、今は自身を更新できません。`,
-  'Cli.CancellingAfterUpdate': `更新の完了後にキャンセルします...`,
   'Error.FolderWillNotGiveFilesBack': `{0} にはファイルを保存できますが、もう一度開くことはできないため、InstallerClean はそこへファイルを移動しません。`,
   'UpdateNotice.NeedsNetFramework48': `このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean を開いて更新してください。`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} は自動ではインストールできません。`,
@@ -582,8 +579,8 @@ const MAP = {
   'Cli.ReportNotSent': `レポートは送信されませんでした。`,
   'Cli.ReportCouldNotBeSent': `レポートを送信できませんでした。{0} に保存されています。`,
   'Cli.ReportWaiting': `以前の実行から送信待ちになっているレポートを送信しています。`,
-  'Cli.UpdateWaitingForFile': `別のプログラムが {0} を解放するのを待っています...`,
-  'Cli.UpdateNotChecked': `InstallerClean はセットアップがインストールしたバージョンを確認できなかったため、コマンドは実行されませんでした。もう一度実行してください。`,
+  'Cli.UpdateRunningNewer': `InstallerClean {1} で {0} を実行します。実行が終わると、このコピーと置き換わります。`,
+  'Cli.UpdateNotRun': `新しいバージョンを実行できませんでした。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
@@ -683,19 +680,23 @@ const STRIPPED = new Set([
   // Two more machine Cli keys that postdate the PR, by the same rule.
   'Cli.EventLogReason.MsiExecuteMutexUnreadable',
   'Cli.EventLogWindowsError',
-  // The three update notices' machine Cli keys, which postdate the PR, by the same rule.
+  // The update notices' machine Cli keys, which postdate the PR, by the same rule: the 3005,
+  // and the 3006 for each reason an update was not made, with its Ctrl+C twin.
   'Cli.EventLogUpdated',
   'Cli.EventLogUpdateDownloadFailed',
-  'Cli.EventLogUpdateInstallFailed',
-  // The machine Cli key for an update whose newer version would not start, by the same rule.
-  'Cli.EventLogUpdateNotStarted',
-  // The machine Cli key for an update not tried because InstallerClean was in use, by the same rule.
-  'Cli.EventLogUpdateInUse',
-  'Cli.EventLogUpdatedThenCancelled',
-  // The machine Cli keys for an update that failed or was not tried before a Ctrl+C, by the same rule.
   'Cli.EventLogUpdateDownloadFailedThenCancelled',
-  'Cli.EventLogUpdateInstallFailedThenCancelled',
+  'Cli.EventLogUpdateNotRun',
+  'Cli.EventLogUpdateNotRunThenCancelled',
+  'Cli.EventLogUpdateInUse',
   'Cli.EventLogUpdateInUseThenCancelled',
+  'Cli.EventLogUpdateCopyCannotTell',
+  'Cli.EventLogUpdateCopyCannotTellThenCancelled',
+  'Cli.EventLogUpdateFromSource',
+  'Cli.EventLogUpdateFromSourceThenCancelled',
+  'Cli.EventLogUpdateNeedsNetFramework48',
+  'Cli.EventLogUpdateNeedsNetFramework48ThenCancelled',
+  'Cli.EventLogUpdateCannotInstall',
+  'Cli.EventLogUpdateCannotInstallThenCancelled',
   // The machine Cli key for an update not installed because nothing was left at the path, by the same rule.
   'Cli.EventLogUpdateNothingAtPath',
   // The machine Cli keys for the command line's replace and setup run not installing an update, by the same rule.

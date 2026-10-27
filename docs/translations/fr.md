@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Erreur : argument supplémentaire inattendu '{0}'. /s et /d n'acceptent aucun autre argument, et un seul indicateur peut être utilisé par exécution. |
 | Cancelling... | Annulation... |
 | Cancelled. | Annulé. |
-| Cancelling once the update has finished... | Annulation dès que la mise à jour sera terminée... |
 | Error: unexpected failure ({0}). Details written to {1}. | Erreur : échec inattendu ({0}). Détails écrits dans {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Erreur : échec inattendu ({0}). Le journal de plantage n'a pas pu être écrit. |
 | Scanning {InstallerFolder}... | Analyse de {InstallerFolder}... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | {0} {1} inutiles ont été déplacés. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Vérifiez que vos programmes se mettent toujours à jour et se désinstallent normalement, puis supprimez {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean est gratuit. S'il vous a été utile, merci de faire un don de 3 $ : {0} |
-| Update now? [{0}/{1}] | Mettre à jour maintenant ? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Mettre à jour maintenant ? Il est vivement recommandé d'utiliser la dernière version. [{0}/{1}] |
 | Y | O |
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Envoyer un rapport anonyme de cette exécution ? Il est enregistré dans {0}. Tapez ? pour voir ce qu'il contient. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | Rapport non envoyé. |
 | The report could not be sent. It is kept in {0}. | Le rapport n'a pas pu être envoyé. Il est conservé dans {0}. |
 | Sending a report left waiting by an earlier run. | Envoi d'un rapport en attente depuis une exécution précédente. |
-| InstallerClean {0} is installed. | InstallerClean {0} est installé. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | La nouvelle version va analyser et lister ce qu'elle trouve, sans rien supprimer. Pour supprimer, relancez /d ensuite. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | La nouvelle version va analyser et lister ce qu'elle trouve, sans rien déplacer. Pour déplacer, relancez /m ensuite. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean est en cours d'utilisation, il ne peut donc pas se mettre à jour maintenant. |
 | Running {0} with InstallerClean {1} instead. | Exécution de {0} avec InstallerClean {1} à la place. |
-| Waiting for another program to let go of {0}... | En attente qu'un autre programme libère {0}... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean n'a pas pu vérifier la version installée par le programme d'installation, votre commande n'a donc pas été exécutée. Relancez-la. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} est installé, mais n'a pas pu être lancé. Relancez la commande. |
+| The newer version couldn't be run. | La version plus récente n'a pas pu être exécutée. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | Exécution de {0} avec InstallerClean {1}. Cette version prendra la place de cette copie une fois l'exécution terminée. |
 | {0}: {1} | {0} : {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Cette version nécessite .NET Framework 4.8. Installez-le depuis le site de Microsoft, redémarrez le PC, puis exécutez à nouveau InstallerClean pour effectuer la mise à jour. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | C'est simple à annuler. Redéplacez-les depuis {0} dans {InstallerFolder} et tout redeviendra comme avant. |

@@ -263,23 +263,25 @@ internal enum CliEventClass
     UpdatedNotice,
 
     /// <summary>
-    /// Notice: the run found a newer version and installed it, and Ctrl+C came before it
-    /// started, so nothing ran. It is the run's only entry. It shares Event ID 3005 with
-    /// <see cref="UpdatedNotice"/>, so a filter on that number sees every update that went
-    /// in. WARNING, on the rule at <see cref="CliContract.EntryTypeFor"/>: the run was
-    /// cancelled before its job, as the 2000 for a cancelled run is.
-    /// </summary>
-    UpdatedThenCancelledNotice,
-
-    /// <summary>
-    /// Notice: the run found a newer version and did not update to it, the download or the
-    /// install having failed or InstallerClean being in use, and ran with the version it is.
-    /// Where nothing ran, because the newer version is in place and would not start or
-    /// because Ctrl+C came after the update failed or was not tried, it is the run's only
-    /// entry. WARNING, on the rule at <see cref="CliContract.EntryTypeFor"/>: the run did
-    /// its job with a version older than the one it set out to use, or did not do it.
+    /// Notice: the run found a newer version and did not run with it, for a reason that can
+    /// pass by the next run (the download failed, the newer version could not be run, or
+    /// InstallerClean was in use), and ran with the version it is. Where Ctrl+C came after the
+    /// run said it goes on, whatever the reason, nothing ran and it is the run's only entry.
+    /// WARNING, on the rule at <see cref="CliContract.EntryTypeFor"/>: the run did its job with a
+    /// version older than the one it set out to use, or did not do it.
     /// </summary>
     UpdateFailedNotice,
+
+    /// <summary>
+    /// Notice: the run found a newer version this copy does not update to, for a reason that
+    /// holds on every run until something on the PC changes (the copy cannot tell whether its
+    /// setup installed it, it was built from source, the release needs .NET Framework 4.8 or
+    /// the release rules this copy out), and ran with the version it is. It shares Event ID
+    /// 3006 with <see cref="UpdateFailedNotice"/>, so one filter sees every update not made.
+    /// INFORMATION, on the rule at <see cref="CliContract.EntryTypeFor"/>: it is true every night
+    /// on a PC with nothing wrong with it.
+    /// </summary>
+    UpdateNotPossibleNotice,
 
     /// <summary>
     /// Notice: a newer version a copy had downloaded did not put itself at that copy's
@@ -308,15 +310,17 @@ internal static class CliContract
     /// <summary>
     /// The switch that turns off the update check and the update for one run. It may
     /// come anywhere on the command line, in any case. A command line updating itself
-    /// starts the newer version with it (<see cref="HandOverContract.CommandLineArguments"/>).
+    /// starts the newer version with it, after the switches
+    /// <see cref="HandOverContract.ReplaceArguments"/> builds, so the newer version goes
+    /// straight to the command.
     /// </summary>
     internal const string NoUpdateSwitch = "/noupdate";
 
     /// <summary>
     /// The switch through which the version that started this one passes, after the colon,
     /// the id of an event that version sets on Ctrl+C. Only a run updating itself passes
-    /// it, so it is not in the help. It goes only to a version
-    /// <see cref="HandOverContract.TakesHandOverSwitches"/> answers true for.
+    /// it, so it is not in the help. It goes beside the switches
+    /// <see cref="HandOverContract.ReplaceArguments"/> builds.
     /// </summary>
     internal const string CancelEventSwitch = "/cancelevent:";
 
@@ -473,8 +477,8 @@ internal static class CliContract
         CliEventClass.ScanNothingOfferedNotice => 3002,
         CliEventClass.ScanSupersededHeldBackNotice => 3003,
         CliEventClass.SourcesGivenUpNotice => 3004,
-        CliEventClass.UpdatedNotice or CliEventClass.UpdatedThenCancelledNotice => 3005,
-        CliEventClass.UpdateFailedNotice => 3006,
+        CliEventClass.UpdatedNotice => 3005,
+        CliEventClass.UpdateFailedNotice or CliEventClass.UpdateNotPossibleNotice => 3006,
         CliEventClass.UpdateNotInstalledNotice => 3007,
         _ => 0,
     };
@@ -502,17 +506,17 @@ internal static class CliContract
     /// one nightly for ever, and the operator's answer to that is a suppression
     /// rule on Source = InstallerClean, which takes the 4000 band with it.
     ///
-    /// The update notices follow the same rule. A run that installed the newer version
-    /// and ran with it fell short of nothing, so its notice is Information; a run that
-    /// could not install it did its job with an older version than it set out to use,
-    /// or did not do it where Ctrl+C came or the newer version would not start, and a
-    /// run that installed it and was cancelled before it started did not do its job at
-    /// all, so all of those are Warning. The type follows the run, so the two classes
-    /// sharing 3005 differ in it.
+    /// The update notices follow the same rule. A run that ran the newer version fell
+    /// short of nothing, so its notice is Information, and so is a run whose copy does not
+    /// update to it for a reason true on every run, since a Warning there would post nightly
+    /// on a healthy PC. A run that did not run it for a reason that can pass did its job with
+    /// an older version than it set out to use, and one where Ctrl+C came did not do it, so
+    /// those notices are Warning. The two classes sharing 3006 differ in it.
     /// </summary>
     internal static EventLogEntryType EntryTypeFor(CliEventClass outcome) => outcome switch
     {
         CliEventClass.Ok or CliEventClass.ScanMissingFilesNotice or CliEventClass.UpdatedNotice
+            or CliEventClass.UpdateNotPossibleNotice
             => EventLogEntryType.Information,
         _ => EventLogEntryType.Warning,
     };

@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Fout: onverwacht extra argument '{0}'. /s en /d nemen geen verdere argumenten, en er kan maar één vlag per uitvoering worden gebruikt. |
 | Cancelling... | Annuleren... |
 | Cancelled. | Geannuleerd. |
-| Cancelling once the update has finished... | Annuleren zodra de update klaar is... |
 | Error: unexpected failure ({0}). Details written to {1}. | Fout: onverwachte crash ({0}). Details weggeschreven naar {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Fout: onverwachte crash ({0}). Het crashlog kon niet worden weggeschreven. |
 | Scanning {InstallerFolder}... | {InstallerFolder} scannen... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | {0} overbodige {1} verplaatst. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Controleer of je programma's nog gewoon bijwerken en verwijderen, en verwijder daarna {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean is gratis. Heb je er iets aan gehad, doneer dan $ 3: {0} |
-| Update now? [{0}/{1}] | Nu bijwerken? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Nu bijwerken? Het wordt sterk aangeraden om de nieuwste versie te gebruiken. [{0}/{1}] |
 | Y | J |
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Een anoniem rapport van deze uitvoering versturen? Het is opgeslagen in {0}. Typ ? om te zien wat erin staat. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | Rapport niet verstuurd. |
 | The report could not be sent. It is kept in {0}. | Het rapport kon niet worden verstuurd. Het wordt bewaard in {0}. |
 | Sending a report left waiting by an earlier run. | Een rapport dat sinds een eerdere uitvoering wacht, wordt nu verstuurd. |
-| InstallerClean {0} is installed. | InstallerClean {0} is geïnstalleerd. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verwijderen. Voer daarna /d opnieuw uit om te verwijderen. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verplaatsen. Voer daarna /m opnieuw uit om te verplaatsen. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean is in gebruik en kan zichzelf nu dus niet bijwerken. |
 | Running {0} with InstallerClean {1} instead. | In plaats daarvan wordt {0} uitgevoerd met InstallerClean {1}. |
-| Waiting for another program to let go of {0}... | Wachten tot een ander programma {0} vrijgeeft... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean kon de versie die het installatieprogramma heeft geïnstalleerd niet controleren, dus je opdracht is niet uitgevoerd. Voer hem opnieuw uit. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} is geïnstalleerd, maar kon niet worden gestart. Voer de opdracht opnieuw uit. |
+| The newer version couldn't be run. | De nieuwere versie kon niet worden uitgevoerd. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | {0} wordt uitgevoerd met InstallerClean {1}. Na afloop neemt deze versie de plaats van deze kopie in. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Deze versie heeft .NET Framework 4.8 nodig. Installeer het van Microsoft, herstart de pc en voer daarna InstallerClean opnieuw uit om bij te werken. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Het is eenvoudig ongedaan te maken. Verplaats ze vanuit {0} terug naar {InstallerFolder} en alles is weer zoals het was. |

@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Помилка: неочікуваний зайвий аргумент «{0}». /s і /d не приймають інших аргументів, і за один запуск можна використати лише один ключ. |
 | Cancelling... | Скасування... |
 | Cancelled. | Скасовано. |
-| Cancelling once the update has finished... | Скасування після завершення оновлення... |
 | Error: unexpected failure ({0}). Details written to {1}. | Помилка: неочікуваний збій ({0}). Подробиці записано до {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Помилка: неочікуваний збій ({0}). Журнал збою записати не вдалося. |
 | Scanning {InstallerFolder}... | Сканування {InstallerFolder}... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | Переміщено {0} непотрібних {1}. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Переконайтеся, що ваші програми досі оновлюються та видаляються як звичайно, а потім видаліть {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean безкоштовний. Якщо він допоміг, будь ласка, підтримайте його на 3 $: {0} |
-| Update now? [{0}/{1}] | Оновити зараз? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Оновити зараз? Настійно рекомендуємо використовувати найновішу версію. [{0}/{1}] |
 | Y | Т |
 | N | Н |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Надіслати анонімний звіт про цей запуск? Його збережено в {0}. Введіть ?, щоб побачити, що в ньому. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | Звіт не надіслано. |
 | The report could not be sent. It is kept in {0}. | Не вдалося надіслати звіт. Його збережено в {0}. |
 | Sending a report left waiting by an earlier run. | Надсилається звіт, що чекає на надсилання ще з раннішого запуску. |
-| InstallerClean {0} is installed. | Версію InstallerClean {0} встановлено. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Нова версія просканує й покаже список знайденого, нічого не видаляючи. Щоб видалити, потім знову запустіть /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Нова версія просканує й покаже список знайденого, нічого не переміщуючи. Щоб перемістити, потім знову запустіть /m. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean використовується, тому зараз не може оновитися. |
 | Running {0} with InstallerClean {1} instead. | Натомість команду {0} буде виконано в InstallerClean {1}. |
-| Waiting for another program to let go of {0}... | Очікування, поки інша програма звільнить {0}... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean не вдалося перевірити версію, встановлену програмою встановлення, тому команду не було виконано. Виконайте її ще раз. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | Версію InstallerClean {0} встановлено, але запустити її не вдалося. Виконайте команду ще раз. |
+| The newer version couldn't be run. | Не вдалося запустити новішу версію. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | Команду {0} буде виконано в InstallerClean {1}. Після завершення ця версія замінить поточну копію. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Для цієї версії потрібен .NET Framework 4.8. Встановіть його з сайту Microsoft, перезавантажте комп'ютер, а потім знову запустіть InstallerClean, щоб виконати оновлення. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Це легко скасувати. Перемістіть їх з {0} назад до {InstallerFolder}, і все повернеться як було. |

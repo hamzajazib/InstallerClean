@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Błąd: nieoczekiwany dodatkowy argument „{0}”. /s i /d nie przyjmują dalszych argumentów, a w jednym uruchomieniu można użyć tylko jednego przełącznika. |
 | Cancelling... | Anulowanie... |
 | Cancelled. | Anulowano. |
-| Cancelling once the update has finished... | Anulowanie po zakończeniu aktualizacji... |
 | Error: unexpected failure ({0}). Details written to {1}. | Błąd: nieoczekiwana awaria ({0}). Szczegóły zapisano w {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Błąd: nieoczekiwana awaria ({0}). Nie udało się zapisać dziennika awarii. |
 | Scanning {InstallerFolder}... | Skanowanie {InstallerFolder}... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | Przeniesiono {0} niepotrzebnych {1}. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Sprawdź, czy twoje programy nadal normalnie się aktualizują i odinstalowują, a potem skasuj {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean jest darmowy. Jeśli ci pomógł, wesprzyj go kwotą 3 $: {0} |
-| Update now? [{0}/{1}] | Zaktualizować teraz? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Zaktualizować teraz? Zdecydowanie zaleca się korzystanie z najnowszej wersji. [{0}/{1}] |
 | Y | T |
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Wysłać anonimowy raport z tego uruchomienia? Jest zapisany w {0}. Wpisz ?, aby zobaczyć, co zawiera. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | Raport nie został wysłany. |
 | The report could not be sent. It is kept in {0}. | Nie udało się wysłać raportu. Jest przechowywany w {0}. |
 | Sending a report left waiting by an earlier run. | Wysyłanie raportu oczekującego od wcześniejszego uruchomienia. |
-| InstallerClean {0} is installed. | Wersja InstallerClean {0} jest zainstalowana. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Nowa wersja przeskanuje i wyświetli listę tego, co znajdzie, niczego nie usuwając. Aby usunąć, uruchom potem ponownie /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Nowa wersja przeskanuje i wyświetli listę tego, co znajdzie, niczego nie przenosząc. Aby przenieść, uruchom potem ponownie /m. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean jest w użyciu, więc nie może się teraz zaktualizować. |
 | Running {0} with InstallerClean {1} instead. | Zamiast tego polecenie {0} zostanie uruchomione w wersji InstallerClean {1}. |
-| Waiting for another program to let go of {0}... | Oczekiwanie, aż inny program zwolni {0}... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean nie mógł sprawdzić wersji zainstalowanej przez instalator, więc polecenie nie zostało wykonane. Uruchom je ponownie. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | Wersja InstallerClean {0} jest zainstalowana, ale nie udało się jej uruchomić. Uruchom polecenie ponownie. |
+| The newer version couldn't be run. | Nie udało się uruchomić nowszej wersji. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | Polecenie {0} zostanie uruchomione w wersji InstallerClean {1}. Po zakończeniu ta wersja zastąpi tę kopię. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Ta wersja wymaga .NET Framework 4.8. Zainstaluj go ze strony Microsoftu, uruchom ponownie komputer, a potem znów uruchom InstallerClean, aby zaktualizować. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Łatwo to cofnąć. Przenieś je z {0} z powrotem do {InstallerFolder}, a wszystko wróci do stanu sprzed. |

@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Erro: argumento extra inesperado '{0}'. /s e /d não aceitam mais argumentos, e só se pode usar um sinalizador por execução. |
 | Cancelling... | Cancelando... |
 | Cancelled. | Cancelado. |
-| Cancelling once the update has finished... | Cancelando assim que a atualização terminar... |
 | Error: unexpected failure ({0}). Details written to {1}. | Erro: falha inesperada ({0}). Detalhes gravados em {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Erro: falha inesperada ({0}). Não foi possível gravar o log de falhas. |
 | Scanning {InstallerFolder}... | Analisando {InstallerFolder}... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | Foram movidos {0} {1} desnecessários. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Confirme que seus programas ainda atualizam e desinstalam normalmente e depois exclua {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | O InstallerClean é gratuito. Se ele ajudou, faça uma doação de US$ 3: {0} |
-| Update now? [{0}/{1}] | Atualizar agora? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Atualizar agora? É altamente recomendável usar a versão mais recente. [{0}/{1}] |
 | Y | S |
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Enviar um relatório anônimo desta execução? Ele está salvo em {0}. Digite ? para ver o que ele contém. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | Relatório não enviado. |
 | The report could not be sent. It is kept in {0}. | Não foi possível enviar o relatório. Ele está guardado em {0}. |
 | Sending a report left waiting by an earlier run. | Enviando um relatório pendente desde uma execução anterior. |
-| InstallerClean {0} is installed. | O InstallerClean {0} está instalado. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | A nova versão vai analisar e listar o que encontrar, sem excluir nada. Para excluir, execute /d novamente depois. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | A nova versão vai analisar e listar o que encontrar, sem mover nada. Para mover, execute /m novamente depois. |
 | InstallerClean is in use, so it can't update itself now. | O InstallerClean está em uso, então não pode se atualizar agora. |
 | Running {0} with InstallerClean {1} instead. | Em vez disso, {0} será executado com o InstallerClean {1}. |
-| Waiting for another program to let go of {0}... | Aguardando que outro programa libere {0}... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | O InstallerClean não conseguiu verificar a versão que o instalador instalou, então seu comando não foi executado. Execute-o novamente. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | O InstallerClean {0} está instalado, mas não foi possível iniciá-lo. Execute o comando novamente. |
+| The newer version couldn't be run. | Não foi possível executar a versão mais recente. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | {0} será executado com o InstallerClean {1}. Ao final da execução, ele substituirá esta cópia. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Esta versão precisa do .NET Framework 4.8. Instale-o pelo site da Microsoft, reinicie o PC e depois execute o InstallerClean de novo para atualizar. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | É simples de desfazer. Mova-os de volta de {0} para {InstallerFolder} e tudo voltará a ser como era. |

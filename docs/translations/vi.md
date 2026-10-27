@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Lỗi: đối số thừa không mong đợi '{0}'. /s và /d không nhận thêm đối số nào, và mỗi lần chạy chỉ dùng được một cờ. |
 | Cancelling... | Đang hủy... |
 | Cancelled. | Đã hủy. |
-| Cancelling once the update has finished... | Sẽ hủy khi cập nhật xong... |
 | Error: unexpected failure ({0}). Details written to {1}. | Lỗi: sự cố không mong đợi ({0}). Chi tiết đã ghi vào {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Lỗi: sự cố không mong đợi ({0}). Không ghi được nhật ký sự cố. |
 | Scanning {InstallerFolder}... | Đang quét {InstallerFolder}... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | Đã chuyển {0} {1} không cần thiết. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Hãy kiểm tra xem các chương trình của bạn vẫn cập nhật và gỡ cài đặt bình thường, rồi xóa {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean miễn phí. Nếu nó có ích, hãy ủng hộ 3 USD: {0} |
-| Update now? [{0}/{1}] | Cập nhật ngay bây giờ? [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Cập nhật ngay bây giờ? Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất. [{0}/{1}] |
 | Y | C |
 | N | K |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Gửi báo cáo ẩn danh về lần chạy này? Báo cáo được lưu tại {0}. Nhập ? để xem nội dung. [{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | Chưa gửi báo cáo. |
 | The report could not be sent. It is kept in {0}. | Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}. |
 | Sending a report left waiting by an earlier run. | Đang gửi một báo cáo còn chờ từ một lần chạy trước đó. |
-| InstallerClean {0} is installed. | Đã cài đặt InstallerClean {0}. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không xóa gì cả. Để xóa, hãy chạy lại /d sau đó. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean đang được sử dụng nên không thể tự cập nhật lúc này. |
 | Running {0} with InstallerClean {1} instead. | Thay vào đó, chạy {0} bằng InstallerClean {1}. |
-| Waiting for another program to let go of {0}... | Đang chờ chương trình khác giải phóng {0}... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean không thể kiểm tra phiên bản mà trình cài đặt đã cài, nên lệnh của bạn chưa được chạy. Hãy chạy lại. |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | Đã cài đặt InstallerClean {0} nhưng không thể khởi động. Hãy chạy lại lệnh. |
+| The newer version couldn't be run. | Không thể chạy phiên bản mới hơn. |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | Chạy {0} bằng InstallerClean {1}. Khi chạy xong, phiên bản này sẽ thay thế bản hiện tại. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Phiên bản này cần .NET Framework 4.8. Hãy cài đặt nó từ Microsoft, khởi động lại PC, rồi chạy lại InstallerClean để cập nhật. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Hoàn tác rất đơn giản. Hãy chuyển chúng từ {0} trở lại {InstallerFolder} và mọi thứ sẽ như cũ. |

@@ -17,13 +17,6 @@ public enum UpdateFailureStage
     /// it, moving it into place or starting it.
     /// </summary>
     Install,
-
-    /// <summary>
-    /// Nothing was put in place because InstallerClean is in use: the single-instance
-    /// mutex is held, or another process is running from the command line's own file.
-    /// Only the command line's update gives this answer.
-    /// </summary>
-    InUse,
 }
 
 /// <summary>

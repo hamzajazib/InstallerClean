@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | 錯誤：出現未預期的多餘參數「{0}」。/s 和 /d 不接受其他參數，而且每次執行只能使用一個選項。 |
 | Cancelling... | 正在取消... |
 | Cancelled. | 已取消。 |
-| Cancelling once the update has finished... | 將在更新完成後取消... |
 | Error: unexpected failure ({0}). Details written to {1}. | 錯誤：未預期的失敗（{0}）。詳細資料已寫入 {1}。 |
 | Error: unexpected failure ({0}). The crash log could not be written. | 錯誤：未預期的失敗（{0}）。無法寫入當機記錄檔。 |
 | Scanning {InstallerFolder}... | 正在掃描 {InstallerFolder}... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | 已移動 {0} 個不需要的{1}。 |
 | Check that your programs still update and uninstall as normal, then delete {0}. | 請確認您的程式仍能照常更新和解除安裝，然後刪除 {0}。 |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean 是免費的。如果它幫上了忙，請贊助 3 美元：{0} |
-| Update now? [{0}/{1}] | 立即更新？[{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | 立即更新？強烈建議使用最新版本。[{0}/{1}] |
 | Y | Y |
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | 傳送本次執行的匿名報告？報告已儲存在 {0}。輸入 ? 可查看其內容。[{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | 報告未傳送。 |
 | The report could not be sent. It is kept in {0}. | 無法傳送報告。報告保存在 {0}。 |
 | Sending a report left waiting by an earlier run. | 正在傳送較早一次執行留下的待傳送報告。 |
-| InstallerClean {0} is installed. | InstallerClean {0} 版已安裝。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本會掃描並列出找到的內容，不會刪除任何檔案。如需刪除，請在之後再次執行 /d。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新版本會掃描並列出找到的內容，不會移動任何檔案。如需移動，請在之後再次執行 /m。 |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean 正在使用中，因此現在無法自行更新。 |
 | Running {0} with InstallerClean {1} instead. | 改用 InstallerClean {1} 執行 {0}。 |
-| Waiting for another program to let go of {0}... | 正在等待另一個程式釋放 {0}... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean 無法檢查安裝程式安裝的版本，因此你的命令未執行。請再次執行。 |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 版已安裝，但無法啟動。請再次執行該命令。 |
+| The newer version couldn't be run. | 無法執行較新的版本。 |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | 使用 InstallerClean {1} 執行 {0}。執行結束後，它將取代此副本。 |
 | {0}: {1} | {0}：{1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | 此版本需要 .NET Framework 4.8。請從 Microsoft 安裝，重新啟動電腦，然後再次執行 InstallerClean 進行更新。 |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 要復原很簡單。把它們從 {0} 移回 {InstallerFolder}，一切就會恢復原狀。 |

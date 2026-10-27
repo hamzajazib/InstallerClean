@@ -494,7 +494,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | エラー：予期しない余分な引数 '{0}'。/s と /d は他の引数を取らず、1 回の実行で使えるフラグは 1 つだけです。 |
 | Cancelling... | キャンセル中... |
 | Cancelled. | キャンセルされました。 |
-| Cancelling once the update has finished... | 更新の完了後にキャンセルします... |
 | Error: unexpected failure ({0}). Details written to {1}. | エラー：予期しない障害 ({0})。詳細を {1} に書き込みました。 |
 | Error: unexpected failure ({0}). The crash log could not be written. | エラー：予期しない障害 ({0})。クラッシュログを書き込めませんでした。 |
 | Scanning {InstallerFolder}... | {InstallerFolder} をスキャン中... |
@@ -556,7 +555,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | {0} 個の不要な {1} を移動しました。 |
 | Check that your programs still update and uninstall as normal, then delete {0}. | プログラムがこれまでどおり更新およびアンインストールできることを確認してから、{0} を削除してください。 |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean は無料です。お役に立てたなら、3 ドルのご寄付をお願いします：{0} |
-| Update now? [{0}/{1}] | 今すぐ更新しますか？ [{0}/{1}] |
+| Update now? It's strongly recommended to use the latest version. [{0}/{1}] | 今すぐ更新しますか？最新バージョンの使用を強くおすすめします。 [{0}/{1}] |
 | Y | Y |
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | この実行の匿名レポートを送信しますか？ 保存先は {0} です。? と入力すると内容を確認できます。[{1}/{2}/?] |
@@ -567,14 +566,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report not sent. | レポートは送信されませんでした。 |
 | The report could not be sent. It is kept in {0}. | レポートを送信できませんでした。{0} に保存されています。 |
 | Sending a report left waiting by an earlier run. | 以前の実行から送信待ちになっているレポートを送信しています。 |
-| InstallerClean {0} is installed. | InstallerClean {0} をインストールしました。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。 |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean は使用中のため、今は自身を更新できません。 |
 | Running {0} with InstallerClean {1} instead. | 代わりに InstallerClean {1} で {0} を実行します。 |
-| Waiting for another program to let go of {0}... | 別のプログラムが {0} を解放するのを待っています... |
-| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean はセットアップがインストールしたバージョンを確認できなかったため、コマンドは実行されませんでした。もう一度実行してください。 |
-| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} をインストールしましたが、起動できませんでした。もう一度コマンドを実行してください。 |
+| The newer version couldn't be run. | 新しいバージョンを実行できませんでした。 |
+| Running {0} with InstallerClean {1}. It takes this copy's place once the run ends. | InstallerClean {1} で {0} を実行します。実行が終わると、このコピーと置き換わります。 |
 | {0}: {1} | {0}：{1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean をもう一度実行して更新してください。 |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 元に戻すのは簡単です。{0} から {InstallerFolder} に戻せば、すべて元どおりになります。 |
