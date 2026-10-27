@@ -244,13 +244,13 @@ jobs:
           # The newer version's replace runs detached from the staging folder once both
           # copies have ended, and on the setup's copy starts the setup, which starts its
           # setup.tmp from an is-*.tmp folder under %TEMP%. Each is waited for, so the
-          # record and the checks see what they left, and one still running after 300 s is
-          # ended and fails the step.
+          # record and the checks see what they left. One still running after 300 s is ended
+          # and named for the checks, which fail on it.
           . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
           $left = Wait-StagingProcesses 300 @('\\is-[^\\]+\.tmp\\')
           if ($watch) { Stop-TempWatch $watch $stop }
-          if ($left) { throw "Still running 300 s after the update run ended, and ended: $($left -join ', ')" }
-          '  nothing the update started is running'
+          if ($left) { "Still running 300 s after the update run ended, and ended: $($left -join ', ')" | Set-Content (Join-Path $env:RUNNER_TEMP 'update-stuck.txt') }
+          else { '  nothing the update started is running' }
 
       - name: Stop recording
         if: always() && env.PROCMON != '' && env.STAGED == 'true'
@@ -386,6 +386,9 @@ jobs:
             if ($run.Output.Contains($unexpected)) { Fail "It printed: $unexpected" } else { "  did not print: $unexpected" }
           }
 
+          $stuck = Join-Path $env:RUNNER_TEMP 'update-stuck.txt'
+          if (Test-Path -LiteralPath $stuck) { Fail (Get-Content -Raw -LiteralPath $stuck).Trim() }
+
           "The files:"
           $files = @($exe)
           if ('${{ matrix.route }}' -eq 'setup') { $files += Join-Path $folder 'InstallerClean.exe' }
@@ -418,7 +421,7 @@ jobs:
           foreach ($e in $events) { "  $($e.Id)  $($e.Message)" }
           $notices = @($events | Where-Object Id -eq 3005)
           $failed = @($events | Where-Object Id -eq 3006)
-          $notInstalled = @($events | Where-Object Id -eq 3007)
+          $notInstalled = @($events | Where-Object Id -eq (Get-NothingAtPathEventId))
           $summaries = @($events | Where-Object { $_.Id -in 1000, 1002, 2000, 4000 })
           if ($notices.Count -ne 1) {
             $unavailable = $run.Output.Contains((Line 'Cli.EventLogUnavailable'))
@@ -427,7 +430,7 @@ jobs:
             Fail "The 3005 entry does not name the update from $old to $latest."
           }
           if ($failed) { Fail "$($failed.Count) entries with Event ID 3006." }
-          if ($notInstalled) { Fail "$($notInstalled.Count) entries with Event ID 3007." }
+          if ($notInstalled) { Fail "$($notInstalled.Count) entries with Event ID $(Get-NothingAtPathEventId)." }
           if ($summaries.Count -ne 1) { Fail "$($summaries.Count) run summaries, where the newer version's was expected alone." }
           elseif ($summaries[0].Id -eq 4000) { Fail "The newer version's run ended in a hard error (4000)." }
 
@@ -565,7 +568,12 @@ jobs:
           })
 
           Start-Record 'second'
-          try { $run = Run $exe 600 }
+          try {
+            $run = Run $exe 600
+            # Its replace runs from a staging folder once it has ended, and is recorded too.
+            $left = Wait-StagingProcesses 300
+            if ($left) { Fail "Still running 300 s after the second update run ended, and ended: $($left -join ', ')" }
+          }
           finally { $csv = Stop-Record 'second' }
           "  the run exited with $($run.ExitCode)"
 

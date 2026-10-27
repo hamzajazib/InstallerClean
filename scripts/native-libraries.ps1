@@ -1571,13 +1571,14 @@ function Get-StagingPrefix {
 function Wait-StagingProcesses([int]$seconds, [string[]]$alsoLike = @()) {
   $prefix = Get-StagingPrefix
   $clock = [System.Diagnostics.Stopwatch]::StartNew()
-  do {
+  while ($true) {
     $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
       $path = $_.Path
       $path -and ($path.StartsWith($prefix, 'OrdinalIgnoreCase') -or @($alsoLike | Where-Object { $path -match $_ }).Count) })
     if (-not $running) { return , @() }
+    if ($clock.Elapsed.TotalSeconds -ge $seconds) { break }
     Start-Sleep -Milliseconds 500
-  } while ($clock.Elapsed.TotalSeconds -lt $seconds)
+  }
   $running | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
   , @($running | ForEach-Object { "$($_.Id) $($_.Path)" })
 }

@@ -2362,7 +2362,7 @@ jobs:
                 "The run $(if ($note) { 'printed' } else { 'did not print' }) the note that the Application log refused an entry" +
                 $(if ($why) { "; crash.log: $($why -join ' | ')" } else { '; crash.log names no refused entry' }) + '.')
             }
-            foreach ($absent in $otherId, 3007) {
+            foreach ($absent in $otherId, (Get-NothingAtPathEventId)) {
               $other = @(Read-Entries $update.Since $absent)
               if ($other) { Fail "$($update.Label): the Application log holds $($other.Count) entries with Event ID $absent since the run started: $(($other | ForEach-Object Text) -join ' | ')" }
               else { "  no $absent since the run started" }
