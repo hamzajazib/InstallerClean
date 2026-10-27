@@ -61,6 +61,10 @@ AppVerName=InstallerClean {#AppVersion}
 ; reason (HoldAllAside below). Started by an update, from the window or the
 ; command line, Setup first waits for the app to close (InitializeSetup below).
 AppMutex={#AppMutexName}
+; Setup does not close programs holding the files it replaces: a running
+; command-line scan would be ended part way through, and [Code] renames each file
+; aside instead, which Windows allows while it runs.
+CloseApplications=no
 ; %LOCALAPPDATA%\InstallerClean\ user data (settings.json,
 ; last-run.json, settings.json.bad on a corrupt-and-recovered run,
 ; crash.log, crash.log.old once the log has rotated) survives
@@ -369,6 +373,10 @@ begin
 end;
 
 // Holds aside every file [Files] writes to {app}, stopping at the first that cannot be.
+// From the first rename until Setup has written the file, nothing is at that name: a
+// scheduled run of the command line starting then does not find it, and where the PC
+// loses power then, the earlier files stay under their held names until the setup runs
+// again.
 function HoldAllAside: Boolean;
 begin
   Result := HoldAside('InstallerClean.exe');
@@ -449,6 +457,29 @@ end;
 
 // Called however Setup ends, after a failed install has been rolled back.
 procedure DeinitializeSetup;
+var
+  ErrorCode: Integer;
+  App: String;
 begin
-  if not Installed then PutHeldBack;
+  if Installed then Exit;
+  PutHeldBack;
+  // Update now closes the window before this setup starts, and the [Run] entry that
+  // opens it again runs only after a completed install, so where the install did not
+  // complete the window is opened here, as whatever is now at its path.
+  if UpdatingFromApp then
+  begin
+    // {app} is set only once Setup has read the earlier install's folder, so a setup
+    // that stopped before then, at its AppMutex check, opens nothing and says so.
+    try
+      App := ExpandConstant('{app}\InstallerClean.exe');
+    except
+      App := '';
+    end;
+    if App = '' then
+      Log('The install folder was not known yet, so the app was not opened.')
+    else if not FileExists(App) then
+      Log(Format('%s is not there, so the app was not opened.', [App]))
+    else if not ShellExec('', App, '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
+      Log(Format('Could not open %s: %s', [App, SysErrorMessage(ErrorCode)]));
+  end;
 end;
