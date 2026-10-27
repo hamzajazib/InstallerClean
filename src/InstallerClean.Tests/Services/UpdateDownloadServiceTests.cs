@@ -137,6 +137,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
             () => service.ReadAsync(ManifestAddress, 1024, CancellationToken.None));
 
         Assert.Equal(UpdateFailureStage.Download, failure.Stage);
+        Assert.Equal("The server answered 404.", failure.Message);
         Assert.Equal([ManifestAddress, AssetAddress, back], handler.Requested);
     }
 

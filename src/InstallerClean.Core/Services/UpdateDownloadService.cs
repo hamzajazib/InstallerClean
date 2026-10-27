@@ -235,7 +235,7 @@ public sealed class UpdateDownloadService
     /// address, up to <see cref="MaxRedirects"/> of them, and answers with the first
     /// response that is not a redirect, which has to be a success, or null for a
     /// 404 Not Found where <paramref name="notFoundIsAnswer"/> is set and every address on
-    /// the way was on <paramref name="address"/>'s host.
+    /// the way was on <paramref name="address"/>'s host and port.
     /// </summary>
     private async Task<HttpResponseMessage?> SendFollowingRedirectsAsync(
         Uri address, CancellationToken cancellationToken, bool notFoundIsAnswer = false)
@@ -244,7 +244,6 @@ public sealed class UpdateDownloadService
         var onFirstHost = true;
         for (var hop = 0; ; hop++)
         {
-            onFirstHost &= string.Equals(current.Host, address.Host, StringComparison.OrdinalIgnoreCase);
             if (!string.Equals(current.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
                 throw Download($"The download was sent to an address that is not https: {current.Scheme}.");
 
@@ -263,6 +262,7 @@ public sealed class UpdateDownloadService
                 if (hop >= MaxRedirects)
                     throw Download("The download was redirected too many times.");
                 current = location.IsAbsoluteUri ? location : new Uri(current, location);
+                onFirstHost &= string.Equals(current.Authority, address.Authority, StringComparison.OrdinalIgnoreCase);
                 continue;
             }
 
