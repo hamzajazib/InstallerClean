@@ -2525,7 +2525,8 @@ Run InstallerClean again as administrator.</value></data>
   <data name="Cli.EventLogMoveAborted" xml:space="preserve"><value>{0} mode stopped: could no longer confirm the destination. {1} of {2} {3} had already moved to {4}, {5} relocated, {6} {7}.</value></data>
   <!-- 0 = mode arg, 1 = processed count, 2 = total count, 3 = pluralised noun.
        The command line cancels the run on Ctrl+C, Ctrl+Break, its console closing
-       or Windows shutting down, and the line names none of them. -->
+       or Windows shutting down, or, where it is the newer version an update started,
+       on the starting version's cancel, and the line names none of them. -->
   <data name="Cli.EventLogCancelledPartial" xml:space="preserve"><value>{0} mode cancelled: {1} of {2} {3} processed before cancellation. See progress output for the per-file detail.</value></data>
   <!-- 0 = mode arg. Audit entry for a cancellation that lands before any file is
        processed (a cancel during the scan, or before the first delete or

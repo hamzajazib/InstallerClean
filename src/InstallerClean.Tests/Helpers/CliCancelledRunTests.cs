@@ -187,8 +187,9 @@ public class CliCancelledRunTests
     public void The_cancelled_audit_lines_name_no_cause()
     {
         // The command line cancels a run on either control key, its console
-        // closing or Windows shutting down, and the handler does not tell them
-        // all apart, so neither line names one. Composed here exactly as the two write
+        // closing, Windows shutting down or, for the newer version an update
+        // started, the starting version's cancel, and the handler does not tell
+        // them all apart, so neither line names one. Composed here exactly as the two write
         // sites compose them, so a slot the value stopped spelling would throw here
         // rather than in the Application channel.
         var partial = MachineContract.English(() => string.Format(
