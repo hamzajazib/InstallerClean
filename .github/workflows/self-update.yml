@@ -99,7 +99,8 @@ jobs:
           # does not know, so against such a release the update cannot be made, and every
           # step after this one is skipped with the reason said here and in the summary.
           $first = '3.5.0'
-          if ([version]$latest -lt [version]$first) {
+          $v = [version]$latest
+          if ([version]"$($v.Major).$($v.Minor).$([Math]::Max($v.Build, 0))" -lt [version]$first) {
             $said = "Nothing was tested: the current release, $latest, is older than $first, the first release that can run a command standing for an older copy, so the update from $env:OLD_VERSION was not made."
             "::warning::$said"
             "## Self-update: nothing tested`n`n$said" | Add-Content $env:GITHUB_STEP_SUMMARY
@@ -235,26 +236,21 @@ jobs:
           }
           "RUN_STARTED=$((Get-Date).ToUniversalTime().ToString('o'))" | Add-Content $env:GITHUB_ENV
           $run = Run $env:EXE
-          # The newer version's replace runs detached from the staging folder once both
-          # copies have ended, and on the setup's copy starts the setup, which starts its
-          # setup.tmp from an is-*.tmp folder under %TEMP%. Each is waited for, so the
-          # record and the checks see what they left.
-          $staging = Join-Path $env:ProgramData 'InstallerClean-update-'
-          $clock = [System.Diagnostics.Stopwatch]::StartNew()
-          do {
-            $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
-              $_.Path -and ($_.Path.StartsWith($staging, 'OrdinalIgnoreCase') -or $_.Path -match '\\is-[^\\]+\.tmp\\') })
-            if (-not $running) { break }
-            Start-Sleep -Seconds 1
-          } while ($clock.Elapsed.TotalSeconds -lt 300)
-          if ($running) { throw "Still running 300 s after the update run ended: $(($running | ForEach-Object { "$($_.Id) $($_.Path)" }) -join ', ')" }
-          "  the replace had ended $([math]::Round($clock.Elapsed.TotalSeconds)) s after the update run"
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'update-run.txt') -Value $run.Output -NoNewline
           "UPDATE_EXIT=$($run.ExitCode)" | Add-Content $env:GITHUB_ENV
           "UPDATE_PID=$($run.Id)" | Add-Content $env:GITHUB_ENV
           $run.Output
           "Exit code: $($run.ExitCode)"
+          # The newer version's replace runs detached from the staging folder once both
+          # copies have ended, and on the setup's copy starts the setup, which starts its
+          # setup.tmp from an is-*.tmp folder under %TEMP%. Each is waited for, so the
+          # record and the checks see what they left, and one still running after 300 s is
+          # ended and fails the step.
+          . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
+          $left = Wait-StagingProcesses 300 @('\\is-[^\\]+\.tmp\\')
           if ($watch) { Stop-TempWatch $watch $stop }
+          if ($left) { throw "Still running 300 s after the update run ended, and ended: $($left -join ', ')" }
+          '  nothing the update started is running'
 
       - name: Stop recording
         if: always() && env.PROCMON != '' && env.STAGED == 'true'
@@ -300,7 +296,8 @@ jobs:
           Get-ChildItem -LiteralPath $folder -Filter 'installerclean-cli.exe*' | ForEach-Object { Describe $_.FullName }
 
           "The files in the staging folders under $env:ProgramData`:"
-          Get-ChildItem -LiteralPath $env:ProgramData -Directory -Filter 'InstallerClean-update-*' -ErrorAction SilentlyContinue |
+          . scripts/native-libraries.ps1
+          Get-ChildItem -LiteralPath $env:ProgramData -Directory -Filter "$(Split-Path (Get-StagingPrefix) -Leaf)*" -ErrorAction SilentlyContinue |
             ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -File } | ForEach-Object { Describe $_.FullName }
 
           $release = Join-Path $env:RUNNER_TEMP 'release'
@@ -345,6 +342,9 @@ jobs:
         if: env.STAGED == 'true'
         shell: pwsh
         run: |
+          # For Get-ReplaceSuffixes and Get-StagingPrefix. Its Fail and its failures are
+          # replaced here.
+          . scripts/native-libraries.ps1
           $failures = [System.Collections.Generic.List[string]]::new()
           function Fail([string]$message) { $failures.Add($message); Write-Host "::error::$message" }
           function Same($a, $b) {
@@ -397,10 +397,8 @@ jobs:
             $shown = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\InstallerClean_is1').DisplayVersion
             if (Same $shown $latest) { "  the uninstall key's DisplayVersion is $shown" } else { Fail "The uninstall key's DisplayVersion is $shown, not $latest." }
           }
-          $replaceSource = Get-Content -Raw src/InstallerClean.Core/Services/ExeReplacement.cs
-          foreach ($name in 'ReplacingSuffix', 'BackupSuffix', 'LockSuffix') {
-            if ($replaceSource -notmatch "const string $name = `"([^`"]+)`"") { throw "ExeReplacement.cs has no $name." }
-            $left = "$exe$($Matches[1])"
+          foreach ($suffix in @(Get-ReplaceSuffixes) + '.old', '.new') {
+            $left = "$exe$suffix"
             if (Test-Path -LiteralPath $left) { Fail "$left is still there." } else { "  no $left" }
           }
 
@@ -460,7 +458,7 @@ jobs:
           # The staging folder stays until a copy's next start takes it away, which the second
           # run was.
           "The download folders:"
-          $staged = @(Get-ChildItem $env:ProgramData -Directory -Filter 'InstallerClean-update-*' -ErrorAction SilentlyContinue)
+          $staged = @(Get-ChildItem $env:ProgramData -Directory -Filter "$(Split-Path (Get-StagingPrefix) -Leaf)*" -ErrorAction SilentlyContinue)
           if ($staged) { Fail "Download folders are left under ${env:ProgramData} after the second run: $($staged.Name -join ', ')" } else { "  no download folder under $env:ProgramData" }
 
           if ($failures.Count -gt 0) {
@@ -557,6 +555,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $folder | Out-Null
           Copy-Item publish/cli/installerclean-cli.exe $folder
           $exe = Join-Path $folder 'installerclean-cli.exe'
+          foreach ($suffix in @(Get-ReplaceSuffixes) + '.old', '.new') { if (Test-Path -LiteralPath "$exe$suffix") { throw "$exe$suffix is there before the run." } }
           $placed = @(Add-Plants $folder @($plan.Plants))
           "  planted $($placed.Count): $(($placed | ForEach-Object Path) -join ', ')"
 

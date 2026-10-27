@@ -1493,7 +1493,7 @@ function New-StartedEvent {
 # names one, with the argument that passes it. It is never set.
 function New-CancelEvent {
   $id = [guid]::NewGuid().ToString('N')
-  $prefix = Read-SourceMatch 'src/InstallerClean.Core/Helpers/CliContract.cs' 'CancelEventName\(Guid id\) => @"([^"]+)" \+' 'CliContract.cs names no cancel event.'
+  $prefix = Read-SourceMatch 'src/InstallerClean.Core/Helpers/CliContract.cs' 'CancelEventName\(Guid id\)\s*=>\s*@?"([^"]+)"\s*\+' 'CliContract.cs names no cancel event.'
   $created = $false
   $handle = [System.Threading.EventWaitHandle]::new($false, 'ManualReset', "$prefix$id", [ref]$created)
   if (-not $created) { $handle.Dispose(); throw "An event named for $id exists already." }
@@ -1557,6 +1557,29 @@ function Get-AccessSddl([string]$path) { (Get-Acl -LiteralPath $path).GetSecurit
 function Get-ReplaceSuffixes {
   $file = 'src/InstallerClean.Core/Services/ExeReplacement.cs'
   @('ReplacingSuffix', 'BackupSuffix', 'LockSuffix' | ForEach-Object { Read-SourceString $file $_ })
+}
+
+# What every staging folder's full path starts with: %ProgramData% and
+# UpdateStagingFolder.NamePrefix.
+function Get-StagingPrefix {
+  Join-Path $env:ProgramData (Read-SourceString 'src/InstallerClean.Core/Services/UpdateStagingFolder.cs' 'NamePrefix')
+}
+
+# Waits up to $seconds for every process running from a staging folder, and every
+# process whose path matches one of $alsoLike, to end. Those still running then are
+# ended, and are answered as "<id> <path>".
+function Wait-StagingProcesses([int]$seconds, [string[]]$alsoLike = @()) {
+  $prefix = Get-StagingPrefix
+  $clock = [System.Diagnostics.Stopwatch]::StartNew()
+  do {
+    $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+      $path = $_.Path
+      $path -and ($path.StartsWith($prefix, 'OrdinalIgnoreCase') -or @($alsoLike | Where-Object { $path -match $_ }).Count) })
+    if (-not $running) { return , @() }
+    Start-Sleep -Milliseconds 500
+  } while ($clock.Elapsed.TotalSeconds -lt $seconds)
+  $running | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
+  , @($running | ForEach-Object { "$($_.Id) $($_.Path)" })
 }
 
 # The Application-log entries from InstallerClean's source (EventLogWriter.SourceName)

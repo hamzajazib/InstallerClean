@@ -2104,14 +2104,16 @@ jobs:
   # - a process is still running from a staging folder 120 s after the run ended, which
   #   is what the replace runs from;
   # - the file at the path does not carry the version that should be there, or a file
-  #   named as a replace names its own (ExeReplacement's three suffixes) is left beside it;
+  #   named as a replace names its own (ExeReplacement's three suffixes), or a .old or a
+  #   .new, is left beside it;
   # - crash.log does not gain the line saying the newer version did not say it had
   #   started within 60 seconds, or that it ended with exit code 7 before it did; or
   #   gains a line saying Windows would not end the newer version or it had not ended;
   # - the run that waited out the minute took less than 60 s, or the one whose newer
   #   file ended at once took 60 s or more;
   # - the run's exit code is not that of a second run of the file now at the path, with
-  #   /s /noupdate, or a stand-in is still running from the run's folder;
+  #   /s /noupdate, or a process is still running from the run's folder as the run
+  #   ends, or holds its output from a staging folder 10 s after;
   # - a stand-in was not started with /s, /noupdate, one /replacecopy: naming the copy at
   #   the path, one /afterprocess: naming the old copy's process, and one /startedevent:
   #   and one /cancelevent:, each carrying an event's id. It writes the arguments it was
@@ -2167,6 +2169,9 @@ jobs:
       - name: Update the old copy to each newer file
         shell: pwsh
         run: |
+          # For Get-StagingPrefix, Get-ReplaceSuffixes and Wait-StagingProcesses. Its Fail and
+          # its failures are replaced below.
+          . scripts/native-libraries.ps1
           $failures = [System.Collections.Generic.List[string]]::new()
           function Fail([string]$message) { $failures.Add($message); Write-Host "::error::$message" }
 
@@ -2228,11 +2233,19 @@ jobs:
             $p.WaitForExit()
             $clock.Stop()
             # A process the run started and left running from its folder holds the output
-            # open, so it is ended, and named, before the output is read to its end.
+            # open, so it is ended, and named, before the output is read to its end. A
+            # replace runs from a staging folder and is started holding none of the output,
+            # so a process there is ended only where the output is still open 10 s on: the
+            # newer version left running, which holds it.
             $left = @(Leftovers (Split-Path $exe))
             $left | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
-            $null = $out.Wait(10000)
-            $null = $err.Wait(10000)
+            if (-not $out.Wait(10000) -or -not $err.Wait(10000)) {
+              $held = @(Leftovers $stagingPrefix)
+              $held | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
+              $left += $held
+              $null = $out.Wait(10000)
+              $null = $err.Wait(10000)
+            }
             [pscustomobject]@{
               ExitCode = if ($ended) { $p.ExitCode } else { $null }
               Output = $(if ($out.IsCompleted) { $out.Result } else { '' }) + $(if ($err.IsCompleted) { $err.Result } else { '' })
@@ -2242,35 +2255,18 @@ jobs:
             }
           }
 
-          # Every installerclean-cli process running from $folder, and every one whose path
-          # cannot be read, since such a process could be running from there.
+          # Every installerclean-cli process whose path starts with $folder, and every one whose
+          # path cannot be read, since such a process could be running from there.
+          $stagingPrefix = Get-StagingPrefix
           function Leftovers([string]$folder) {
             @(Get-Process -Name 'installerclean-cli' -ErrorAction SilentlyContinue |
               Where-Object { -not $_.Path -or $_.Path.StartsWith($folder, 'OrdinalIgnoreCase') })
           }
 
-          # Every process running from a staging folder under %ProgramData%, which is where a
-          # replace runs from, waited for up to 120 s. Answers those still running then,
-          # which are ended.
-          $stagingPrefix = Join-Path $env:ProgramData 'InstallerClean-update-'
-          function Wait-Replaces {
-            $clock = [System.Diagnostics.Stopwatch]::StartNew()
-            do {
-              $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($stagingPrefix, 'OrdinalIgnoreCase') })
-              if (-not $running) { return , @() }
-              Start-Sleep -Milliseconds 500
-            } while ($clock.Elapsed.TotalSeconds -lt 120)
-            $running | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
-            , @($running | ForEach-Object { "$($_.Id) $($_.Path)" })
-          }
-
-          # The names a replace gives files beside the exe, read from ExeReplacement.cs.
-          $replaceSource = Get-Content -Raw src/InstallerClean.Core/Services/ExeReplacement.cs
-          $replaceSuffixes = @(foreach ($name in 'ReplacingSuffix', 'BackupSuffix', 'LockSuffix') {
-            if ($replaceSource -notmatch "const string $name = `"([^`"]+)`"") { throw "ExeReplacement.cs has no $name." }
-            $Matches[1]
-          })
-          "  a replace names its files with $($replaceSuffixes -join ', ')"
+          # The names that must not be left beside the exe: those a replace gives its files,
+          # and .old and .new.
+          $leftNames = @(Get-ReplaceSuffixes) + '.old', '.new'
+          "  nothing may be left beside the exe named with $($leftNames -join ', ')"
 
           # The InstallerClean entries with $id written since $since. Only the answer that no
           # entry matches reads as none; any other failure to read the log stops the step.
@@ -2317,7 +2313,7 @@ jobs:
             Set-Content -LiteralPath $manifestFile -Value $manifest -Encoding utf8NoBOM -NoNewline
             Copy-Item -LiteralPath $oldExe -Destination $folder
             $exe = Join-Path $folder 'installerclean-cli.exe'
-            foreach ($left in $replaceSuffixes) { if (Test-Path -LiteralPath "$exe$left") { throw "$exe$left is there before the run." } }
+            foreach ($left in $leftNames) { if (Test-Path -LiteralPath "$exe$left") { throw "$exe$left is there before the run." } }
             $logLength = CrashLogLength
             $since = Get-Date
             $argumentsFile = Join-Path $env:RUNNER_TEMP "start-check-$label-arguments.txt"
@@ -2336,13 +2332,14 @@ jobs:
             Write-Host "::endgroup::"
             Write-Host "  exit code $($run.ExitCode), after $([math]::Round($run.Seconds, 1)) s"
             if ($null -eq $run.ExitCode) { Fail "$label`: the run was still going after 240 s and was ended." }
+            if ($run.Left) { Fail "$label`: a process was still running from $folder, or held the run's output from a staging folder, when the run ended, and was ended: $($run.Left -join ', ')" }
+            # The replace writes to crash.log too, so crash.log is read once it has ended.
+            $replaces = Wait-StagingProcesses 120
+            if ($replaces) { Fail "$label`: a process was still running from a staging folder 120 s after the run ended, and was ended: $($replaces -join ', ')" }
+            else { Write-Host "  nothing is running from a staging folder" }
             $logged = CrashLogSince $logLength
             if ($logged) { Write-Host "  crash.log gained:"; $logged -split "`r?`n" | Where-Object { $_ } | ForEach-Object { Write-Host "    $_" } }
             else { Write-Host "  crash.log gained nothing" }
-            if ($run.Left) { Fail "$label`: a process was still running from $folder when the run ended, and was ended: $($run.Left -join ', ')" }
-            $replaces = Wait-Replaces
-            if ($replaces) { Fail "$label`: a process was still running from a staging folder 120 s after the run ended, and was ended: $($replaces -join ', ')" }
-            else { Write-Host "  nothing is running from a staging folder" }
             [pscustomobject]@{ Label = $label; Exe = $exe; Run = $run; Since = $since; Logged = $logged; Arguments = $argumentsFile }
           }
 
@@ -2375,7 +2372,7 @@ jobs:
           function Expect-File($update, [string]$version) {
             $carried = Version3 $update.Exe
             if ($carried -eq $version) { "  the file at the path carries $carried" } else { Fail "$($update.Label): the file at the path carries '$carried', not $version." }
-            foreach ($suffix in $replaceSuffixes) {
+            foreach ($suffix in $leftNames) {
               if (Test-Path -LiteralPath "$($update.Exe)$suffix") { Fail "$($update.Label): $($update.Exe)$suffix is left." } else { "  no $suffix" }
             }
           }
