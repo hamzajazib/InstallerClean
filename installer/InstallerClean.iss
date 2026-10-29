@@ -286,11 +286,8 @@ var
   CancelClicked: Boolean;
   Installed: Boolean;
 
-const
-  AppFileCount = 4;
-
-// The Ith file [Files] writes to {app}, by its name there, for I from 0 to
-// AppFileCount - 1.
+// The Ith file [Files] writes to {app}, by its name there, counting from 0, and ''
+// past the last.
 function AppFile(I: Integer): String;
 begin
   case I of
@@ -413,10 +410,12 @@ var
   I: Integer;
 begin
   Result := True;
-  for I := 0 to AppFileCount - 1 do
+  I := 0;
+  while AppFile(I) <> '' do
   begin
     Result := HoldAside(AppFile(I));
     if not Result then Exit;
+    I := I + 1;
   end;
 end;
 
@@ -450,6 +449,7 @@ begin
   end;
   SetArrayLength(HeldFrom, 0);
   SetArrayLength(HeldAt, 0);
+  SetArrayLength(HeldSkipped, 0);
 end;
 
 // Deletes every file under a held or a done name for the file Name in {app}, other than
@@ -536,8 +536,12 @@ begin
     // Where this install wrote a file at a name, every file an earlier setup left under
     // that name's held or done names is from before it and not needed. One still
     // running stays, and DeleteLeftAside keeps all of them where it wrote none.
-    for I := 0 to AppFileCount - 1 do
+    I := 0;
+    while AppFile(I) <> '' do
+    begin
       DeleteLeftAside(AppFile(I));
+      I := I + 1;
+    end;
   end;
 end;
 
