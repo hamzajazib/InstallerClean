@@ -468,7 +468,8 @@ internal static class Program
             Path.Combine(AppDataFolder.Location, "last-run.json"),
             ReadmeLinks.For("reports-stats", Localisation.UiCulture),
             () => CancelKey.Process.Closing,
-            CommandLineUpdate.ControlCBound);
+            CommandLineUpdate.ControlCBound,
+            ConsoleQuestion.AnswerBound);
         var outcome = report.Entry is { } entry
             ? offer.Offer(entry, token)
             : offer.SendWaiting(token);

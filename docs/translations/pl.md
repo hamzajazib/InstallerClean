@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Zaktualizować teraz? Zdecydowanie zaleca się korzystanie z najnowszej wersji. [{0}/{1}] |
 | Y | T |
 | N | N |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | Brak odpowiedzi po minucie, więc InstallerClean aktualizuje się bez pytania, tak jak wtedy, gdy nie ma kto odpowiedzieć. |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Wysłać anonimowy raport z tego uruchomienia? Jest zapisany w {0}. Wpisz ?, aby zobaczyć, co zawiera. [{1}/{2}/?] |
 | the chart at {0} | wykresu pod adresem {0} |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Raport dodaje twój wynik do {0}, który pokazuje, ile miejsca ludzie odzyskują dzięki InstallerClean. Zawiera też te dane techniczne, które pomagają mi wyłapywać błędy: |
 | The full report is printed below. | Pełny raport wyświetlono poniżej. |
 | Report sent. Thank you. | Raport wysłany. Dziękuję. |
 | Report not sent. | Raport nie został wysłany. |
+| No answer after a minute. | Brak odpowiedzi po minucie. |
 | The report could not be sent. It is kept in {0}. | Nie udało się wysłać raportu. Jest przechowywany w {0}. |
 | Sending a report left waiting by an earlier run. | Wysyłanie raportu oczekującego od wcześniejszego uruchomienia. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Nowa wersja przeskanuje i wyświetli listę tego, co znajdzie, niczego nie usuwając. Aby usunąć, uruchom potem ponownie /d. |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m ŚCIEŻKA  Przenieś do wskazanej ścieżki |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli blokuje wiersz polecenia aż do końca, więc skrypt<br>albo zadanie zaplanowane może na niego zaczekać. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Folder dla każdego użytkownika; zaplanowane lub SYSTEM: /m ŚCIEŻKA. |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Przed skanowaniem sprawdza, czy jest nowsza wersja InstallerClean.<br>Uruchomiony ręcznie pyta przed aktualizacją. Uruchomiony samodzielnie,<br>w zadaniu zaplanowanym lub skrypcie, aktualizuje się bez pytania. Dodaj<br>/noupdate, aby pominąć sprawdzanie. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | Przed skanowaniem sprawdza, czy jest nowsza wersja InstallerClean.<br>Uruchomiony ręcznie pyta przed aktualizacją i aktualizuje się, jeśli nikt<br>nie odpowie w ciągu minuty. Uruchomiony samodzielnie, w zadaniu<br>zaplanowanym lub skrypcie, aktualizuje się bez pytania. Dodaj /noupdate,<br>aby pominąć sprawdzanie. |
 | Exit codes: | Kody zakończenia: |
 |   0   success: the run did what it was asked |   0   sukces: zrobił to, o co poproszono |
 |   1   nothing processed: the run failed or was refused |   1   nic nie przetworzono: uruchomienie zawiodło albo zostało odrzucone |

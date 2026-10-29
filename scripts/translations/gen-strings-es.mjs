@@ -568,7 +568,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `La nueva versión analizará y mostrará lo que encuentre, sin mover nada. Para mover, vuelve a ejecutar /m después.`,
   'Cli.UpdateRunningInstead': `En su lugar, se ejecuta {0} con InstallerClean {1}.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Antes de analizar, comprueba si hay una versión más reciente de&#10;InstallerClean. Cuando lo ejecutas tú, pregunta antes de actualizar.&#10;Cuando se ejecuta solo, en una tarea programada o un script, se actualiza&#10;sin preguntar. Añade /noupdate para omitir la comprobación.`,
+  'Cli.Help.UpdateNote': `Antes de analizar, comprueba si hay una versión más reciente de&#10;InstallerClean. Cuando lo ejecutas tú, pregunta antes de actualizar, y se&#10;actualiza si nadie responde en un minuto. Cuando se ejecuta solo, en una&#10;tarea programada o un script, se actualiza sin preguntar. Añade /noupdate&#10;para omitir la comprobación.`,
   'UpdateNotice.Scoop': `Esta copia se instaló con Scoop. Para actualizarla, cierra InstallerClean y ejecuta:`,
   'UpdateNotice.ScoopGlobal': `Esta copia se instaló con Scoop para todos los usuarios. Para actualizarla, cierra InstallerClean, abre un terminal como administrador y ejecuta:`,
   'UpdateNotice.CommandCopied': `Copiado`,
@@ -598,6 +598,8 @@ const MAP = {
   'Cli.MutexLostMove': `Detenido tras mover {0} de {1} {2} a {3}: InstallerClean ya no podía tener la certeza de que ningún otro InstallerClean estuviera actuando. Vuelve a ejecutar el mismo comando. Código de salida 2 (parcial).`,
   'Cli.CoverLostNoWorkDelete': `Detenido antes de eliminar ningún archivo: InstallerClean ya no podía tener la certeza de que ningún otro InstallerClean estuviera actuando. Vuelve a ejecutar el mismo comando. Código de salida 75 (transitorio).`,
   'Cli.CoverLostNoWorkMove': `Detenido antes de mover ningún archivo: InstallerClean ya no podía tener la certeza de que ningún otro InstallerClean estuviera actuando. Vuelve a ejecutar el mismo comando. Código de salida 75 (transitorio).`,
+  'Cli.UpdateNoAnswer': `Sin respuesta tras un minuto, así que InstallerClean se actualiza sin preguntar, como cuando no hay nadie para responder.`,
+  'Cli.ReportNoAnswer': `Sin respuesta tras un minuto.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

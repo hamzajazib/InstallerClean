@@ -632,7 +632,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요.`,
   'Cli.UpdateRunningInstead': `대신 InstallerClean {1} 버전으로 {0} 명령을 실행합니다.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면&#10;업데이트하기 전에 묻습니다. 예약 작업이나 스크립트에서 자동으로 실행되면&#10;묻지 않고 업데이트합니다. 확인을 건너뛰려면 /noupdate를 추가하세요.`,
+  'Cli.Help.UpdateNote': `검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면&#10;업데이트하기 전에 묻고, 1분 안에 아무도 응답하지 않으면 업데이트합니다.&#10;예약 작업이나 스크립트에서 자동으로 실행되면 묻지 않고 업데이트합니다.&#10;확인을 건너뛰려면 /noupdate를 추가하세요.`,
   'UpdateNotice.Scoop': `이 사본은 Scoop으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고 다음을 실행하세요:`,
   'UpdateNotice.ScoopGlobal': `이 사본은 Scoop으로 모든 사용자용으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고, 관리자 권한으로 터미널을 열어 다음을 실행하세요:`,
   'UpdateNotice.CommandCopied': `복사됨`,
@@ -662,6 +662,8 @@ const MAP = {
   'Cli.MutexLostMove': `{2} {1}개 중 {0}개를 {3}(으)로 이동한 뒤 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 2(일부 완료).`,
   'Cli.CoverLostNoWorkDelete': `파일을 삭제하기 전에 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 75(일시적).`,
   'Cli.CoverLostNoWorkMove': `파일을 이동하기 전에 중지됨: InstallerClean이 다른 InstallerClean이 작업 중이지 않다는 것을 더 이상 확신할 수 없었습니다. 같은 명령을 다시 실행하세요. 종료 코드 75(일시적).`,
+  'Cli.UpdateNoAnswer': `1분 동안 응답이 없어, 응답할 사람이 없을 때처럼 InstallerClean이 묻지 않고 업데이트합니다.`,
+  'Cli.ReportNoAnswer': `1분 동안 응답이 없었습니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -695,7 +695,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards.`,
   'Cli.UpdateRunningInstead': `Running {0} with InstallerClean {1} instead.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating. When it runs on its&#10;own, in a scheduled task or a script, it updates without asking.&#10;Add /noupdate to skip the check.`,
+  'Cli.Help.UpdateNote': `Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating, and updates if nobody&#10;answers within a minute. When it runs on its own, in a scheduled task or&#10;a script, it updates without asking.&#10;Add /noupdate to skip the check.`,
   'UpdateNotice.Scoop': `This copy was installed by Scoop. To update it, close InstallerClean and run:`,
   'UpdateNotice.ScoopGlobal': `This copy was installed by Scoop for all users. To update it, close InstallerClean, open a terminal as administrator and run:`,
   'UpdateNotice.CommandCopied': `Copied`,
@@ -725,6 +725,8 @@ const MAP = {
   'Cli.MutexLostMove': `Stopped after moving {0} of {1} {2} to {3}: InstallerClean could no longer be sure that no other InstallerClean was acting. Run the same command again. Exit 2 (partial).`,
   'Cli.CoverLostNoWorkDelete': `Stopped before deleting any file: InstallerClean could no longer be sure that no other InstallerClean was acting. Run the same command again. Exit 75 (transient).`,
   'Cli.CoverLostNoWorkMove': `Stopped before moving any file: InstallerClean could no longer be sure that no other InstallerClean was acting. Run the same command again. Exit 75 (transient).`,
+  'Cli.UpdateNoAnswer': `No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer.`,
+  'Cli.ReportNoAnswer': `No answer after a minute.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

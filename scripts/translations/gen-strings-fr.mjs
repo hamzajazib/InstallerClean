@@ -650,7 +650,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `La nouvelle version va analyser et lister ce qu'elle trouve, sans rien déplacer. Pour déplacer, relancez /m ensuite.`,
   'Cli.UpdateRunningInstead': `Exécution de {0} avec InstallerClean {1} à la place.`,
   'Cli.UpdateDownloadLink': `{0} : {1}`,
-  'Cli.Help.UpdateNote': `Avant l'analyse, il vérifie s'il existe une version plus récente&#10;d'InstallerClean. Lancé par vous, il demande avant de mettre à jour. Lancé&#10;seul, dans une tâche planifiée ou un script, il se met à jour sans&#10;demander. Ajoutez /noupdate pour ignorer la vérification.`,
+  'Cli.Help.UpdateNote': `Avant l'analyse, il vérifie s'il existe une version plus récente&#10;d'InstallerClean. Lancé par vous, il demande avant de mettre à jour, et&#10;se met à jour si personne ne répond dans la minute. Lancé seul, dans une&#10;tâche planifiée ou un script, il se met à jour sans demander. Ajoutez&#10;/noupdate pour ignorer la vérification.`,
   'UpdateNotice.Scoop': `Cette copie a été installée par Scoop. Pour la mettre à jour, fermez InstallerClean et exécutez :`,
   'UpdateNotice.ScoopGlobal': `Cette copie a été installée par Scoop pour tous les utilisateurs. Pour la mettre à jour, fermez InstallerClean, ouvrez un terminal en tant qu'administrateur et exécutez :`,
   'UpdateNotice.CommandCopied': `Copié`,
@@ -680,6 +680,8 @@ const MAP = {
   'Cli.MutexLostMove': `Arrêté après le déplacement de {0} sur {1} {2} vers {3} : InstallerClean ne pouvait plus être certain qu'aucun autre InstallerClean n'était en train d'agir. Relancez la même commande. Code de sortie 2 (partiel).`,
   'Cli.CoverLostNoWorkDelete': `Arrêté avant d'avoir supprimé le moindre fichier : InstallerClean ne pouvait plus être certain qu'aucun autre InstallerClean n'était en train d'agir. Relancez la même commande. Code de sortie 75 (transitoire).`,
   'Cli.CoverLostNoWorkMove': `Arrêté avant d'avoir déplacé le moindre fichier : InstallerClean ne pouvait plus être certain qu'aucun autre InstallerClean n'était en train d'agir. Relancez la même commande. Code de sortie 75 (transitoire).`,
+  'Cli.UpdateNoAnswer': `Pas de réponse après une minute, donc InstallerClean se met à jour sans demander, comme lorsque personne n'est là pour répondre.`,
+  'Cli.ReportNoAnswer': `Pas de réponse après une minute.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

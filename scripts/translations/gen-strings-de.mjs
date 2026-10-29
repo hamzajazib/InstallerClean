@@ -649,7 +649,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `Die neue Version scannt und listet auf, was sie findet, ohne etwas zu verschieben. Zum Verschieben führe danach /m erneut aus.`,
   'Cli.UpdateRunningInstead': `Stattdessen wird {0} mit InstallerClean {1} ausgeführt.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Vor dem Scannen prüft es, ob es eine neuere Version von InstallerClean&#10;gibt. Wenn du es selbst startest, fragt es vor dem Aktualisieren. Läuft es&#10;von selbst, in einer geplanten Aufgabe oder einem Skript, aktualisiert es&#10;ohne zu fragen. Mit /noupdate wird die Prüfung übersprungen.`,
+  'Cli.Help.UpdateNote': `Vor dem Scannen prüft es, ob es eine neuere Version von InstallerClean&#10;gibt. Wenn du es selbst startest, fragt es vor dem Aktualisieren und&#10;aktualisiert, wenn innerhalb einer Minute niemand antwortet. Läuft es von&#10;selbst, in einer geplanten Aufgabe oder einem Skript, aktualisiert es ohne&#10;zu fragen. Mit /noupdate wird die Prüfung übersprungen.`,
   'UpdateNotice.Scoop': `Diese Kopie wurde mit Scoop installiert. Um sie zu aktualisieren, schließe InstallerClean und führe Folgendes aus:`,
   'UpdateNotice.ScoopGlobal': `Diese Kopie wurde mit Scoop für alle Benutzer installiert. Um sie zu aktualisieren, schließe InstallerClean, öffne ein Terminal als Administrator und führe Folgendes aus:`,
   'UpdateNotice.CommandCopied': `Kopiert`,
@@ -679,6 +679,8 @@ const MAP = {
   'Cli.MutexLostMove': `Angehalten nach dem Verschieben von {0} von {1} {2} nach {3}: InstallerClean konnte nicht mehr sicher sein, dass keine andere InstallerClean-Instanz tätig war. Führe denselben Befehl erneut aus. Exit-Code 2 (teilweise).`,
   'Cli.CoverLostNoWorkDelete': `Angehalten, bevor eine Datei gelöscht wurde: InstallerClean konnte nicht mehr sicher sein, dass keine andere InstallerClean-Instanz tätig war. Führe denselben Befehl erneut aus. Exit-Code 75 (vorübergehend).`,
   'Cli.CoverLostNoWorkMove': `Angehalten, bevor eine Datei verschoben wurde: InstallerClean konnte nicht mehr sicher sein, dass keine andere InstallerClean-Instanz tätig war. Führe denselben Befehl erneut aus. Exit-Code 75 (vorübergehend).`,
+  'Cli.UpdateNoAnswer': `Keine Antwort nach einer Minute, also aktualisiert sich InstallerClean ohne zu fragen, wie wenn niemand da ist, der antworten kann.`,
+  'Cli.ReportNoAnswer': `Keine Antwort nach einer Minute.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

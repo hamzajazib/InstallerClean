@@ -2422,6 +2422,10 @@ Run InstallerClean again as administrator.</value></data>
        and N are taken as well in every language. The two must differ. -->
   <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>Y</value></data>
   <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>N</value></data>
+  <!-- After Cli.UpdatePrompt where nothing was answered within a minute. The update then
+       goes ahead as it does where nobody can answer the console, and the command runs as
+       given with the newer version. -->
+  <data name="Cli.UpdateNoAnswer" xml:space="preserve"><value>No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer.</value></data>
   <!-- The command line's offer to send the anonymous report, asked after the PC's first
        finished run where somebody is at the console, once the run's work is done. 0 = the
        full path of last-run.json, which holds the report; 1 and 2 = the letters for yes
@@ -2445,6 +2449,9 @@ Run InstallerClean again as administrator.</value></data>
   <data name="Cli.ReportSent" xml:space="preserve"><value>Report sent. Thank you.</value></data>
   <!-- After the answer was no, and after Ctrl+C at the question or while the report was being sent. -->
   <data name="Cli.ReportNotSent" xml:space="preserve"><value>Report not sent.</value></data>
+  <!-- After Cli.ReportPrompt where nothing was answered within a minute, and before
+       Cli.ReportNotSent. -->
+  <data name="Cli.ReportNoAnswer" xml:space="preserve"><value>No answer after a minute.</value></data>
   <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>The report could not be sent. It is kept in {0}.</value></data>
@@ -2710,11 +2717,11 @@ Run InstallerClean again as administrator.</value></data>
        word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli blocks the prompt until it finishes, so a script or&#10;scheduled task can wait on it.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>That folder is saved per-user; scheduled or SYSTEM runs need /m PATH.</value></data>
-  <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
+  <!-- ONE value carrying FIVE printed lines, under the /m note. The &#10; is where the
        English breaks; a translation breaks within the 74-column cap where its own
        grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
-  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating. When it runs on its&#10;own, in a scheduled task or a script, it updates without asking.&#10;Add /noupdate to skip the check.</value></data>
+  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating, and updates if nobody&#10;answers within a minute. When it runs on its own, in a scheduled task or&#10;a script, it updates without asking.&#10;Add /noupdate to skip the check.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Exit codes:</value></data>
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print

@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Nu bijwerken? Het wordt sterk aangeraden om de nieuwste versie te gebruiken. [{0}/{1}] |
 | Y | J |
 | N | N |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | Na een minuut geen antwoord, dus InstallerClean werkt bij zonder te vragen, zoals wanneer er niemand is om te antwoorden. |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Een anoniem rapport van deze uitvoering versturen? Het is opgeslagen in {0}. Typ ? om te zien wat erin staat. [{1}/{2}/?] |
 | the chart at {0} | de grafiek op {0} |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Het rapport voegt je resultaat toe aan {0}, die laat zien hoeveel ruimte mensen met InstallerClean vrijmaken. Het bevat ook deze technische gegevens, die me helpen eventuele bugs op te sporen: |
 | The full report is printed below. | Het volledige rapport staat hieronder. |
 | Report sent. Thank you. | Rapport verstuurd. Bedankt. |
 | Report not sent. | Rapport niet verstuurd. |
+| No answer after a minute. | Na een minuut geen antwoord. |
 | The report could not be sent. It is kept in {0}. | Het rapport kon niet worden verstuurd. Het wordt bewaard in {0}. |
 | Sending a report left waiting by an earlier run. | Een rapport dat sinds een eerdere uitvoering wacht, wordt nu verstuurd. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verwijderen. Voer daarna /d opnieuw uit om te verwijderen. |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m PAD     Verplaatsen naar het opgegeven pad |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli blokkeert de prompt tot het klaar is, zodat een script<br>of geplande taak erop kan wachten. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Die map geldt per gebruiker; geplande of SYSTEM-taken vereisen /m PAD. |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Voor het scannen controleert het of er een nieuwere versie van<br>InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming.<br>Draait het zelfstandig, in een geplande taak of een script, dan werkt het<br>bij zonder te vragen. Voeg /noupdate toe om de controle over te slaan. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | Voor het scannen controleert het of er een nieuwere versie van<br>InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming, en<br>werkt het bij als niemand binnen een minuut antwoordt. Draait het<br>zelfstandig, in een geplande taak of een script, dan werkt het bij zonder<br>te vragen. Voeg /noupdate toe om de controle over te slaan. |
 | Exit codes: | Afsluitcodes: |
 |   0   success: the run did what it was asked |   0   geslaagd: de uitvoering deed wat gevraagd was |
 |   1   nothing processed: the run failed or was refused |   1   niets verwerkt: de uitvoering is mislukt of is geweigerd |

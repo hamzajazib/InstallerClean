@@ -544,7 +544,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `新版本會掃描並列出找到的內容，不會移動任何檔案。如需移動，請在之後再次執行 /m。`,
   'Cli.UpdateRunningInstead': `改用 InstallerClean {1} 執行 {0}。`,
   'Cli.UpdateDownloadLink': `{0}：{1}`,
-  'Cli.Help.UpdateNote': `掃描前，它會檢查是否有較新版本的 InstallerClean。由您親自執行時，&#10;它會在更新前詢問。在排定的工作或指令碼中自動執行時，它會直接更新而不詢問。&#10;加上 /noupdate 可略過檢查。`,
+  'Cli.Help.UpdateNote': `掃描前，它會檢查是否有較新版本的 InstallerClean。由您親自執行時，&#10;它會在更新前詢問，一分鐘內無人回答則直接更新。在排定的工作或指令碼中&#10;自動執行時，它會直接更新而不詢問。&#10;加上 /noupdate 可略過檢查。`,
   'UpdateNotice.Scoop': `此副本由 Scoop 安裝。若要更新，請關閉 InstallerClean 並執行：`,
   'UpdateNotice.ScoopGlobal': `此副本由 Scoop 為所有使用者安裝。若要更新，請關閉 InstallerClean，以系統管理員身分開啟終端機並執行：`,
   'UpdateNotice.CommandCopied': `已複製`,
@@ -574,6 +574,8 @@ const MAP = {
   'Cli.MutexLostMove': `已將 {1} 個{2}中的 {0} 個移動到 {3} 後停止：InstallerClean 已無法確定沒有其他 InstallerClean 正在執行操作。請再次執行同一命令。結束代碼 2（部分完成）。`,
   'Cli.CoverLostNoWorkDelete': `在刪除任何檔案之前已停止：InstallerClean 已無法確定沒有其他 InstallerClean 正在執行操作。請再次執行同一命令。結束代碼 75（暫時性）。`,
   'Cli.CoverLostNoWorkMove': `在移動任何檔案之前已停止：InstallerClean 已無法確定沒有其他 InstallerClean 正在執行操作。請再次執行同一命令。結束代碼 75（暫時性）。`,
+  'Cli.UpdateNoAnswer': `一分鐘內沒有回答，因此 InstallerClean 會像無人可回答時一樣，不詢問直接更新。`,
+  'Cli.ReportNoAnswer': `一分鐘內沒有回答。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

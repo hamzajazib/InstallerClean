@@ -636,7 +636,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `A nova versão vai analisar e listar o que encontrar, sem mover nada. Para mover, execute /m novamente depois.`,
   'Cli.UpdateRunningInstead': `Em vez disso, {0} será executado com o InstallerClean {1}.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar.&#10;Quando roda sozinho, em uma tarefa agendada ou um script, ele atualiza sem&#10;perguntar. Adicione /noupdate para pular a verificação.`,
+  'Cli.Help.UpdateNote': `Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar, e&#10;atualiza se ninguém responder em um minuto. Quando roda sozinho, em uma&#10;tarefa agendada ou um script, ele atualiza sem perguntar. Adicione&#10;/noupdate para pular a verificação.`,
   'UpdateNotice.Scoop': `Esta cópia foi instalada pelo Scoop. Para atualizá-la, feche o InstallerClean e execute:`,
   'UpdateNotice.ScoopGlobal': `Esta cópia foi instalada pelo Scoop para todos os usuários. Para atualizá-la, feche o InstallerClean, abra um terminal como administrador e execute:`,
   'UpdateNotice.CommandCopied': `Copiado`,
@@ -666,6 +666,8 @@ const MAP = {
   'Cli.MutexLostMove': `Interrompido após mover {0} de {1} {2} para {3}: o InstallerClean não podia mais ter certeza de que nenhum outro InstallerClean estava agindo. Execute o mesmo comando novamente. Código de saída 2 (parcial).`,
   'Cli.CoverLostNoWorkDelete': `Interrompido antes de excluir qualquer arquivo: o InstallerClean não podia mais ter certeza de que nenhum outro InstallerClean estava agindo. Execute o mesmo comando novamente. Código de saída 75 (transitório).`,
   'Cli.CoverLostNoWorkMove': `Interrompido antes de mover qualquer arquivo: o InstallerClean não podia mais ter certeza de que nenhum outro InstallerClean estava agindo. Execute o mesmo comando novamente. Código de saída 75 (transitório).`,
+  'Cli.UpdateNoAnswer': `Sem resposta após um minuto, então o InstallerClean se atualiza sem perguntar, como quando não há ninguém para responder.`,
+  'Cli.ReportNoAnswer': `Sem resposta após um minuto.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

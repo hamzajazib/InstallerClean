@@ -557,7 +557,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.UpdateListsOnlyAfterMove': `Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın.`,
   'Cli.UpdateRunningInstead': `Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Taramadan önce InstallerClean'in daha yeni bir sürümü olup olmadığını&#10;denetler. Kendiniz çalıştırdığınızda güncellemeden önce sorar. Zamanlanmış&#10;bir görevde veya betikte kendi kendine çalıştığında sormadan güncellenir.&#10;Denetimi atlamak için /noupdate ekleyin.`,
+  'Cli.Help.UpdateNote': `Taramadan önce InstallerClean'in daha yeni bir sürümü olup olmadığını&#10;denetler. Kendiniz çalıştırdığınızda güncellemeden önce sorar ve bir&#10;dakika içinde kimse yanıtlamazsa güncellenir. Zamanlanmış bir görevde veya&#10;betikte kendi kendine çalıştığında sormadan güncellenir.&#10;Denetimi atlamak için /noupdate ekleyin.`,
   'UpdateNotice.Scoop': `Bu kopya Scoop ile yüklendi. Güncellemek için InstallerClean'i kapatıp şunu çalıştırın:`,
   'UpdateNotice.ScoopGlobal': `Bu kopya Scoop ile tüm kullanıcılar için yüklendi. Güncellemek için InstallerClean'i kapatın, yönetici olarak bir terminal açın ve şunu çalıştırın:`,
   'UpdateNotice.CommandCopied': `Kopyalandı`,
@@ -587,6 +587,8 @@ Ayrıntılar şuraya yazıldı:
   'Cli.MutexLostMove': `{1} {2} içinden {0} tanesi {3} konumuna taşındıktan sonra durduruldu: InstallerClean, başka hiçbir InstallerClean'in işlem yapmadığından artık emin olamadı. Aynı komutu yeniden çalıştırın. Çıkış 2 (kısmi).`,
   'Cli.CoverLostNoWorkDelete': `Herhangi bir dosya silinmeden önce durduruldu: InstallerClean, başka hiçbir InstallerClean'in işlem yapmadığından artık emin olamadı. Aynı komutu yeniden çalıştırın. Çıkış 75 (geçici).`,
   'Cli.CoverLostNoWorkMove': `Herhangi bir dosya taşınmadan önce durduruldu: InstallerClean, başka hiçbir InstallerClean'in işlem yapmadığından artık emin olamadı. Aynı komutu yeniden çalıştırın. Çıkış 75 (geçici).`,
+  'Cli.UpdateNoAnswer': `Bir dakika içinde yanıt gelmedi, bu yüzden InstallerClean, yanıtlayacak kimse olmadığında yaptığı gibi sormadan güncelleniyor.`,
+  'Cli.ReportNoAnswer': `Bir dakika içinde yanıt gelmedi.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -307,6 +307,7 @@ public static class Strings
     public static string Cli_ReportCouldNotBeSent => Get("Cli.ReportCouldNotBeSent");
     public static string Cli_ReportInFull => Get("Cli.ReportInFull");
     public static string Cli_ReportIntro => Get("Cli.ReportIntro");
+    public static string Cli_ReportNoAnswer => Get("Cli.ReportNoAnswer");
     public static string Cli_ReportNotSent => Get("Cli.ReportNotSent");
     public static string Cli_ReportPrompt => Get("Cli.ReportPrompt");
     public static string Cli_ReportSent => Get("Cli.ReportSent");
@@ -337,6 +338,7 @@ public static class Strings
     public static string Cli_UpdateListsOnlyAfterDelete => Get("Cli.UpdateListsOnlyAfterDelete");
     public static string Cli_UpdateListsOnlyAfterMove => Get("Cli.UpdateListsOnlyAfterMove");
     public static string Cli_UpdateNeedsNetFramework48 => Get("Cli.UpdateNeedsNetFramework48");
+    public static string Cli_UpdateNoAnswer => Get("Cli.UpdateNoAnswer");
     public static string Cli_UpdateNotRun => Get("Cli.UpdateNotRun");
     public static string Cli_UpdatePrompt => Get("Cli.UpdatePrompt");
     public static string Cli_UpdateRunningInstead => Get("Cli.UpdateRunningInstead");

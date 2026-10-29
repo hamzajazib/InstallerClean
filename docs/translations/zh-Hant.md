@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | 立即更新？強烈建議使用最新版本。[{0}/{1}] |
 | Y | Y |
 | N | N |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | 一分鐘內沒有回答，因此 InstallerClean 會像無人可回答時一樣，不詢問直接更新。 |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | 傳送本次執行的匿名報告？報告已儲存在 {0}。輸入 ? 可查看其內容。[{1}/{2}/?] |
 | the chart at {0} | 地址為 {0} 的圖表 |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 報告會把您的結果加到{0}，圖表顯示人們用 InstallerClean 釋放了多少空間。報告也包含以下技術細節，幫助我發現程式錯誤： |
 | The full report is printed below. | 完整報告列印在下方。 |
 | Report sent. Thank you. | 報告已傳送。謝謝。 |
 | Report not sent. | 報告未傳送。 |
+| No answer after a minute. | 一分鐘內沒有回答。 |
 | The report could not be sent. It is kept in {0}. | 無法傳送報告。報告保存在 {0}。 |
 | Sending a report left waiting by an earlier run. | 正在傳送較早一次執行留下的待傳送報告。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本會掃描並列出找到的內容，不會刪除任何檔案。如需刪除，請在之後再次執行 /d。 |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m 路徑    移到指定的路徑 |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli 會佔住命令提示字元直到結束，<br>因此指令碼或排定的工作可以等候它完成。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 該資料夾依使用者儲存；排定的工作或 SYSTEM 執行需要 /m 路徑。 |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | 掃描前，它會檢查是否有較新版本的 InstallerClean。由您親自執行時，<br>它會在更新前詢問。在排定的工作或指令碼中自動執行時，它會直接更新而不詢問。<br>加上 /noupdate 可略過檢查。 |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | 掃描前，它會檢查是否有較新版本的 InstallerClean。由您親自執行時，<br>它會在更新前詢問，一分鐘內無人回答則直接更新。在排定的工作或指令碼中<br>自動執行時，它會直接更新而不詢問。<br>加上 /noupdate 可略過檢查。 |
 | Exit codes: | 結束代碼： |
 |   0   success: the run did what it was asked |   0   成功：這次執行完成了要求的事 |
 |   1   nothing processed: the run failed or was refused |   1   沒有處理任何內容：這次執行失敗或被拒絕 |

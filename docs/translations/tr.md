@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Şimdi güncellensin mi? En son sürümü kullanmanız önemle tavsiye edilir. [{0}/{1}] |
 | Y | E |
 | N | H |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | Bir dakika içinde yanıt gelmedi, bu yüzden InstallerClean, yanıtlayacak kimse olmadığında yaptığı gibi sormadan güncelleniyor. |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Bu çalıştırmanın anonim raporu gönderilsin mi? {0} konumuna kaydedildi. İçeriğini görmek için ? yazın. [{1}/{2}/?] |
 | the chart at {0} | {0} adresindeki grafiğe |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Rapor, sonucunuzu {0} ekler; bu grafik, insanların InstallerClean ile ne kadar yer açtığını gösterir. Ayrıca hataları fark etmeme yardımcı olacak şu teknik ayrıntıları da içerir: |
 | The full report is printed below. | Raporun tamamı aşağıda yazdırılmıştır. |
 | Report sent. Thank you. | Rapor gönderildi. Teşekkürler. |
 | Report not sent. | Rapor gönderilmedi. |
+| No answer after a minute. | Bir dakika içinde yanıt gelmedi. |
 | The report could not be sent. It is kept in {0}. | Rapor gönderilemedi. {0} konumunda saklanıyor. |
 | Sending a report left waiting by an earlier run. | Daha önceki bir çalıştırmadan beri bekleyen bir rapor gönderiliyor. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın. |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m YOL     Belirtilen yola taşı |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli bitene kadar komut istemini tutar, böylece bir betik<br>ya da zamanlanmış görev onu bekleyebilir. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Klasör kullanıcıya özeldir; zamanlanmış veya SYSTEM: /m YOL. |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Taramadan önce InstallerClean'in daha yeni bir sürümü olup olmadığını<br>denetler. Kendiniz çalıştırdığınızda güncellemeden önce sorar. Zamanlanmış<br>bir görevde veya betikte kendi kendine çalıştığında sormadan güncellenir.<br>Denetimi atlamak için /noupdate ekleyin. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | Taramadan önce InstallerClean'in daha yeni bir sürümü olup olmadığını<br>denetler. Kendiniz çalıştırdığınızda güncellemeden önce sorar ve bir<br>dakika içinde kimse yanıtlamazsa güncellenir. Zamanlanmış bir görevde veya<br>betikte kendi kendine çalıştığında sormadan güncellenir.<br>Denetimi atlamak için /noupdate ekleyin. |
 | Exit codes: | Çıkış kodları: |
 |   0   success: the run did what it was asked |   0   başarılı: isteneni yaptı |
 |   1   nothing processed: the run failed or was refused |   1   hiçbir şey işlenmedi: çalıştırma başarısız oldu ya da reddedildi |

@@ -2383,6 +2383,10 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        and N are taken as well in every language. The two must differ. -->
   <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>C</value></data>
   <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>K</value></data>
+  <!-- After Cli.UpdatePrompt where nothing was answered within a minute. The update then
+       goes ahead as it does where nobody can answer the console, and the command runs as
+       given with the newer version. -->
+  <data name="Cli.UpdateNoAnswer" xml:space="preserve"><value>Không có câu trả lời sau một phút, nên InstallerClean cập nhật mà không hỏi, như khi không có ai ở đó để trả lời.</value></data>
   <!-- The command line's offer to send the anonymous report, asked after the PC's first
        finished run where somebody is at the console, once the run's work is done. 0 = the
        full path of last-run.json, which holds the report; 1 and 2 = the letters for yes
@@ -2406,6 +2410,9 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
   <data name="Cli.ReportSent" xml:space="preserve"><value>Đã gửi báo cáo. Cảm ơn bạn.</value></data>
   <!-- After the answer was no, and after Ctrl+C at the question or while the report was being sent. -->
   <data name="Cli.ReportNotSent" xml:space="preserve"><value>Chưa gửi báo cáo.</value></data>
+  <!-- After Cli.ReportPrompt where nothing was answered within a minute, and before
+       Cli.ReportNotSent. -->
+  <data name="Cli.ReportNoAnswer" xml:space="preserve"><value>Không có câu trả lời sau một phút.</value></data>
   <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}.</value></data>
@@ -2635,11 +2642,11 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli giữ dấu nhắc cho tới khi xong, để một tập lệnh hoặc&#10;một tác vụ theo lịch có thể chờ nó.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Thư mục theo người dùng; tác vụ theo lịch hoặc SYSTEM: /m ĐƯỜNG_DẪN.</value></data>
-  <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
+  <!-- ONE value carrying FIVE printed lines, under the /m note. The &#10; is where the
        English breaks; a translation breaks within the 74-column cap where its own
        grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
-  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn&#10;không. Khi bạn tự chạy, nó hỏi trước khi cập nhật. Khi chạy tự động, trong&#10;một tác vụ theo lịch hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm&#10;/noupdate để bỏ qua bước kiểm tra.</value></data>
+  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn&#10;không. Khi bạn tự chạy, nó hỏi trước khi cập nhật, và cập nhật nếu không&#10;ai trả lời trong một phút. Khi chạy tự động, trong một tác vụ theo lịch&#10;hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm /noupdate để bỏ qua&#10;bước kiểm tra.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Mã thoát:</value></data>
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print

@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Cập nhật ngay bây giờ? Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất. [{0}/{1}] |
 | Y | C |
 | N | K |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | Không có câu trả lời sau một phút, nên InstallerClean cập nhật mà không hỏi, như khi không có ai ở đó để trả lời. |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Gửi báo cáo ẩn danh về lần chạy này? Báo cáo được lưu tại {0}. Nhập ? để xem nội dung. [{1}/{2}/?] |
 | the chart at {0} | biểu đồ tại {0} |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Báo cáo sẽ thêm kết quả của bạn vào {0}, cho thấy mọi người đang giải phóng được bao nhiêu dung lượng với InstallerClean. Báo cáo cũng chứa các chi tiết kỹ thuật sau để giúp tôi phát hiện lỗi: |
 | The full report is printed below. | Toàn bộ báo cáo được in bên dưới. |
 | Report sent. Thank you. | Đã gửi báo cáo. Cảm ơn bạn. |
 | Report not sent. | Chưa gửi báo cáo. |
+| No answer after a minute. | Không có câu trả lời sau một phút. |
 | The report could not be sent. It is kept in {0}. | Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}. |
 | Sending a report left waiting by an earlier run. | Đang gửi một báo cáo còn chờ từ một lần chạy trước đó. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không xóa gì cả. Để xóa, hãy chạy lại /d sau đó. |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m ĐƯỜNG_DẪN  Chuyển tới đường dẫn được chỉ định |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli giữ dấu nhắc cho tới khi xong, để một tập lệnh hoặc<br>một tác vụ theo lịch có thể chờ nó. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Thư mục theo người dùng; tác vụ theo lịch hoặc SYSTEM: /m ĐƯỜNG_DẪN. |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn<br>không. Khi bạn tự chạy, nó hỏi trước khi cập nhật. Khi chạy tự động, trong<br>một tác vụ theo lịch hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm<br>/noupdate để bỏ qua bước kiểm tra. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn<br>không. Khi bạn tự chạy, nó hỏi trước khi cập nhật, và cập nhật nếu không<br>ai trả lời trong một phút. Khi chạy tự động, trong một tác vụ theo lịch<br>hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm /noupdate để bỏ qua<br>bước kiểm tra. |
 | Exit codes: | Mã thoát: |
 |   0   success: the run did what it was asked |   0   thành công: đã làm đúng việc được yêu cầu |
 |   1   nothing processed: the run failed or was refused |   1   không xử lý gì: lần chạy đã thất bại hoặc bị từ chối |

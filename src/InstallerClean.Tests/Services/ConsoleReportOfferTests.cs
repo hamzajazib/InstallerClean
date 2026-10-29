@@ -58,6 +58,20 @@ public class ConsoleReportOfferTests
     }
 
     [Fact]
+    public void A_question_nobody_answers_sends_nothing_and_says_so()
+    {
+        var rig = new Rig(ScriptedConsole.NoAnswer);
+
+        var outcome = rig.Offer();
+
+        Assert.Equal(ReportOfferOutcome.Declined, outcome);
+        rig.Log.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        Assert.False(rig.Settings.State.ReportSendPending);
+        Assert.False(rig.Settings.State.HasSentResultLog);
+        Assert.Equal([string.Empty, Strings.Cli_ReportNoAnswer, Strings.Cli_ReportNotSent], rig.Console.Lines[^3..]);
+    }
+
+    [Fact]
     public void The_report_is_saved_before_the_question_and_the_question_names_the_file()
     {
         var rig = new Rig("n");
@@ -324,11 +338,15 @@ public class ConsoleReportOfferTests
         public ReportOfferOutcome SendWaiting(CancellationToken token = default) => Make().SendWaiting(token);
 
         private ConsoleReportOffer Make() => new(
-            Console, Log, Settings, ReportPath, ChartAddress, () => Closing, TimeSpan.Zero);
+            Console, Log, Settings, ReportPath, ChartAddress, () => Closing, TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(50));
     }
 
     private sealed class ScriptedConsole(Rig rig, string?[] answers) : IConsolePrompt
     {
+        /// <summary>An answer that never comes: the read waits until its token is cancelled.</summary>
+        public const string NoAnswer = "\0 no answer";
+
         private int _next;
 
         public List<string> Lines { get; } = [];
@@ -341,7 +359,10 @@ public class ConsoleReportOfferTests
         public string? ReadLine(CancellationToken token)
         {
             rig.OnRead?.Invoke();
-            return _next < answers.Length ? answers[_next++] : null;
+            var answer = _next < answers.Length ? answers[_next++] : null;
+            if (answer != NoAnswer) return answer;
+            token.WaitHandle.WaitOne();
+            return null;
         }
     }
 

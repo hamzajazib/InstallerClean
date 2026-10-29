@@ -656,7 +656,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `Versi baru akan memindai dan menampilkan daftar temuannya, tanpa memindahkan apa pun. Untuk memindahkan, jalankan /m lagi setelahnya.`,
   'Cli.UpdateRunningInstead': `Menjalankan {0} dengan InstallerClean {1} sebagai gantinya.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.&#10;Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui.&#10;Jika berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui&#10;tanpa bertanya. Tambahkan /noupdate untuk melewati pemeriksaan.`,
+  'Cli.Help.UpdateNote': `Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.&#10;Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui,&#10;dan memperbarui jika tidak ada yang menjawab dalam satu menit. Jika&#10;berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui tanpa&#10;bertanya. Tambahkan /noupdate untuk melewati pemeriksaan.`,
   'UpdateNotice.Scoop': `Salinan ini dipasang oleh Scoop. Untuk memperbaruinya, tutup InstallerClean lalu jalankan:`,
   'UpdateNotice.ScoopGlobal': `Salinan ini dipasang oleh Scoop untuk semua pengguna. Untuk memperbaruinya, tutup InstallerClean, buka terminal sebagai administrator, lalu jalankan:`,
   'UpdateNotice.CommandCopied': `Tersalin`,
@@ -686,6 +686,8 @@ const MAP = {
   'Cli.MutexLostMove': `Dihentikan setelah memindahkan {0} dari {1} {2} ke {3}: InstallerClean tidak bisa lagi memastikan bahwa tidak ada InstallerClean lain yang sedang bekerja. Jalankan perintah yang sama lagi. Kode keluar 2 (sebagian).`,
   'Cli.CoverLostNoWorkDelete': `Dihentikan sebelum menghapus file apa pun: InstallerClean tidak bisa lagi memastikan bahwa tidak ada InstallerClean lain yang sedang bekerja. Jalankan perintah yang sama lagi. Kode keluar 75 (sementara).`,
   'Cli.CoverLostNoWorkMove': `Dihentikan sebelum memindahkan file apa pun: InstallerClean tidak bisa lagi memastikan bahwa tidak ada InstallerClean lain yang sedang bekerja. Jalankan perintah yang sama lagi. Kode keluar 75 (sementara).`,
+  'Cli.UpdateNoAnswer': `Tidak ada jawaban setelah satu menit, jadi InstallerClean memperbarui tanpa bertanya, seperti saat tidak ada orang yang dapat menjawab.`,
+  'Cli.ReportNoAnswer': `Tidak ada jawaban setelah satu menit.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

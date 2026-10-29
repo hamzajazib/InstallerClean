@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | 지금 업데이트할까요? 최신 버전을 사용할 것을 강력히 권장합니다. [{0}/{1}] |
 | Y | Y |
 | N | N |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | 1분 동안 응답이 없어, 응답할 사람이 없을 때처럼 InstallerClean이 묻지 않고 업데이트합니다. |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | 이번 실행의 익명 보고서를 보낼까요? {0}에 저장되어 있습니다. ?를 입력하면 담긴 내용을 볼 수 있습니다. [{1}/{2}/?] |
 | the chart at {0} | {0} 주소의 차트 |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 보고서는 사용자의 결과를 {0}에 추가하며, 이 차트는 사람들이 InstallerClean으로 얼마나 많은 공간을 확보하고 있는지 보여 줍니다. 또한 버그를 찾는 데 도움이 되는 다음 기술 정보도 포함됩니다: |
 | The full report is printed below. | 전체 보고서는 아래에 출력됩니다. |
 | Report sent. Thank you. | 보고서를 보냈습니다. 감사합니다. |
 | Report not sent. | 보고서를 보내지 않았습니다. |
+| No answer after a minute. | 1분 동안 응답이 없었습니다. |
 | The report could not be sent. It is kept in {0}. | 보고서를 보내지 못했습니다. {0}에 보관되어 있습니다. |
 | Sending a report left waiting by an earlier run. | 이전 실행 때부터 대기 중이던 보고서를 보내는 중입니다. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 삭제하지 않습니다. 삭제하려면 그 후에 /d를 다시 실행하세요. |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m 경로    지정한 경로로 이동 |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로<br>스크립트나 예약 작업이 이를 기다릴 수 있습니다. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 폴더는 사용자별 저장. 예약 또는 SYSTEM 실행에는 /m 경로 필요. |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | 검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면<br>업데이트하기 전에 묻습니다. 예약 작업이나 스크립트에서 자동으로 실행되면<br>묻지 않고 업데이트합니다. 확인을 건너뛰려면 /noupdate를 추가하세요. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | 검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면<br>업데이트하기 전에 묻고, 1분 안에 아무도 응답하지 않으면 업데이트합니다.<br>예약 작업이나 스크립트에서 자동으로 실행되면 묻지 않고 업데이트합니다.<br>확인을 건너뛰려면 /noupdate를 추가하세요. |
 | Exit codes: | 종료 코드: |
 |   0   success: the run did what it was asked |   0   성공: 요청한 일을 했음 |
 |   1   nothing processed: the run failed or was refused |   1   아무것도 처리되지 않음: 실행이 실패했거나 거부됨 |

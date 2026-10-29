@@ -38,7 +38,8 @@ internal sealed class ConsoleReportOffer(
     string reportPath,
     string chartAddress,
     Func<bool> consoleClosing,
-    TimeSpan controlCBound)
+    TimeSpan controlCBound,
+    TimeSpan answerBound)
 {
     /// <summary>
     /// Saves <paramref name="entry"/> and asks whether to send it. Enter or Y, or this
@@ -46,7 +47,8 @@ internal sealed class ConsoleReportOffer(
     /// mark prints what the report holds and the report itself, then asks again;
     /// anything else asks again. The end of input is no, unless the token is cancelled
     /// within the bound this offer was given for it, since Ctrl+C at the prompt can
-    /// itself be read as the end of input. Where the report cannot be saved nothing is
+    /// itself be read as the end of input. Nothing answered within the bound this offer was
+    /// given for an answer is no, said as such. Where the report cannot be saved nothing is
     /// asked, as there is no file to name or to send. Never throws.
     /// </summary>
     public ReportOfferOutcome Offer(ResultLogEntry entry, CancellationToken token)
@@ -61,10 +63,13 @@ internal sealed class ConsoleReportOffer(
             {
                 switch (ConsoleQuestion.Ask(
                     console, (yes, no) => string.Format(Strings.Cli_ReportPrompt, reportPath, yes, no),
-                    token, controlCBound, out var answer))
+                    token, controlCBound, answerBound, out var answer))
                 {
                     case ConsoleAnswer.Yes: return Send(waiting: false, token);
                     case ConsoleAnswer.No: return Declined();
+                    case ConsoleAnswer.TimedOut:
+                        console.WriteLine(Strings.Cli_ReportNoAnswer);
+                        return Declined();
                     case ConsoleAnswer.Cancelled: return Cancelled();
                     case ConsoleAnswer.Other when answer == "?": ShowReport(); break;
                 }

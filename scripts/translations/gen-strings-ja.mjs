@@ -556,7 +556,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。`,
   'Cli.UpdateRunningInstead': `代わりに InstallerClean {1} で {0} を実行します。`,
   'Cli.UpdateDownloadLink': `{0}：{1}`,
-  'Cli.Help.UpdateNote': `スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。&#10;自分で実行した場合は、更新する前に確認を求めます。&#10;スケジュールされたタスクやスクリプトで自動実行される場合は、&#10;確認なしで更新します。確認を省くには /noupdate を付けてください。`,
+  'Cli.Help.UpdateNote': `スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。&#10;自分で実行した場合は、更新する前に確認を求め、1 分以内に応答が&#10;なければ更新します。スケジュールされたタスクやスクリプトで&#10;自動実行される場合は、確認なしで更新します。&#10;確認を省くには /noupdate を付けてください。`,
   'UpdateNotice.Scoop': `このコピーは Scoop でインストールされています。更新するには、InstallerClean を閉じてから次を実行してください：`,
   'UpdateNotice.ScoopGlobal': `このコピーは Scoop ですべてのユーザー向けにインストールされています。更新するには、InstallerClean を閉じ、管理者としてターミナルを開いて、次を実行してください：`,
   'UpdateNotice.CommandCopied': `コピー済み`,
@@ -586,6 +586,8 @@ const MAP = {
   'Cli.MutexLostMove': `{1} 個中 {0} 個の {2} を {3} に移動した時点で停止しました: InstallerClean は、ほかの InstallerClean が動作していないことを確認できなくなりました。同じコマンドをもう一度実行してください。終了コード2 (一部完了)。`,
   'Cli.CoverLostNoWorkDelete': `ファイルを削除する前に停止しました: InstallerClean は、ほかの InstallerClean が動作していないことを確認できなくなりました。同じコマンドをもう一度実行してください。終了コード75 (一時的)。`,
   'Cli.CoverLostNoWorkMove': `ファイルを移動する前に停止しました: InstallerClean は、ほかの InstallerClean が動作していないことを確認できなくなりました。同じコマンドをもう一度実行してください。終了コード75 (一時的)。`,
+  'Cli.UpdateNoAnswer': `1 分たっても応答がないため、応答できる人がいない場合と同じく、確認なしで InstallerClean を更新します。`,
+  'Cli.ReportNoAnswer': `1 分たっても応答がありませんでした。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

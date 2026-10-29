@@ -615,7 +615,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `De nieuwe versie scant en toont wat hij vindt, zonder iets te verplaatsen. Voer daarna /m opnieuw uit om te verplaatsen.`,
   'Cli.UpdateRunningInstead': `In plaats daarvan wordt {0} uitgevoerd met InstallerClean {1}.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Voor het scannen controleert het of er een nieuwere versie van&#10;InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming.&#10;Draait het zelfstandig, in een geplande taak of een script, dan werkt het&#10;bij zonder te vragen. Voeg /noupdate toe om de controle over te slaan.`,
+  'Cli.Help.UpdateNote': `Voor het scannen controleert het of er een nieuwere versie van&#10;InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming, en&#10;werkt het bij als niemand binnen een minuut antwoordt. Draait het&#10;zelfstandig, in een geplande taak of een script, dan werkt het bij zonder&#10;te vragen. Voeg /noupdate toe om de controle over te slaan.`,
   'UpdateNotice.Scoop': `Deze kopie is met Scoop geïnstalleerd. Bijwerken doe je door InstallerClean te sluiten en dit uit te voeren:`,
   'UpdateNotice.ScoopGlobal': `Deze kopie is met Scoop voor alle gebruikers geïnstalleerd. Bijwerken doe je door InstallerClean te sluiten, een terminal als administrator te openen en dit uit te voeren:`,
   'UpdateNotice.CommandCopied': `Gekopieerd`,
@@ -645,6 +645,8 @@ const MAP = {
   'Cli.MutexLostMove': `Gestopt na het verplaatsen van {0} van {1} {2} naar {3}: InstallerClean kon niet langer zeker zijn dat geen andere InstallerClean bezig was. Voer dezelfde opdracht opnieuw uit. Exit 2 (gedeeltelijk).`,
   'Cli.CoverLostNoWorkDelete': `Gestopt voordat er een bestand is verwijderd: InstallerClean kon niet langer zeker zijn dat geen andere InstallerClean bezig was. Voer dezelfde opdracht opnieuw uit. Exit 75 (tijdelijk).`,
   'Cli.CoverLostNoWorkMove': `Gestopt voordat er een bestand is verplaatst: InstallerClean kon niet langer zeker zijn dat geen andere InstallerClean bezig was. Voer dezelfde opdracht opnieuw uit. Exit 75 (tijdelijk).`,
+  'Cli.UpdateNoAnswer': `Na een minuut geen antwoord, dus InstallerClean werkt bij zonder te vragen, zoals wanneer er niemand is om te antwoorden.`,
+  'Cli.ReportNoAnswer': `Na een minuut geen antwoord.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

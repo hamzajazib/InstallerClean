@@ -2390,6 +2390,10 @@ InstallerClean を管理者としてもう一度実行してください。</val
        and N are taken as well in every language. The two must differ. -->
   <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>Y</value></data>
   <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>N</value></data>
+  <!-- After Cli.UpdatePrompt where nothing was answered within a minute. The update then
+       goes ahead as it does where nobody can answer the console, and the command runs as
+       given with the newer version. -->
+  <data name="Cli.UpdateNoAnswer" xml:space="preserve"><value>1 分たっても応答がないため、応答できる人がいない場合と同じく、確認なしで InstallerClean を更新します。</value></data>
   <!-- The command line's offer to send the anonymous report, asked after the PC's first
        finished run where somebody is at the console, once the run's work is done. 0 = the
        full path of last-run.json, which holds the report; 1 and 2 = the letters for yes
@@ -2413,6 +2417,9 @@ InstallerClean を管理者としてもう一度実行してください。</val
   <data name="Cli.ReportSent" xml:space="preserve"><value>レポートを送信しました。ありがとうございます。</value></data>
   <!-- After the answer was no, and after Ctrl+C at the question or while the report was being sent. -->
   <data name="Cli.ReportNotSent" xml:space="preserve"><value>レポートは送信されませんでした。</value></data>
+  <!-- After Cli.ReportPrompt where nothing was answered within a minute, and before
+       Cli.ReportNotSent. -->
+  <data name="Cli.ReportNoAnswer" xml:space="preserve"><value>1 分たっても応答がありませんでした。</value></data>
   <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>レポートを送信できませんでした。{0} に保存されています。</value></data>
@@ -2650,11 +2657,11 @@ InstallerClean を管理者としてもう一度実行してください。</val
        word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli は終了までプロンプトを占有するため、&#10;スクリプトやスケジュールされたタスクが完了を待てます。</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>フォルダーはユーザーごと。予約実行や SYSTEM には /m PATH が必要。</value></data>
-  <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
+  <!-- ONE value carrying FIVE printed lines, under the /m note. The &#10; is where the
        English breaks; a translation breaks within the 74-column cap where its own
        grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
-  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。&#10;自分で実行した場合は、更新する前に確認を求めます。&#10;スケジュールされたタスクやスクリプトで自動実行される場合は、&#10;確認なしで更新します。確認を省くには /noupdate を付けてください。</value></data>
+  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。&#10;自分で実行した場合は、更新する前に確認を求め、1 分以内に応答が&#10;なければ更新します。スケジュールされたタスクやスクリプトで&#10;自動実行される場合は、確認なしで更新します。&#10;確認を省くには /noupdate を付けてください。</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>終了コード：</value></data>
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print

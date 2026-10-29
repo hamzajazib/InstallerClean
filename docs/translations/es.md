@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | ¿Actualizar ahora? Se recomienda encarecidamente usar la versión más reciente. [{0}/{1}] |
 | Y | S |
 | N | N |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | Sin respuesta tras un minuto, así que InstallerClean se actualiza sin preguntar, como cuando no hay nadie para responder. |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | ¿Enviar un informe anónimo de esta ejecución? Está guardado en {0}. Escribe ? para ver qué contiene. [{1}/{2}/?] |
 | the chart at {0} | este gráfico en {0} |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | El informe añade tu resultado a {0}, que muestra cuánto espacio están recuperando las personas con InstallerClean. También incluye estos datos técnicos, que me ayudan a detectar errores: |
 | The full report is printed below. | El informe completo se muestra a continuación. |
 | Report sent. Thank you. | Informe enviado. Gracias. |
 | Report not sent. | Informe no enviado. |
+| No answer after a minute. | Sin respuesta tras un minuto. |
 | The report could not be sent. It is kept in {0}. | No se pudo enviar el informe. Se conserva en {0}. |
 | Sending a report left waiting by an earlier run. | Se envía un informe que esperaba desde una ejecución anterior. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | La nueva versión analizará y mostrará lo que encuentre, sin eliminar nada. Para eliminar, vuelve a ejecutar /d después. |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m RUTA    Mueve a la ruta especificada |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli bloquea el símbolo del sistema hasta terminar,<br>para que un script o una tarea programada pueda esperarlo. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Carpeta por usuario; ejecuciones programadas o SYSTEM: /m RUTA. |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Antes de analizar, comprueba si hay una versión más reciente de<br>InstallerClean. Cuando lo ejecutas tú, pregunta antes de actualizar.<br>Cuando se ejecuta solo, en una tarea programada o un script, se actualiza<br>sin preguntar. Añade /noupdate para omitir la comprobación. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | Antes de analizar, comprueba si hay una versión más reciente de<br>InstallerClean. Cuando lo ejecutas tú, pregunta antes de actualizar, y se<br>actualiza si nadie responde en un minuto. Cuando se ejecuta solo, en una<br>tarea programada o un script, se actualiza sin preguntar. Añade /noupdate<br>para omitir la comprobación. |
 | Exit codes: | Códigos de salida: |
 |   0   success: the run did what it was asked |   0   correcto: hizo lo que se le pidió |
 |   1   nothing processed: the run failed or was refused |   1   nada procesado: la ejecución falló o fue rechazada |

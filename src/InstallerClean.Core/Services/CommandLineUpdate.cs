@@ -140,8 +140,9 @@ internal interface ICommandLineUpdateHost : IConsolePrompt
 /// and runs the command with it there, in the same console. The newer version then takes
 /// this copy's place once both have ended. Where a person can see the console and answer
 /// it, it asks first, and after a yes the newer version scans and lists as <c>/s</c> does
-/// and moves or deletes nothing. Where nobody can answer, it updates without asking and the
-/// newer version runs the command as given. Where the copy cannot update itself, the
+/// and moves or deletes nothing. Where nobody can answer, or nobody answers within
+/// <see cref="ConsoleQuestion.AnswerBound"/>, it updates without asking and the newer
+/// version runs the command as given. Where the copy cannot update itself, the
 /// newer version's release rules this copy out, InstallerClean is in use or a part fails,
 /// it says so, notes it, and runs the command with the version it is, unless Ctrl+C has
 /// come.
@@ -181,21 +182,23 @@ internal sealed class CommandLineUpdate
     private readonly ICommandLineUpdateHost _host;
     private readonly TimeSpan _watchedCheckBound;
     private readonly TimeSpan _controlCBound;
+    private readonly TimeSpan _answerBound;
 
     public CommandLineUpdate(
         Func<CancellationToken, Task<UpdateCheckResult>> check, IAppUpdater updater, ICommandLineUpdateHost host)
-        : this(check, updater, host, WatchedCheckBound, ControlCBound) { }
+        : this(check, updater, host, WatchedCheckBound, ControlCBound, ConsoleQuestion.AnswerBound) { }
 
-    /// <summary>Test seam: the two bounds given.</summary>
+    /// <summary>Test seam: the three bounds given.</summary>
     internal CommandLineUpdate(
         Func<CancellationToken, Task<UpdateCheckResult>> check, IAppUpdater updater, ICommandLineUpdateHost host,
-        TimeSpan watchedCheckBound, TimeSpan controlCBound)
+        TimeSpan watchedCheckBound, TimeSpan controlCBound, TimeSpan answerBound)
     {
         _check = check;
         _updater = updater;
         _host = host;
         _watchedCheckBound = watchedCheckBound;
         _controlCBound = controlCBound;
+        _answerBound = answerBound;
     }
 
     /// <summary>
@@ -244,7 +247,8 @@ internal sealed class CommandLineUpdate
         // it is held until that has ended, so nothing else that takes it runs meanwhile: the
         // window, another Move or Delete, and another run's update. The newer version goes on
         // without it where it cannot take it. After a yes the newer version only scans, which
-        // takes no mutex, so it is let go before that starts.
+        // takes no mutex, so it is let go before that starts. A question nobody answers goes
+        // on as a run nobody can answer does, the mutex still held.
         var holdsLock = false;
         try
         {
@@ -260,6 +264,9 @@ internal sealed class CommandLineUpdate
                 {
                     case Answer.Cancelled: return new CommandLineUpdateResult.Cancelled();
                     case Answer.No: return CommandLineUpdateResult.NothingTried;
+                    case Answer.TimedOut:
+                        SayLine(Strings.Cli_UpdateNoAnswer);
+                        return Update(false, command, arguments, exePath, current, latest, token);
                 }
                 if (holdsLock)
                 {
@@ -381,7 +388,7 @@ internal sealed class CommandLineUpdate
         }
     }
 
-    private enum Answer { Yes, No, Cancelled }
+    private enum Answer { Yes, No, Cancelled, TimedOut }
 
     /// <summary>
     /// Asks the question until it gets an answer. Enter, or an answer starting with this
@@ -390,18 +397,21 @@ internal sealed class CommandLineUpdate
     /// is cancelled, by Ctrl+C or by the console being closed, and the question then
     /// answers cancelled. The end of input is no, unless the token is cancelled while the
     /// question waits on it, up to <see cref="ControlCBound"/> in a run, since Ctrl+C at the
-    /// prompt can itself be read as the end of input.
+    /// prompt can itself be read as the end of input. Nothing answered within the answer
+    /// bound is <see cref="Answer.TimedOut"/>.
     /// </summary>
     private Answer Ask(CancellationToken token)
     {
         while (true)
         {
             switch (ConsoleQuestion.Ask(
-                _host, (yes, no) => string.Format(Strings.Cli_UpdatePrompt, yes, no), token, _controlCBound, out _))
+                _host, (yes, no) => string.Format(Strings.Cli_UpdatePrompt, yes, no),
+                token, _controlCBound, _answerBound, out _))
             {
                 case ConsoleAnswer.Yes: return Answer.Yes;
                 case ConsoleAnswer.No: return Answer.No;
                 case ConsoleAnswer.Cancelled: return Answer.Cancelled;
+                case ConsoleAnswer.TimedOut: return Answer.TimedOut;
             }
         }
     }

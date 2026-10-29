@@ -2383,6 +2383,10 @@ Execute o InstallerClean novamente como administrador.</value></data>
        and N are taken as well in every language. The two must differ. -->
   <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>S</value></data>
   <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>N</value></data>
+  <!-- After Cli.UpdatePrompt where nothing was answered within a minute. The update then
+       goes ahead as it does where nobody can answer the console, and the command runs as
+       given with the newer version. -->
+  <data name="Cli.UpdateNoAnswer" xml:space="preserve"><value>Sem resposta após um minuto, então o InstallerClean se atualiza sem perguntar, como quando não há ninguém para responder.</value></data>
   <!-- The command line's offer to send the anonymous report, asked after the PC's first
        finished run where somebody is at the console, once the run's work is done. 0 = the
        full path of last-run.json, which holds the report; 1 and 2 = the letters for yes
@@ -2406,6 +2410,9 @@ Execute o InstallerClean novamente como administrador.</value></data>
   <data name="Cli.ReportSent" xml:space="preserve"><value>Relatório enviado. Obrigado.</value></data>
   <!-- After the answer was no, and after Ctrl+C at the question or while the report was being sent. -->
   <data name="Cli.ReportNotSent" xml:space="preserve"><value>Relatório não enviado.</value></data>
+  <!-- After Cli.ReportPrompt where nothing was answered within a minute, and before
+       Cli.ReportNotSent. -->
+  <data name="Cli.ReportNoAnswer" xml:space="preserve"><value>Sem resposta após um minuto.</value></data>
   <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Não foi possível enviar o relatório. Ele está guardado em {0}.</value></data>
@@ -2636,11 +2643,11 @@ Execute o InstallerClean novamente como administrador.</value></data>
        word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>O installerclean-cli bloqueia o prompt até terminar, para que um script&#10;ou uma tarefa agendada possa esperar por ele.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Pasta salva por usuário; execuções agendadas ou SYSTEM: /m CAMINHO.</value></data>
-  <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
+  <!-- ONE value carrying FIVE printed lines, under the /m note. The &#10; is where the
        English breaks; a translation breaks within the 74-column cap where its own
        grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
-  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar.&#10;Quando roda sozinho, em uma tarefa agendada ou um script, ele atualiza sem&#10;perguntar. Adicione /noupdate para pular a verificação.</value></data>
+  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar, e&#10;atualiza se ninguém responder em um minuto. Quando roda sozinho, em uma&#10;tarefa agendada ou um script, ele atualiza sem perguntar. Adicione&#10;/noupdate para pular a verificação.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Códigos de saída:</value></data>
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print

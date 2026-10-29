@@ -564,7 +564,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `La nuova versione eseguirà la scansione ed elencherà ciò che trova, senza spostare nulla. Per spostare, esegui di nuovo /m al termine.`,
   'Cli.UpdateRunningInstead': `Si esegue invece {0} con InstallerClean {1}.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Prima della scansione controlla se esiste una versione più recente di&#10;InstallerClean. Se lo avvii tu, chiede prima di aggiornare. Se viene&#10;eseguito da solo, in un'operazione pianificata o in uno script, si&#10;aggiorna senza chiedere. Aggiungi /noupdate per saltare il controllo.`,
+  'Cli.Help.UpdateNote': `Prima della scansione controlla se esiste una versione più recente di&#10;InstallerClean. Se lo avvii tu, chiede prima di aggiornare, e si aggiorna&#10;se nessuno risponde entro un minuto. Se viene eseguito da solo, in&#10;un'operazione pianificata o in uno script, si aggiorna senza chiedere.&#10;Aggiungi /noupdate per saltare il controllo.`,
   'UpdateNotice.Scoop': `Questa copia è stata installata da Scoop. Per aggiornarla, chiudi InstallerClean ed esegui:`,
   'UpdateNotice.ScoopGlobal': `Questa copia è stata installata da Scoop per tutti gli utenti. Per aggiornarla, chiudi InstallerClean, apri un terminale come amministratore ed esegui:`,
   'UpdateNotice.CommandCopied': `Copiato`,
@@ -594,6 +594,8 @@ const MAP = {
   'Cli.MutexLostMove': `Interrotto dopo aver spostato {0} di {1} {2} in {3}: InstallerClean non poteva più essere certo che nessun altro InstallerClean stesse agendo. Esegui di nuovo lo stesso comando. Codice di uscita 2 (parziale).`,
   'Cli.CoverLostNoWorkDelete': `Interrotto prima di eliminare qualsiasi file: InstallerClean non poteva più essere certo che nessun altro InstallerClean stesse agendo. Esegui di nuovo lo stesso comando. Codice di uscita 75 (transitorio).`,
   'Cli.CoverLostNoWorkMove': `Interrotto prima di spostare qualsiasi file: InstallerClean non poteva più essere certo che nessun altro InstallerClean stesse agendo. Esegui di nuovo lo stesso comando. Codice di uscita 75 (transitorio).`,
+  'Cli.UpdateNoAnswer': `Nessuna risposta dopo un minuto, quindi InstallerClean si aggiorna senza chiedere, come quando non c'è nessuno a rispondere.`,
+  'Cli.ReportNoAnswer': `Nessuna risposta dopo un minuto.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

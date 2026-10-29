@@ -2383,6 +2383,10 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
        and N are taken as well in every language. The two must differ. -->
   <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>Y</value></data>
   <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>N</value></data>
+  <!-- After Cli.UpdatePrompt where nothing was answered within a minute. The update then
+       goes ahead as it does where nobody can answer the console, and the command runs as
+       given with the newer version. -->
+  <data name="Cli.UpdateNoAnswer" xml:space="preserve"><value>一分钟内没有回答，因此 InstallerClean 会像无人可回答时一样，不询问直接更新。</value></data>
   <!-- The command line's offer to send the anonymous report, asked after the PC's first
        finished run where somebody is at the console, once the run's work is done. 0 = the
        full path of last-run.json, which holds the report; 1 and 2 = the letters for yes
@@ -2406,6 +2410,9 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
   <data name="Cli.ReportSent" xml:space="preserve"><value>报告已发送。谢谢。</value></data>
   <!-- After the answer was no, and after Ctrl+C at the question or while the report was being sent. -->
   <data name="Cli.ReportNotSent" xml:space="preserve"><value>报告未发送。</value></data>
+  <!-- After Cli.ReportPrompt where nothing was answered within a minute, and before
+       Cli.ReportNotSent. -->
+  <data name="Cli.ReportNoAnswer" xml:space="preserve"><value>一分钟内没有回答。</value></data>
   <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>无法发送报告。报告保存在 {0}。</value></data>
@@ -2633,11 +2640,11 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
        word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli 会占住命令提示符直到结束，&#10;因此脚本或计划任务可以等待它完成。</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>该文件夹按用户保存；计划任务或 SYSTEM 运行需要 /m 路径。</value></data>
-  <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
+  <!-- ONE value carrying FIVE printed lines, under the /m note. The &#10; is where the
        English breaks; a translation breaks within the 74-column cap where its own
        grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
-  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>扫描前，它会检查是否有较新版本的 InstallerClean。由您亲自运行时，&#10;它会在更新前询问。在计划任务或脚本中自动运行时，它会直接更新而不询问。&#10;添加 /noupdate 可跳过检查。</value></data>
+  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>扫描前，它会检查是否有较新版本的 InstallerClean。由您亲自运行时，&#10;它会在更新前询问，一分钟内无人回答则直接更新。在计划任务或脚本中&#10;自动运行时，它会直接更新而不询问。&#10;添加 /noupdate 可跳过检查。</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>退出代码：</value></data>
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print

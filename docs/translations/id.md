@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Perbarui sekarang? Sangat disarankan untuk memakai versi terbaru. [{0}/{1}] |
 | Y | Y |
 | N | T |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | Tidak ada jawaban setelah satu menit, jadi InstallerClean memperbarui tanpa bertanya, seperti saat tidak ada orang yang dapat menjawab. |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Kirim laporan anonim dari proses ini? Disimpan di {0}. Ketik ? untuk melihat isinya. [{1}/{2}/?] |
 | the chart at {0} | grafik di {0} |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Laporan ini menambahkan hasil Anda ke {0}, yang menunjukkan berapa banyak ruang yang dikosongkan orang dengan InstallerClean. Laporan ini juga memuat detail teknis berikut untuk membantu saya menemukan bug: |
 | The full report is printed below. | Laporan lengkap dicetak di bawah ini. |
 | Report sent. Thank you. | Laporan terkirim. Terima kasih. |
 | Report not sent. | Laporan tidak dikirim. |
+| No answer after a minute. | Tidak ada jawaban setelah satu menit. |
 | The report could not be sent. It is kept in {0}. | Laporan tidak dapat dikirim. Laporan disimpan di {0}. |
 | Sending a report left waiting by an earlier run. | Mengirim laporan yang tertunda sejak proses sebelumnya. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa menghapus apa pun. Untuk menghapus, jalankan /d lagi setelahnya. |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m JALUR   Pindahkan ke jalur yang ditentukan |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli menahan prompt sampai selesai, sehingga skrip atau<br>tugas terjadwal bisa menunggunya. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Folder disimpan per pengguna; tugas terjadwal atau SYSTEM: /m JALUR. |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.<br>Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui.<br>Jika berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui<br>tanpa bertanya. Tambahkan /noupdate untuk melewati pemeriksaan. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.<br>Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui,<br>dan memperbarui jika tidak ada yang menjawab dalam satu menit. Jika<br>berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui tanpa<br>bertanya. Tambahkan /noupdate untuk melewati pemeriksaan. |
 | Exit codes: | Kode keluar: |
 |   0   success: the run did what it was asked |   0   berhasil: menjalankan yang diminta |
 |   1   nothing processed: the run failed or was refused |   1   tidak ada yang diproses: proses gagal atau ditolak |

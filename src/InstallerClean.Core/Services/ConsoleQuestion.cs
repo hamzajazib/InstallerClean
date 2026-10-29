@@ -15,6 +15,9 @@ internal enum ConsoleAnswer
     /// <summary>Ctrl+C or a closing console came while the question waited.</summary>
     Cancelled,
 
+    /// <summary>Nothing was answered within <see cref="ConsoleQuestion.AnswerBound"/>.</summary>
+    TimedOut,
+
     /// <summary>Anything else, which the caller reads or asks again.</summary>
     Other,
 }
@@ -26,6 +29,14 @@ internal enum ConsoleAnswer
 internal static class ConsoleQuestion
 {
     /// <summary>
+    /// How long a question waits for an answer. A scheduled task set to run only when its
+    /// user is logged on gets a console that can be seen, so a question can be put where
+    /// nobody is there to answer it, and the run waits this long before going on as an
+    /// unanswered run does. The lines saying so name the time as a minute.
+    /// </summary>
+    internal static readonly TimeSpan AnswerBound = TimeSpan.FromMinutes(1);
+
+    /// <summary>
     /// Prints the question and reads one answer. <paramref name="prompt"/> builds the
     /// question from the letters shown in its brackets: this language's letter for yes in
     /// capitals, since Enter answers yes, and its letter for no in lower case
@@ -34,18 +45,31 @@ internal static class ConsoleQuestion
     /// the answer is then <see cref="ConsoleAnswer.Cancelled"/>. The end of input is
     /// <see cref="ConsoleAnswer.No"/>, unless the token is cancelled while the question
     /// waits on it, up to <paramref name="controlCBound"/> in a run, since Ctrl+C at the
-    /// prompt can itself be read as the end of input. <paramref name="answer"/> is the
-    /// answer typed, trimmed.
+    /// prompt can itself be read as the end of input. Where nothing is answered within
+    /// <paramref name="answerBound"/>, the read ends, the cursor moves past the question
+    /// and the answer is <see cref="ConsoleAnswer.TimedOut"/>, for the caller to say what
+    /// happens next. <paramref name="answer"/> is the answer typed, trimmed.
     /// </summary>
     internal static ConsoleAnswer Ask(
         IConsolePrompt console, Func<string, string, string> prompt,
-        CancellationToken token, TimeSpan controlCBound, out string answer)
+        CancellationToken token, TimeSpan controlCBound, TimeSpan answerBound, out string answer)
     {
         var yes = Strings.Cli_UpdateAnswerYes.Trim();
         var no = Strings.Cli_UpdateAnswerNo.Trim();
         console.Write(prompt(
             yes.ToUpper(CultureInfo.CurrentUICulture), no.ToLower(CultureInfo.CurrentUICulture)) + " ");
-        var line = console.ReadLine(token);
+        string? line;
+        using (var bound = CancellationTokenSource.CreateLinkedTokenSource(token))
+        {
+            bound.CancelAfter(answerBound);
+            line = console.ReadLine(bound.Token);
+            if (line is null && bound.IsCancellationRequested && !token.IsCancellationRequested)
+            {
+                answer = string.Empty;
+                console.WriteLine(string.Empty);
+                return ConsoleAnswer.TimedOut;
+            }
+        }
         if (line is null) token.WaitHandle.WaitOne(controlCBound);
         answer = line?.Trim() ?? string.Empty;
         if (token.IsCancellationRequested) return ConsoleAnswer.Cancelled;

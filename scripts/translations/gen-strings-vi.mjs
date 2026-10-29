@@ -631,7 +631,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó.`,
   'Cli.UpdateRunningInstead': `Thay vào đó, chạy {0} bằng InstallerClean {1}.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn&#10;không. Khi bạn tự chạy, nó hỏi trước khi cập nhật. Khi chạy tự động, trong&#10;một tác vụ theo lịch hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm&#10;/noupdate để bỏ qua bước kiểm tra.`,
+  'Cli.Help.UpdateNote': `Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn&#10;không. Khi bạn tự chạy, nó hỏi trước khi cập nhật, và cập nhật nếu không&#10;ai trả lời trong một phút. Khi chạy tự động, trong một tác vụ theo lịch&#10;hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm /noupdate để bỏ qua&#10;bước kiểm tra.`,
   'UpdateNotice.Scoop': `Bản này được cài bằng Scoop. Để cập nhật, hãy đóng InstallerClean rồi chạy:`,
   'UpdateNotice.ScoopGlobal': `Bản này được cài bằng Scoop cho tất cả người dùng. Để cập nhật, hãy đóng InstallerClean, mở terminal với quyền quản trị viên rồi chạy:`,
   'UpdateNotice.CommandCopied': `Đã sao chép`,
@@ -661,6 +661,8 @@ const MAP = {
   'Cli.MutexLostMove': `Đã dừng sau khi chuyển {0}/{1} {2} đến {3}: InstallerClean không còn chắc chắn được rằng không có InstallerClean nào khác đang hoạt động. Hãy chạy lại cùng lệnh đó. Mã thoát 2 (một phần).`,
   'Cli.CoverLostNoWorkDelete': `Đã dừng trước khi xóa bất kỳ tệp nào: InstallerClean không còn chắc chắn được rằng không có InstallerClean nào khác đang hoạt động. Hãy chạy lại cùng lệnh đó. Mã thoát 75 (tạm thời).`,
   'Cli.CoverLostNoWorkMove': `Đã dừng trước khi di chuyển bất kỳ tệp nào: InstallerClean không còn chắc chắn được rằng không có InstallerClean nào khác đang hoạt động. Hãy chạy lại cùng lệnh đó. Mã thoát 75 (tạm thời).`,
+  'Cli.UpdateNoAnswer': `Không có câu trả lời sau một phút, nên InstallerClean cập nhật mà không hỏi, như khi không có ai ở đó để trả lời.`,
+  'Cli.ReportNoAnswer': `Không có câu trả lời sau một phút.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

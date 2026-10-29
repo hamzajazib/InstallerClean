@@ -30,10 +30,13 @@ public sealed class CommandLineUpdateTests : IDisposable
     /// <summary>The watched check's bound every run here is given.</summary>
     private static readonly TimeSpan WatchedBound = TimeSpan.FromMilliseconds(200);
 
+    /// <summary>The bound on an answer every run here is given.</summary>
+    private static readonly TimeSpan AnswerBound = TimeSpan.FromMilliseconds(50);
+
     private CommandLineUpdateResult Run(
         FakeUpdater updater, bool canAsk, string command = "/s", string[]? arguments = null,
         Func<CancellationToken, Task<UpdateCheckResult>>? check = null, CancellationToken token = default) =>
-        new CommandLineUpdate(check ?? NewerOut, updater, _host, WatchedBound, TimeSpan.FromMilliseconds(20))
+        new CommandLineUpdate(check ?? NewerOut, updater, _host, WatchedBound, TimeSpan.FromMilliseconds(20), AnswerBound)
             .Run(canAsk, command, arguments ?? [command], Exe, token);
 
     private static string Prompt() =>
@@ -195,6 +198,48 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal((Staged, @"/m D:\kept", Exe, Current, Latest, true), Assert.Single(_host.NewerVersionRuns));
         Assert.Equal(0, _host.Reads);
         Assert.Equal([Available, Downloading, string.Format(Strings.Cli_UpdateRunningNewer, "/m", Latest)], _host.Output);
+    }
+
+    [Theory]
+    [InlineData("/d", true)]
+    [InlineData("/m", true)]
+    [InlineData("/s", false)]
+    public void A_question_nobody_answers_updates_as_an_unwatched_run_does(string command, bool holdsLock)
+    {
+        var updater = new FakeUpdater();
+        _host.Answers.Enqueue(RecordingHost.NoAnswer);
+        _host.NewerVersionExitCode = 4;
+
+        var result = Run(updater, canAsk: true, command: command, arguments: [command, "/v"]);
+
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(4, Current, Latest, command + " /v"), result);
+        Assert.Equal((Staged, command + " /v", Exe, Current, Latest, holdsLock), Assert.Single(_host.NewerVersionRuns));
+        Assert.Equal(holdsLock ? [true] : [], _host.LockTakes);
+        Assert.Equal(holdsLock ? 1 : 0, _host.LockReleases);
+        Assert.Equal(
+            [
+                Available, Prompt(), string.Empty, Strings.Cli_UpdateNoAnswer, Downloading,
+                string.Format(Strings.Cli_UpdateRunningNewer, command, Latest),
+            ],
+            _host.Output);
+    }
+
+    [Fact]
+    public void Ctrl_C_while_the_question_waits_is_the_runs_cancel_not_a_question_nobody_answered()
+    {
+        var updater = new FakeUpdater();
+        _host.Answers.Enqueue(RecordingHost.NoAnswer);
+        using var cancel = new CancellationTokenSource();
+        _host.OnRead = () => cancel.CancelAfter(TimeSpan.FromMilliseconds(10));
+
+        var result = new CommandLineUpdate(
+                NewerOut, updater, _host, WatchedBound, TimeSpan.FromMilliseconds(20), TimeSpan.FromMinutes(1))
+            .Run(true, "/d", ["/d"], Exe, cancel.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.Equal(0, updater.Prepares);
+        Assert.DoesNotContain(Strings.Cli_UpdateNoAnswer, _host.Output);
+        Assert.Equal(1, _host.LockReleases);
     }
 
     [Fact]
@@ -414,6 +459,9 @@ public sealed class CommandLineUpdateTests : IDisposable
 
     private sealed class RecordingHost : ICommandLineUpdateHost
     {
+        /// <summary>An answer that never comes: the read waits until its token is cancelled.</summary>
+        public const string NoAnswer = "\0 no answer";
+
         public List<string> Output { get; } = [];
         public Queue<string?> Answers { get; } = new();
         public int Reads { get; private set; }
@@ -423,6 +471,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         public int LockReleases { get; private set; }
         public Action<string>? OnWriteLine { get; set; }
         public Action? OnNewerVersion { get; set; }
+        public Action? OnRead { get; set; }
         public int? NewerVersionExitCode { get; set; }
 
         /// <summary>Each newer version run: what it ran, its arguments joined, and whether the mutex was held.</summary>
@@ -441,7 +490,11 @@ public sealed class CommandLineUpdateTests : IDisposable
         public string? ReadLine(CancellationToken token)
         {
             Reads++;
-            return Answers.Count > 0 ? Answers.Dequeue() : null;
+            OnRead?.Invoke();
+            var answer = Answers.Count > 0 ? Answers.Dequeue() : null;
+            if (answer != NoAnswer) return answer;
+            token.WaitHandle.WaitOne();
+            return null;
         }
 
         public bool TryTakeInstanceLock()

@@ -673,7 +673,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `Nowa wersja przeskanuje i wyświetli listę tego, co znajdzie, niczego nie przenosząc. Aby przenieść, uruchom potem ponownie /m.`,
   'Cli.UpdateRunningInstead': `Zamiast tego polecenie {0} zostanie uruchomione w wersji InstallerClean {1}.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Przed skanowaniem sprawdza, czy jest nowsza wersja InstallerClean.&#10;Uruchomiony ręcznie pyta przed aktualizacją. Uruchomiony samodzielnie,&#10;w zadaniu zaplanowanym lub skrypcie, aktualizuje się bez pytania. Dodaj&#10;/noupdate, aby pominąć sprawdzanie.`,
+  'Cli.Help.UpdateNote': `Przed skanowaniem sprawdza, czy jest nowsza wersja InstallerClean.&#10;Uruchomiony ręcznie pyta przed aktualizacją i aktualizuje się, jeśli nikt&#10;nie odpowie w ciągu minuty. Uruchomiony samodzielnie, w zadaniu&#10;zaplanowanym lub skrypcie, aktualizuje się bez pytania. Dodaj /noupdate,&#10;aby pominąć sprawdzanie.`,
   'UpdateNotice.Scoop': `Ta kopia została zainstalowana przez Scoop. Aby ją zaktualizować, zamknij InstallerClean i uruchom:`,
   'UpdateNotice.ScoopGlobal': `Ta kopia została zainstalowana przez Scoop dla wszystkich użytkowników. Aby ją zaktualizować, zamknij InstallerClean, otwórz terminal jako administrator i uruchom:`,
   'UpdateNotice.CommandCopied': `Skopiowano`,
@@ -703,6 +703,8 @@ const MAP = {
   'Cli.MutexLostMove': `Zatrzymano po przeniesieniu {0}/{1} {2} do {3}: InstallerClean nie mógł już mieć pewności, że żaden inny InstallerClean nie działa. Uruchom to samo polecenie ponownie. Kod zakończenia 2 (częściowo).`,
   'Cli.CoverLostNoWorkDelete': `Zatrzymano przed usunięciem jakiegokolwiek pliku: InstallerClean nie mógł już mieć pewności, że żaden inny InstallerClean nie działa. Uruchom to samo polecenie ponownie. Kod zakończenia 75 (stan przejściowy).`,
   'Cli.CoverLostNoWorkMove': `Zatrzymano przed przeniesieniem jakiegokolwiek pliku: InstallerClean nie mógł już mieć pewności, że żaden inny InstallerClean nie działa. Uruchom to samo polecenie ponownie. Kod zakończenia 75 (stan przejściowy).`,
+  'Cli.UpdateNoAnswer': `Brak odpowiedzi po minucie, więc InstallerClean aktualizuje się bez pytania, tak jak wtedy, gdy nie ma kto odpowiedzieć.`,
+  'Cli.ReportNoAnswer': `Brak odpowiedzi po minucie.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | 今すぐ更新しますか？最新バージョンの使用を強くおすすめします。 [{0}/{1}] |
 | Y | Y |
 | N | N |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | 1 分たっても応答がないため、応答できる人がいない場合と同じく、確認なしで InstallerClean を更新します。 |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | この実行の匿名レポートを送信しますか？ 保存先は {0} です。? と入力すると内容を確認できます。[{1}/{2}/?] |
 | the chart at {0} | アドレス {0} のグラフ |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | レポートは、あなたの結果を{0}に追加します。このグラフには、InstallerClean でどれだけの容量が取り戻されているかが示されています。また、バグを見つけるのに役立つ、次の技術情報も含まれます： |
 | The full report is printed below. | レポートの全文を以下に表示します。 |
 | Report sent. Thank you. | レポートを送信しました。ありがとうございます。 |
 | Report not sent. | レポートは送信されませんでした。 |
+| No answer after a minute. | 1 分たっても応答がありませんでした。 |
 | The report could not be sent. It is kept in {0}. | レポートを送信できませんでした。{0} に保存されています。 |
 | Sending a report left waiting by an earlier run. | 以前の実行から送信待ちになっているレポートを送信しています。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。 |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m PATH    指定されたパスに移動 |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli は終了までプロンプトを占有するため、<br>スクリプトやスケジュールされたタスクが完了を待てます。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | フォルダーはユーザーごと。予約実行や SYSTEM には /m PATH が必要。 |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。<br>自分で実行した場合は、更新する前に確認を求めます。<br>スケジュールされたタスクやスクリプトで自動実行される場合は、<br>確認なしで更新します。確認を省くには /noupdate を付けてください。 |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。<br>自分で実行した場合は、更新する前に確認を求め、1 分以内に応答が<br>なければ更新します。スケジュールされたタスクやスクリプトで<br>自動実行される場合は、確認なしで更新します。<br>確認を省くには /noupdate を付けてください。 |
 | Exit codes: | 終了コード： |
 |   0   success: the run did what it was asked |   0   成功：求められた処理を行った |
 |   1   nothing processed: the run failed or was refused |   1   何も処理されなかった：実行が失敗したか拒否された |

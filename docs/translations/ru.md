@@ -559,12 +559,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? It's strongly recommended to use the latest version. [{0}/{1}] | Обновить сейчас? Настоятельно рекомендуется использовать последнюю версию. [{0}/{1}] |
 | Y | Д |
 | N | Н |
+| No answer after a minute, so InstallerClean updates without asking, as it does when nobody is there to answer. | Ответа нет уже минуту, поэтому InstallerClean обновляется без вопросов, как при запуске, когда отвечать некому. |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Отправить анонимный отчёт об этом запуске? Он сохранён в {0}. Введите ?, чтобы увидеть, что в нём. [{1}/{2}/?] |
 | the chart at {0} | график по адресу {0} |
 | The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Отчёт добавляет ваш результат в {0}, который показывает, сколько места люди освобождают с помощью InstallerClean. В нём есть и эти технические сведения, которые помогают мне находить ошибки: |
 | The full report is printed below. | Полный отчёт выведен ниже. |
 | Report sent. Thank you. | Отчёт отправлен. Спасибо. |
 | Report not sent. | Отчёт не отправлен. |
+| No answer after a minute. | Ответа нет уже минуту. |
 | The report could not be sent. It is kept in {0}. | Не удалось отправить отчёт. Он хранится в {0}. |
 | Sending a report left waiting by an earlier run. | Отправляется отчёт, ожидающий отправки ещё с более раннего запуска. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Новая версия просканирует и покажет список найденного, ничего не удаляя. Чтобы удалить, затем снова запустите /d. |
@@ -596,7 +598,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m ПУТЬ      Переместить в указанный путь |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli удерживает командную строку до конца работы, чтобы<br>скрипт или запланированная задача могли его дождаться. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Папка своя у каждого пользователя; запланированным и SYSTEM: /m ПУТЬ. |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Перед сканированием проверяет, есть ли более новая версия InstallerClean.<br>При запуске вручную спрашивает перед обновлением. При запуске без участия<br>человека, в запланированной задаче или скрипте, обновляется без вопросов.<br>Добавьте /noupdate, чтобы пропустить проверку. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating, and updates if nobody<br>answers within a minute. When it runs on its own, in a scheduled task or<br>a script, it updates without asking.<br>Add /noupdate to skip the check. | Перед сканированием проверяет, есть ли более новая версия InstallerClean.<br>При запуске вручную спрашивает перед обновлением и обновляется, если в<br>течение минуты никто не ответил. При запуске без участия человека, в<br>запланированной задаче или скрипте, обновляется без вопросов.<br>Добавьте /noupdate, чтобы пропустить проверку. |
 | Exit codes: | Коды выхода: |
 |   0   success: the run did what it was asked |   0   успех: запуск сделал то, о чём просили |
 |   1   nothing processed: the run failed or was refused |   1   ничего не обработано: запуск завершился сбоем или был отклонён |
