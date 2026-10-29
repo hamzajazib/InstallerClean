@@ -2,18 +2,20 @@
 // Fails (exit 1) when the setup's [Code] and the app drift apart on the files the setup
 // renames aside while it writes:
 // - AppFile, the setup's one list of the files it writes to {app}, leaves one out, names
-//   one [Files] does not write, skips a number or does not answer '' past its end;
-// - HoldAllAside does not hold aside each in turn, stopping at the first it cannot, or
-//   its answer is not acted on;
+//   one [Files] does not write, skips a number or does not answer '' past its end, or
+//   AppFileCount does not count it;
+// - HoldAllAside does not hold aside each in turn, stopping at the first it cannot, as a
+//   loop that is not the body of a condition, or its answer is not acted on;
 // - the completed install's ssPostInstall branch does not clear what earlier setups
 //   left of each, or DeleteLeftAside is called anywhere else;
 // - a rename builds its name from anything but the file's own name in {app};
 // - the done suffix differs from ExeReplacement.SetupDoneSuffix, the C# names the held
 //   suffix, or the setup holds no mutex of its own;
 // - the window is opened anywhere but DeinitializeSetup after its exit for a completed
-//   install, or [Code] starts any other program, or the switch is not
-//   HandOverContract.UpdateFailedSwitch set before the start, or a [Run] entry passes
-//   anything;
+//   install, or [Code] starts any other program through Inno Setup's own calls or
+//   declares any external but MoveFileW and DeleteFileW, or the switch is not
+//   HandOverContract.UpdateFailedSwitch, left out where the person cancelled and set
+//   before the start, or a [Run] entry in this file carries Parameters;
 // - CancelButtonClick does not ask Setup's own question and record only a yes.
 //
 // Before any file is written, the setup renames each file it writes to {app} aside, and
@@ -123,7 +125,7 @@ for (const l of lines) {
 
 // AppFile is the setup's one list of the files it writes to {app}: HoldAllAside holds
 // each aside and the completed install clears what earlier setups left of each. Its
-// entries run from 0 with no gap, and both loops run while AppFile(I) is not ''.
+// entries run from 0 with no gap, and both loops run to AppFileCount, which counts them.
 const text = lines.map((l) => l.text).join('\n');
 const lineAt = (index) => setupSource.slice(0, index).split('\n').length;
 const held = new Map();
@@ -140,12 +142,22 @@ else {
   });
   if (!/else\s+Result\s*:=\s*''\s*;/i.test(appFile[0])) problems.push(`${SETUP_FILE}: AppFile does not answer '' past its last entry`);
 }
-// A loop over every AppFile entry, as one statement of the body it stands in: after
-// 'begin' or a ';', so it sits inside no condition.
-const everyFile = (call) => new RegExp(
-  `(?:\\bbegin|;)\\s*I\\s*:=\\s*0\\s*;\\s*while\\s+AppFile\\s*\\(\\s*I\\s*\\)\\s*<>\\s*''\\s+do\\s+begin\\s*${call}\\s*I\\s*:=\\s*I\\s*\\+\\s*1\\s*;\\s*end\\s*;`, 'i');
+if (!/function\s+AppFileCount\s*:\s*Integer\s*;\s*begin\s*Result\s*:=\s*0\s*;\s*while\s+AppFile\s*\(\s*Result\s*\)\s*<>\s*''\s+do\s+Result\s*:=\s*Result\s*\+\s*1\s*;\s*end\s*;/i.test(setupSource)) {
+  problems.push(`${SETUP_FILE}: AppFileCount does not count AppFile's entries up to the first ''`);
+}
+// A loop over every AppFile entry that follows a ';' or a routine's own 'begin', not a
+// 'then', 'do' or 'else' or a 'begin' after one, so it is not the body of a condition
+// or loop. A condition further out, one 'begin' up, is not looked for.
+const everyFile = (call, within) => {
+  const m = within.match(new RegExp(String.raw`for\s+I\s*:=\s*0\s+to\s+AppFileCount\s*-\s*1\s+do\s+(?:begin\s*${call}\s*end\s*;|${call})`, 'i'));
+  if (!m) return false;
+  const before = within.slice(0, m.index).replace(/\s+$/, '');
+  if (before.endsWith(';')) return true;
+  if (!/\bbegin$/i.test(before)) return false;
+  return !/\b(?:then|do|else)$/i.test(before.slice(0, -5).replace(/\s+$/, ''));
+};
 const holdAll = setupSource.match(/function\s+HoldAllAside\s*:\s*Boolean\s*;[\s\S]*?\nend;/i);
-if (!holdAll || !everyFile(String.raw`Result\s*:=\s*HoldAside\s*\(\s*AppFile\s*\(\s*I\s*\)\s*\)\s*;\s*if\s+not\s+Result\s+then\s+Exit\s*;`).test(holdAll[0])) {
+if (!holdAll || !everyFile(String.raw`Result\s*:=\s*HoldAside\s*\(\s*AppFile\s*\(\s*I\s*\)\s*\)\s*;\s*if\s+not\s+Result\s+then\s+Exit\s*;`, holdAll[0])) {
   problems.push(`${SETUP_FILE}: HoldAllAside does not hold aside every AppFile entry, stopping at the first that cannot be`);
 }
 
@@ -174,12 +186,12 @@ if (setupMutex.length !== 1 || setupMutex[0].text.replace(/\s+/g, '') !== 'Setup
 // After a completed install the ssPostInstall branch clears what earlier setups left of
 // every file in AppFile, and nothing else calls DeleteLeftAside.
 const post = setupSource.match(/CurStep\s*=\s*ssPostInstall\s+then([\s\S]*?)\nend;/i);
-const clears = [...setupSource.matchAll(/\bDeleteLeftAside\s*\(/g)].filter((m) => !/\bprocedure\s+$/i.test(setupSource.slice(0, m.index)));
+const clears = [...setupSource.matchAll(/\bDeleteLeftAside\s*\(/g)].filter((m) => !/\bprocedure\s+$/i.test(setupSource.slice(Math.max(0, m.index - 80), m.index)));
 if (!post) problems.push(`${SETUP_FILE}: no ssPostInstall branch found in CurStepChanged`);
 else {
   const start = post.index;
   const end = post.index + post[0].length;
-  if (!everyFile(String.raw`DeleteLeftAside\s*\(\s*AppFile\s*\(\s*I\s*\)\s*\)\s*;`).test(post[1])) {
+  if (!everyFile(String.raw`DeleteLeftAside\s*\(\s*AppFile\s*\(\s*I\s*\)\s*\)\s*;`, post[1])) {
     problems.push(`${SETUP_FILE}:${lineAt(start)}: the ssPostInstall branch does not call DeleteLeftAside(AppFile(I)) for every AppFile entry, outside any condition`);
   }
   for (const m of clears) {
@@ -195,12 +207,18 @@ const contract = readCSharp(read(CONTRACT_FILE)).code;
 const failedSwitch = contract.match(/const\s+string\s+UpdateFailedSwitch\s*=\s*"([^"]*)"/)?.[1];
 if (failedSwitch === undefined) problems.push(`${CONTRACT_FILE}: no 'const string UpdateFailedSwitch' found`);
 const deinit = setupSource.match(/procedure\s+DeinitializeSetup\s*;[\s\S]*?\nbegin([\s\S]*?)\nend;/i);
-// Every way [Code] can start a program, and every spelling of the switch, however the
-// program's path is written.
+// Inno Setup's own calls that start a program, any external a script could start one
+// through, and the switch spelled out whole, however the program's path is written.
+// A switch built from pieces is not looked for.
 const setupCode = setupSource.slice(setupSource.search(/^\[Code\]/im));
 const opens = [...setupCode.matchAll(/\b(?:ShellExec|ShellExecAsOriginalUser|Exec|ExecAsOriginalUser|ExecAndLogOutput|ExecAndCaptureOutput)\s*\(/gi)]
   .map((m) => ({ index: setupSource.length - setupCode.length + m.index }));
 if (opens.length !== 1) problems.push(`${SETUP_FILE}: expected one call in [Code] that starts a program, the window's, found ${opens.length}`);
+for (const m of setupCode.matchAll(/external\s+'([^']*)'/gi)) {
+  if (!/^(?:MoveFileW|DeleteFileW)@kernel32\.dll\b/i.test(m[1])) {
+    problems.push(`${SETUP_FILE}:${lineAt(setupSource.length - setupCode.length + m.index)}: an external other than MoveFileW or DeleteFileW, '${m[1]}', which this check cannot follow`);
+  }
+}
 const spellings = failedSwitch === undefined ? [] : [...setupCode.matchAll(new RegExp(failedSwitch.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'), 'gi'))];
 if (failedSwitch !== undefined && spellings.length !== 1) {
   problems.push(`${SETUP_FILE}: expected ${failedSwitch} once in [Code], in DeinitializeSetup's Args, found ${spellings.length}`);
@@ -216,25 +234,30 @@ else {
     const at = m.index - (deinit.index + deinit[0].indexOf(body));
     if (at < 0 || at > body.length) problems.push(`${SETUP_FILE}:${lineAt(m.index)}: the window is opened outside DeinitializeSetup`);
   }
+  const bodyAt = deinit.index + deinit[0].indexOf(body);
   const switchAt = [...body.matchAll(/\bArgs\s*:=\s*'([^']+)'/g)];
   if (switchAt.length !== 1) problems.push(`${SETUP_FILE}:${line}: expected one Args := '...' in DeinitializeSetup, found ${switchAt.length}`);
+  // The switch is the else of the cancel, so a setup the person stopped gets none.
+  if (!/\bif\s+CancelClicked\s+then\s+Args\s*:=\s*''\s+else\s+Args\s*:=\s*'[^']+'\s*;/i.test(body)) {
+    problems.push(`${SETUP_FILE}:${line}: DeinitializeSetup does not leave the switch out where CancelClicked is set`);
+  }
   const openAt = body.search(/ShellExec\s*\(\s*'[^']*'\s*,\s*App\s*,\s*Args\s*,/);
   if (openAt < 0) {
     problems.push(`${SETUP_FILE}:${line}: DeinitializeSetup does not open the window with ShellExec('', App, Args, ...)`);
   }
   for (const m of switchAt) {
-    if (openAt >= 0 && m.index > openAt) problems.push(`${SETUP_FILE}:${line}: Args is set after the window is started`);
+    if (openAt >= 0 && m.index > openAt) problems.push(`${SETUP_FILE}:${lineAt(bodyAt + m.index)}: Args is set after the window is started`);
   }
   for (const m of switchAt) {
-    console.log(`${SETUP_FILE}:${lineAt(deinit.index + deinit[0].indexOf(body) + m.index)}: DeinitializeSetup opens the window with '${m[1]}'`);
+    console.log(`${SETUP_FILE}:${lineAt(bodyAt + m.index)}: DeinitializeSetup opens the window with '${m[1]}'`);
     if (failedSwitch !== undefined && m[1] !== failedSwitch) {
-      problems.push(`${SETUP_FILE}:${line}: opens the window with '${m[1]}', HandOverContract.UpdateFailedSwitch is '${failedSwitch}'`);
+      problems.push(`${SETUP_FILE}:${lineAt(bodyAt + m.index)}: opens the window with '${m[1]}', HandOverContract.UpdateFailedSwitch is '${failedSwitch}'`);
     }
   }
 }
-// No entry in [Run], which runs after a completed install, passes the switch in any
-// field order, or passes the window anything at all, so no constant, {code:...} or
-// define can carry it there.
+// No entry in this file's [Run], which runs after a completed install, passes the
+// switch in any field order, or carries Parameters at all, so no constant, {code:...}
+// or define can carry the switch there. A [Run] entry in an included file is not read.
 if (failedSwitch !== undefined) {
   let runSection = '';
   for (const l of lines) {
@@ -246,15 +269,15 @@ if (failedSwitch !== undefined) {
     if (runSection === 'run' && l.text.toLowerCase().includes(failedSwitch.toLowerCase())) {
       problems.push(`${SETUP_FILE}:${l.line}: a [Run] entry passes ${failedSwitch}, which a completed install never does`);
     } else if (runSection === 'run' && /(?:^|;)\s*Parameters\s*:/i.test(l.text)) {
-      problems.push(`${SETUP_FILE}:${l.line}: a [Run] entry passes Parameters, which could carry ${failedSwitch} after a completed install`);
+      problems.push(`${SETUP_FILE}:${l.line}: a [Run] entry carries Parameters, which this check does not follow; one that opens the window must not pass ${failedSwitch} after a completed install`);
     }
   }
 }
 
-// A cancel is recorded only where the person answered yes to Setup's own question, so a
-// declined cancel still has a failed update reported.
+// A cancel is recorded only where the person answered yes to the question, so a declined
+// cancel, or a stop Setup makes without asking, still has a failed update reported.
 const cancelClick = setupSource.match(/procedure\s+CancelButtonClick\s*\([^)]*\)\s*;\s*begin([\s\S]*?)\nend;/i);
-if (!cancelClick || !/^\s*if\s+Confirm\s+then\s+begin\s*Cancel\s*:=\s*ExitSetupMsgBox\s*;\s*Confirm\s*:=\s*False\s*;\s*end\s*;\s*if\s+Cancel\s+then\s+CancelClicked\s*:=\s*True\s*;\s*$/i.test(cancelClick[1])) {
+if (!cancelClick || !/^\s*if\s+Confirm\s+then\s+begin\s*Cancel\s*:=\s*ExitSetupMsgBox\s*;\s*Confirm\s*:=\s*False\s*;\s*if\s+Cancel\s+then\s+CancelClicked\s*:=\s*True\s*;\s*end\s*;\s*$/i.test(cancelClick[1])) {
   problems.push(`${SETUP_FILE}: CancelButtonClick does not ask ExitSetupMsgBox itself and record only a yes in CancelClicked`);
 }
 if ([...setupCode.matchAll(/\bCancelClicked\s*:=/gi)].length !== 1) problems.push(`${SETUP_FILE}: CancelClicked is set somewhere other than CancelButtonClick`);

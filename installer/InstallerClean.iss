@@ -287,7 +287,7 @@ var
   Installed: Boolean;
 
 // The Ith file [Files] writes to {app}, by its name there, counting from 0, and ''
-// past the last.
+// past the last. AppFileCount counts them.
 function AppFile(I: Integer): String;
 begin
   case I of
@@ -298,6 +298,12 @@ begin
   else
     Result := '';
   end;
+end;
+
+function AppFileCount: Integer;
+begin
+  Result := 0;
+  while AppFile(Result) <> '' do Result := Result + 1;
 end;
 
 // MoveFileW and DeleteFileW from kernel32.dll, so DLLGetLastError answers the error
@@ -410,12 +416,10 @@ var
   I: Integer;
 begin
   Result := True;
-  I := 0;
-  while AppFile(I) <> '' do
+  for I := 0 to AppFileCount - 1 do
   begin
     Result := HoldAside(AppFile(I));
     if not Result then Exit;
-    I := I + 1;
   end;
 end;
 
@@ -482,15 +486,16 @@ end;
 
 // Setup's progress window has a Cancel button on the silent routes too. The question
 // whether to stop is asked here rather than by Setup, so that only a setup the person
-// did stop is kept from being reported to the window as a failed update.
+// stopped by answering yes is kept from being reported to the window as a failed
+// update; a stop Setup makes without asking is reported.
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
 begin
   if Confirm then
   begin
     Cancel := ExitSetupMsgBox;
     Confirm := False;
+    if Cancel then CancelClicked := True;
   end;
-  if Cancel then CancelClicked := True;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -536,12 +541,8 @@ begin
     // Where this install wrote a file at a name, every file an earlier setup left under
     // that name's held or done names is from before it and not needed. One still
     // running stays, and DeleteLeftAside keeps all of them where it wrote none.
-    I := 0;
-    while AppFile(I) <> '' do
-    begin
+    for I := 0 to AppFileCount - 1 do
       DeleteLeftAside(AppFile(I));
-      I := I + 1;
-    end;
   end;
 end;
 
