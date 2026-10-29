@@ -166,7 +166,9 @@ public sealed class UpdateStagingFolder
     /// <remarks>
     /// Any user can create a folder with this name in %ProgramData%, so nothing found
     /// is trusted and nothing is reached by its path across a check. The root is opened
-    /// as a handle, and each candidate folder is opened relative to it, with delete
+    /// as a handle, as the path names it, a link included, as <see cref="Create(string)"/>
+    /// opens it, so a %ProgramData% that is a junction to another drive is cleaned where
+    /// the folders were made. Each candidate folder is opened relative to it, with delete
     /// access and without following a link in its name; a folder is cleaned only where
     /// its owner and list are the app's own, as <see cref="Create(string)"/> sets them, so
     /// a folder another account made is left whole. A folder an update still holds
@@ -191,7 +193,7 @@ public sealed class UpdateStagingFolder
         {
             if (!Directory.Exists(root)) return true;
 
-            using var rootHandle = DirectoryGuard.OpenDirectoryNoFollow(root);
+            using var rootHandle = DirectoryGuard.OpenDirectoryFollow(root, out _);
             if (rootHandle is null) return false;
 
             var allGone = true;

@@ -357,6 +357,35 @@ public sealed class StagedDownloadTests : IDisposable
     }
 
     [Fact]
+    public void The_start_up_clean_up_takes_a_folder_left_under_a_root_that_is_a_junction()
+    {
+        // A %ProgramData% moved to another drive and reached through a junction. A directory
+        // junction needs no privilege, so this always makes one and fails where it cannot.
+        var linkedRoot = Path.Combine(_root, "programdata-link");
+        using (var mklink = Process.Start(new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = $"/c mklink /J \"{linkedRoot}\" \"{_stagingRoot}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        })!)
+        {
+            var output = mklink.StandardOutput.ReadToEnd() + mklink.StandardError.ReadToEnd();
+            mklink.WaitForExit();
+            Assert.True(mklink.ExitCode == 0, $"mklink /J failed: {output}");
+        }
+        var made = UpdateStagingFolder.Create(linkedRoot, AdministratorsAndThisAccount);
+        made.Handle.Dispose();
+        File.WriteAllBytes(Path.Combine(made.FullPath, AppCopy.CommandLineFileName), Release(2));
+
+        Assert.True(UpdateStagingFolder.RemoveLeftovers(linkedRoot, ThisAccountExpectation));
+
+        Assert.Empty(Directory.EnumerateFileSystemEntries(_stagingRoot));
+    }
+
+    [Fact]
     public async Task The_start_up_clean_up_leaves_the_folder_a_prepared_update_holds()
     {
         var network = new ByName(new() { [SetupName] = Release(3), [AppCopy.CommandLineFileName] = Release(2) });
