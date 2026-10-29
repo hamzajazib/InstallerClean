@@ -12,7 +12,7 @@
 // - the done suffix differs from ExeReplacement.SetupDoneSuffix, the C# names the held
 //   suffix, or the setup holds no mutex of its own;
 // - the window is opened anywhere but DeinitializeSetup after its exit for a completed
-//   install, or [Code] starts any other program through Inno Setup's own calls or
+//   install, or [Code] starts any other program through an Exec or ShellExec call or
 //   declares any external but MoveFileW and DeleteFileW, or the switch is not
 //   HandOverContract.UpdateFailedSwitch, left out where the person cancelled and set
 //   before the start, or a [Run] entry in this file carries Parameters;
@@ -146,10 +146,11 @@ if (!/function\s+AppFileCount\s*:\s*Integer\s*;\s*begin\s*Result\s*:=\s*0\s*;\s*
   problems.push(`${SETUP_FILE}: AppFileCount does not count AppFile's entries up to the first ''`);
 }
 // A loop over every AppFile entry that follows a ';' or a routine's own 'begin', not a
-// 'then', 'do' or 'else' or a 'begin' after one, so it is not the body of a condition
-// or loop. A condition further out, one 'begin' up, is not looked for.
-const everyFile = (call, within) => {
-  const m = within.match(new RegExp(String.raw`for\s+I\s*:=\s*0\s+to\s+AppFileCount\s*-\s*1\s+do\s+(?:begin\s*${call}\s*end\s*;|${call})`, 'i'));
+// 'then', 'do' or 'else' or a 'begin' after one, so it is not itself the body of a
+// condition or loop. A loop body of more than one statement is written in begin and end.
+const everyFile = (call, within, block) => {
+  const body = block ? String.raw`begin\s*${call}\s*end\s*;` : String.raw`(?:begin\s*${call}\s*end\s*;|${call})`;
+  const m = within.match(new RegExp(String.raw`for\s+I\s*:=\s*0\s+to\s+AppFileCount\s*-\s*1\s+do\s+${body}`, 'i'));
   if (!m) return false;
   const before = within.slice(0, m.index).replace(/\s+$/, '');
   if (before.endsWith(';')) return true;
@@ -157,7 +158,7 @@ const everyFile = (call, within) => {
   return !/\b(?:then|do|else)$/i.test(before.slice(0, -5).replace(/\s+$/, ''));
 };
 const holdAll = setupSource.match(/function\s+HoldAllAside\s*:\s*Boolean\s*;[\s\S]*?\nend;/i);
-if (!holdAll || !everyFile(String.raw`Result\s*:=\s*HoldAside\s*\(\s*AppFile\s*\(\s*I\s*\)\s*\)\s*;\s*if\s+not\s+Result\s+then\s+Exit\s*;`, holdAll[0])) {
+if (!holdAll || !everyFile(String.raw`Result\s*:=\s*HoldAside\s*\(\s*AppFile\s*\(\s*I\s*\)\s*\)\s*;\s*if\s+not\s+Result\s+then\s+Exit\s*;`, holdAll[0], true)) {
   problems.push(`${SETUP_FILE}: HoldAllAside does not hold aside every AppFile entry, stopping at the first that cannot be`);
 }
 
@@ -186,13 +187,13 @@ if (setupMutex.length !== 1 || setupMutex[0].text.replace(/\s+/g, '') !== 'Setup
 // After a completed install the ssPostInstall branch clears what earlier setups left of
 // every file in AppFile, and nothing else calls DeleteLeftAside.
 const post = setupSource.match(/CurStep\s*=\s*ssPostInstall\s+then([\s\S]*?)\nend;/i);
-const clears = [...setupSource.matchAll(/\bDeleteLeftAside\s*\(/g)].filter((m) => !/\bprocedure\s+$/i.test(setupSource.slice(Math.max(0, m.index - 80), m.index)));
+const clears = [...setupSource.matchAll(/(?<!\bprocedure\s+)\bDeleteLeftAside\s*\(/gi)];
 if (!post) problems.push(`${SETUP_FILE}: no ssPostInstall branch found in CurStepChanged`);
 else {
   const start = post.index;
   const end = post.index + post[0].length;
   if (!everyFile(String.raw`DeleteLeftAside\s*\(\s*AppFile\s*\(\s*I\s*\)\s*\)\s*;`, post[1])) {
-    problems.push(`${SETUP_FILE}:${lineAt(start)}: the ssPostInstall branch does not call DeleteLeftAside(AppFile(I)) for every AppFile entry, outside any condition`);
+    problems.push(`${SETUP_FILE}:${lineAt(start)}: the ssPostInstall branch does not call DeleteLeftAside(AppFile(I)) for every AppFile entry, as a loop that is not itself the body of a condition`);
   }
   for (const m of clears) {
     if (m.index < start || m.index > end) problems.push(`${SETUP_FILE}:${lineAt(m.index)}: DeleteLeftAside is called outside the ssPostInstall branch`);
@@ -207,16 +208,15 @@ const contract = readCSharp(read(CONTRACT_FILE)).code;
 const failedSwitch = contract.match(/const\s+string\s+UpdateFailedSwitch\s*=\s*"([^"]*)"/)?.[1];
 if (failedSwitch === undefined) problems.push(`${CONTRACT_FILE}: no 'const string UpdateFailedSwitch' found`);
 const deinit = setupSource.match(/procedure\s+DeinitializeSetup\s*;[\s\S]*?\nbegin([\s\S]*?)\nend;/i);
-// Inno Setup's own calls that start a program, any external a script could start one
-// through, and the switch spelled out whole, however the program's path is written.
-// A switch built from pieces is not looked for.
+// The Exec and ShellExec calls that start a program, every external the script
+// declares, and the switch spelled out whole, however the program's path is written.
 const setupCode = setupSource.slice(setupSource.search(/^\[Code\]/im));
 const opens = [...setupCode.matchAll(/\b(?:ShellExec|ShellExecAsOriginalUser|Exec|ExecAsOriginalUser|ExecAndLogOutput|ExecAndCaptureOutput)\s*\(/gi)]
   .map((m) => ({ index: setupSource.length - setupCode.length + m.index }));
 if (opens.length !== 1) problems.push(`${SETUP_FILE}: expected one call in [Code] that starts a program, the window's, found ${opens.length}`);
 for (const m of setupCode.matchAll(/external\s+'([^']*)'/gi)) {
   if (!/^(?:MoveFileW|DeleteFileW)@kernel32\.dll\b/i.test(m[1])) {
-    problems.push(`${SETUP_FILE}:${lineAt(setupSource.length - setupCode.length + m.index)}: an external other than MoveFileW or DeleteFileW, '${m[1]}', which this check cannot follow`);
+    problems.push(`${SETUP_FILE}:${lineAt(setupSource.length - setupCode.length + m.index)}: an external other than MoveFileW or DeleteFileW, '${m[1]}', which this check does not read`);
   }
 }
 const spellings = failedSwitch === undefined ? [] : [...setupCode.matchAll(new RegExp(failedSwitch.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'), 'gi'))];
@@ -255,9 +255,9 @@ else {
     }
   }
 }
-// No entry in this file's [Run], which runs after a completed install, passes the
-// switch in any field order, or carries Parameters at all, so no constant, {code:...}
-// or define can carry the switch there. A [Run] entry in an included file is not read.
+// No entry in this file's [Run] section, which runs after a completed install, passes
+// the switch in any field order, or carries Parameters at all, so no constant,
+// {code:...} or define can carry the switch there.
 if (failedSwitch !== undefined) {
   let runSection = '';
   for (const l of lines) {
@@ -269,7 +269,7 @@ if (failedSwitch !== undefined) {
     if (runSection === 'run' && l.text.toLowerCase().includes(failedSwitch.toLowerCase())) {
       problems.push(`${SETUP_FILE}:${l.line}: a [Run] entry passes ${failedSwitch}, which a completed install never does`);
     } else if (runSection === 'run' && /(?:^|;)\s*Parameters\s*:/i.test(l.text)) {
-      problems.push(`${SETUP_FILE}:${l.line}: a [Run] entry carries Parameters, which this check does not follow; one that opens the window must not pass ${failedSwitch} after a completed install`);
+      problems.push(`${SETUP_FILE}:${l.line}: a [Run] entry carries Parameters, which this check does not read; one that opens the window must not pass ${failedSwitch} after a completed install`);
     }
   }
 }

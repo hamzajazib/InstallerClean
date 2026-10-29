@@ -487,7 +487,8 @@ end;
 // Setup's progress window has a Cancel button on the silent routes too. The question
 // whether to stop is asked here rather than by Setup, so that only a setup the person
 // stopped by answering yes is kept from being reported to the window as a failed
-// update; a stop Setup makes without asking is reported.
+// update. Setup calls this without asking only for a cancel after it has failed to
+// prepare the install, which is reported as the failed update it is.
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
 begin
   if Confirm then
