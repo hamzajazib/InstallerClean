@@ -2483,9 +2483,9 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
        both of the guard's conditions, because no host selects on which one fired
        and one of them leaves the destination exactly where the user put it. -->
   <!-- 0 = mode arg, 1 = processed count, 2 = total count, 3 = pluralised noun.
-       The console cancel handler is raised for either control key and never reads
-       which one it was, so the line says where the cancellation came from rather
-       than which key sent it. -->
+       The command line cancels the run on Ctrl+C, Ctrl+Break, its console closing
+       or Windows shutting down, or, where it is the newer version an update started,
+       on the starting version's cancel, and the line names none of them. -->
   <!-- 0 = mode arg. Audit entry for a cancellation that lands before any file is
        processed (a cancel during the scan, or before the first delete or
        move), so "each /s, /d or /m run writes one summary entry" holds for
