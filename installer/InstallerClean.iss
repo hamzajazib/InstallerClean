@@ -439,8 +439,8 @@ begin
       Left := RenameAside(HeldFrom[I], HeldFrom[I], '{#DoneSuffix}');
       if Left = '' then
       begin
-        Log(Format('Could not delete %s: %s. The earlier file is left as %s.',
-          [HeldFrom[I], SysErrorMessage(Error), HeldAt[I]]));
+        Log(Format('Could not delete %s: %s. The earlier file is left as %s.', [
+          HeldFrom[I], SysErrorMessage(Error), HeldAt[I]]));
         Continue;
       end;
       Log(Format('Could not delete %s: %s. It was renamed to %s.', [HeldFrom[I], SysErrorMessage(Error), Left]));
@@ -448,8 +448,8 @@ begin
     if MoveFileW(HeldAt[I], HeldFrom[I]) then
       Log(Format('Put %s back as %s.', [HeldAt[I], HeldFrom[I]]))
     else
-      Log(Format('Could not rename %s back to %s: %s. The earlier file is left as %s.',
-        [HeldAt[I], HeldFrom[I], SysErrorMessage(DLLGetLastError), HeldAt[I]]));
+      Log(Format('Could not rename %s back to %s: %s. The earlier file is left as %s.', [
+        HeldAt[I], HeldFrom[I], SysErrorMessage(DLLGetLastError), HeldAt[I]]));
   end;
   SetArrayLength(HeldFrom, 0);
   SetArrayLength(HeldAt, 0);
