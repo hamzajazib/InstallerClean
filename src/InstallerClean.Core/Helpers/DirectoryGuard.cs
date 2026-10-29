@@ -60,37 +60,12 @@ internal static class DirectoryGuard
     }
 
     /// <summary>
-    /// Opens <paramref name="path"/> as a directory handle without following a link in
-    /// its final component, and returns it only where what opened is a real directory.
-    /// Null where the open fails, the attributes cannot be read, or what opened is a
-    /// reparse point or not a directory.
-    /// </summary>
-    internal static SafeFileHandle? OpenDirectoryNoFollow(string path)
-    {
-        if (string.IsNullOrEmpty(path)) return null;
-
-        var handle = Kernel32.CreateFile(
-            path, Kernel32.GENERIC_READ, Kernel32.FILE_SHARE_ALL, IntPtr.Zero,
-            Kernel32.OPEN_EXISTING,
-            Kernel32.FILE_FLAG_OPEN_REPARSE_POINT | Kernel32.FILE_FLAG_BACKUP_SEMANTICS,
-            IntPtr.Zero);
-        if (handle.IsInvalid) return null;
-
-        if (!Kernel32.GetFileInformationByHandle(handle, out var info)
-            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_REPARSE_POINT) != 0
-            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_DIRECTORY) == 0)
-        {
-            handle.Dispose();
-            return null;
-        }
-        return handle;
-    }
-
-    /// <summary>
     /// Opens <paramref name="path"/> as a directory handle, following a link in its
-    /// final component, so a folder the user chose that is a volume mount point or a
-    /// directory junction resolves to the directory it stands for, as the Move's own
-    /// path resolution and the file move do. The children of the handle are still
+    /// final component, so a folder that is a volume mount point or a directory junction
+    /// resolves to the directory it stands for: a folder the user chose for a Move, as the
+    /// Move's own path resolution and the file move do, and the %ProgramData% an update
+    /// makes its staging folder in and later cleans, as a folder made by its path would
+    /// be. The children of the handle are still
     /// reached without following a link in each child's name, which is what keeps a
     /// child swapped for a link from redirecting an act. Null where the open fails or
     /// what opened is not a directory, with the Win32 cause in

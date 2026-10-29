@@ -362,27 +362,31 @@ public sealed class StagedDownloadTests : IDisposable
         // A %ProgramData% moved to another drive and reached through a junction. A directory
         // junction needs no privilege, so this always makes one and fails where it cannot.
         var linkedRoot = Path.Combine(_root, "programdata-link");
-        using (var mklink = Process.Start(new ProcessStartInfo
+        var start = new ProcessStartInfo("cmd.exe")
         {
-            FileName = "cmd.exe",
-            Arguments = $"/c mklink /J \"{linkedRoot}\" \"{_stagingRoot}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
-        })!)
+        };
+        foreach (var arg in new[] { "/d", "/c", "mklink", "/J", linkedRoot, _stagingRoot })
+            start.ArgumentList.Add(arg);
+        using (var mklink = Process.Start(start)!)
         {
             var output = mklink.StandardOutput.ReadToEnd() + mklink.StandardError.ReadToEnd();
             mklink.WaitForExit();
             Assert.True(mklink.ExitCode == 0, $"mklink /J failed: {output}");
         }
+        Assert.True(new DirectoryInfo(linkedRoot).Attributes.HasFlag(FileAttributes.ReparsePoint));
         var made = UpdateStagingFolder.Create(linkedRoot, AdministratorsAndThisAccount);
         made.Handle.Dispose();
         File.WriteAllBytes(Path.Combine(made.FullPath, AppCopy.CommandLineFileName), Release(2));
+        Assert.Single(Directory.EnumerateDirectories(_stagingRoot));
 
         Assert.True(UpdateStagingFolder.RemoveLeftovers(linkedRoot, ThisAccountExpectation));
 
         Assert.Empty(Directory.EnumerateFileSystemEntries(_stagingRoot));
+        Assert.True(new DirectoryInfo(linkedRoot).Attributes.HasFlag(FileAttributes.ReparsePoint));
     }
 
     [Fact]
