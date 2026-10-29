@@ -373,7 +373,7 @@ internal static class Program
 
         // Made before the take, so nothing between the take and the try that releases the
         // mutex can throw.
-        var report = new RunReport(ConsoleCanAsk());
+        var report = new RunReport(ConsoleCanAsk() && !updateHost.AsksNothingMore);
         var take = TakeInstanceLock(arg, s_standsFor is not null, () => new InstanceLock(), update.RunningInstead, cts.Token,
             () => new StagedRunCover(InstanceLock.Name,
                 s_copyHeld ?? throw new InvalidOperationException("A run standing for a copy holds no handle on it.")));

@@ -109,6 +109,13 @@ internal interface ICommandLineUpdateHost : IConsolePrompt
     void ReleaseInstanceLock();
 
     /// <summary>
+    /// Records that the question went unanswered, so the rest of the run asks nothing at
+    /// this console, as where nobody can answer it. The read left waiting would otherwise
+    /// take a line typed later as the answer to the next question.
+    /// </summary>
+    void NobodyAnswered();
+
+    /// <summary>
     /// Starts the newer version at <paramref name="file"/> in this console, with
     /// <paramref name="arguments"/>, the switches asking it to run them standing for the copy
     /// at <paramref name="replaces"/> and then to take that copy's place
@@ -265,8 +272,9 @@ internal sealed class CommandLineUpdate
                     case Answer.Cancelled: return new CommandLineUpdateResult.Cancelled();
                     case Answer.No: return CommandLineUpdateResult.NothingTried;
                     case Answer.TimedOut:
+                        _host.NobodyAnswered();
                         SayLine(Strings.Cli_UpdateNoAnswer);
-                        return Update(false, command, arguments, exePath, current, latest, token);
+                        return Update(false, true, command, arguments, exePath, current, latest, token);
                 }
                 if (holdsLock)
                 {
@@ -275,7 +283,7 @@ internal sealed class CommandLineUpdate
                 }
             }
 
-            return Update(canAsk, command, arguments, exePath, current, latest, token);
+            return Update(canAsk, canAsk, command, arguments, exePath, current, latest, token);
         }
         finally
         {
@@ -421,10 +429,12 @@ internal sealed class CommandLineUpdate
     /// there. Where the download fails, is refused or the newer version does not start, what
     /// was downloaded is taken away and the command is left to this version. Once the newer
     /// version has started nothing is taken away: it runs from the staging folder and then
-    /// takes this copy's place from there.
+    /// takes this copy's place from there. <paramref name="canAsk"/> says whether a yes
+    /// sent the newer version to scan only, and <paramref name="asked"/> whether the
+    /// question was printed, answered or not.
     /// </summary>
     private CommandLineUpdateResult Update(
-        bool canAsk, string command, IReadOnlyList<string> arguments, string exePath,
+        bool canAsk, bool asked, string command, IReadOnlyList<string> arguments, string exePath,
         string current, string latest, CancellationToken token)
     {
         PreparedUpdate prepared;
@@ -445,7 +455,7 @@ internal sealed class CommandLineUpdate
             // read before the question could not be made. Nothing was downloaded. Where the
             // question was asked, the line naming the newer version is said again, since the
             // reason follows it.
-            if (canAsk) _host.WriteLine(string.Format(Strings.UpdateNotice_Available, latest));
+            if (asked) _host.WriteLine(string.Format(Strings.UpdateNotice_Available, latest));
             return Refused(refused.Refusal, current, latest, token);
         }
         catch (Exception ex)

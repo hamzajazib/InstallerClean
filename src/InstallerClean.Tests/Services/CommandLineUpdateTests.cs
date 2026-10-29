@@ -216,6 +216,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal((Staged, command + " /v", Exe, Current, Latest, holdsLock), Assert.Single(_host.NewerVersionRuns));
         Assert.Equal(holdsLock ? [true] : [], _host.LockTakes);
         Assert.Equal(holdsLock ? 1 : 0, _host.LockReleases);
+        Assert.Equal(1, _host.NobodyAnsweredCalls);
         Assert.Equal(
             [
                 Available, Prompt(), string.Empty, Strings.Cli_UpdateNoAnswer, Downloading,
@@ -240,6 +241,33 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(0, updater.Prepares);
         Assert.DoesNotContain(Strings.Cli_UpdateNoAnswer, _host.Output);
         Assert.Equal(1, _host.LockReleases);
+        Assert.Equal(0, _host.NobodyAnsweredCalls);
+    }
+
+    [Fact]
+    public void A_refusal_from_the_downloads_own_read_names_the_newer_version_again_after_a_question_nobody_answered()
+    {
+        var updater = new FakeUpdater
+        {
+            Prepare = () => throw new UpdateRefusedException(UpdateRefusal.CannotInstallFromThisCopy, Latest),
+        };
+        _host.Answers.Enqueue(RecordingHost.NoAnswer);
+
+        var result = Run(updater, canAsk: true);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateNotMade.CannotInstallAutomatically, Current, Latest), result);
+        Assert.Equal(
+            [Available, Prompt(), string.Empty, Strings.Cli_UpdateNoAnswer, Downloading, Available,
+                string.Format(Strings.UpdateNotice_CannotInstallAutomatically, Latest), ReleaseLink],
+            _host.Output);
+    }
+
+    [Fact]
+    public void The_answer_bound_is_the_minute_the_lines_name()
+    {
+        // Cli.UpdateNoAnswer, Cli.ReportNoAnswer and Cli.Help.UpdateNote say "a minute" in
+        // every language, so a change here changes them too.
+        Assert.Equal(TimeSpan.FromMinutes(1), ConsoleQuestion.AnswerBound);
     }
 
     [Fact]
@@ -469,6 +497,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         public bool HoldsLock { get; private set; }
         public List<bool> LockTakes { get; } = [];
         public int LockReleases { get; private set; }
+        public int NobodyAnsweredCalls { get; private set; }
         public Action<string>? OnWriteLine { get; set; }
         public Action? OnNewerVersion { get; set; }
         public Action? OnRead { get; set; }
@@ -503,6 +532,8 @@ public sealed class CommandLineUpdateTests : IDisposable
             LockTakes.Add(HoldsLock);
             return HoldsLock;
         }
+
+        public void NobodyAnswered() => NobodyAnsweredCalls++;
 
         public void ReleaseInstanceLock()
         {

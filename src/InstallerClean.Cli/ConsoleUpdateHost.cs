@@ -100,6 +100,14 @@ internal sealed class ConsoleUpdateHost(string arg, Func<InstanceLock>? newLock 
         }
     }
 
+    /// <summary>
+    /// Whether the update question went unanswered in this run, after which the run asks
+    /// nothing more at the console (<see cref="ICommandLineUpdateHost.NobodyAnswered"/>).
+    /// </summary>
+    public bool AsksNothingMore { get; private set; }
+
+    public void NobodyAnswered() => AsksNothingMore = true;
+
     public bool TryTakeInstanceLock()
     {
         _instanceLock = _newLock();
