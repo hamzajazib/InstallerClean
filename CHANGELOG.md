@@ -19,6 +19,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Changed
 
+- The setup renames the files in the install folder aside before it writes anything, which Windows allows for a program that is running, so a command-line scan running at the time doesn't stop the install. Where an install fails or is cancelled, it puts every one of them back, and where one cannot be renamed aside, it stops with nothing changed. This covers every route that runs the setup: Update now, the command line, winget, Chocolatey and a setup run by hand.
 - The setup no longer offers to close a running InstallerClean before it installs, so it doesn't end a scheduled scan, Move or Delete part way through. A copy still running when the setup finishes has its file left beside the new one under a .setup-done name, which the app deletes the next time it starts.
 - The Application-log entries for a cancelled command-line run (event 2000) no longer say it was cancelled "at the console", since a run ended by Task Scheduler's time limit is recorded the same way.
 - The setup's welcome image reads "Reclaim the disk space Windows leaves behind" under the app's name.
@@ -41,7 +42,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Fixed
 
-- Where a file the setup has to replace was in use, the command line running a scan say, the setup gave up after about four seconds and undid only part of its work, leaving the window at the new version and the command line and the uninstall entry at the old one. The setup now renames the files in the install folder aside before it writes anything, which Windows allows for a program that is running. Where an install then fails or is cancelled, it puts every one of them back, and where one cannot be renamed aside, it stops with nothing changed. This covers every route that runs the setup: Update now, the command line, winget, Chocolatey and a setup run by hand.
 - Closing InstallerClean while a Move or Delete is starting or asking for confirmation waits until it has finished starting, and the Move or Delete then does not run. A Move no longer leaves its destination folder behind when the window is closed then.
 - The tooltip over the small Donate under Done no longer shows a pale mark from the button beneath it.
 - Closing the console window under a command-line run ends it the way Ctrl+C does: it stops at its next file, writes its Application-log entry and exits with 130, or 2 where files were already moved or deleted. It ended at once, with no entry.
